@@ -1,0 +1,2 @@
+Cinzel-Bold.ttf: fonte do titulo (licenca SIL Open Font License, ver OFL-Cinzel.txt).
+Inter-ExtraBold.otf: fonte das legendas (licenca SIL Open Font License, https://rsms.me/inter).
