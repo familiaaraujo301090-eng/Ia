@@ -1,0 +1,7 @@
+{
+  "titulo": "Sua vida não está parada",
+  "narracao": "narracao.wav",
+  "tempos": "tempos.json",
+  "imagens": ["1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg"],
+  "inicios": [0, 7.2, 17.9, 26.1, 34.0]
+}

@@ -4,7 +4,7 @@
 Uso:
     python gerar_voz.py pasta_do_video/ [voz] [velocidade] [tom]
 
-O tom abaixo de 1 deixa a voz mais grave (0.93 e o padrao; 0.86 fica bem grave).
+O tom abaixo de 1 deixa a voz mais grave (0.96 e o padrao, sereno; 0.9 fica bem grave).
 Cria pasta/narracao.wav e pasta/tempos.json (inicio e fim de cada paragrafo,
 usados por editar_short.py para sincronizar as legendas). Precisa de
 `pip install kokoro-onnx soundfile` e dos arquivos do modelo em shorts/modelo-voz/:
@@ -21,10 +21,10 @@ import soundfile as sf
 from kokoro_onnx import Kokoro
 
 MODELO = Path(__file__).parent / "modelo-voz"
-PAUSA = 0.45  # segundos de silencio entre paragrafos
+PAUSA = 0.7  # segundos de silencio entre paragrafos (pausas longas deixam a fala serena)
 
 
-def gerar(pasta, voz="pm_santa", velocidade=0.9, tom=0.93):
+def gerar(pasta, voz="pm_santa", velocidade=0.84, tom=0.96):
     pasta = Path(pasta)
     kokoro = Kokoro(str(MODELO / "kokoro-v1.0.onnx"), str(MODELO / "voices-v1.0.bin"))
     paragrafos = [p.strip() for p in (pasta / "roteiro.txt").read_text(encoding="utf-8").splitlines()
@@ -38,11 +38,11 @@ def gerar(pasta, voz="pm_santa", velocidade=0.9, tom=0.93):
         partes += [audio.astype(np.float32), np.zeros(int(taxa * PAUSA), dtype=np.float32)]
     crua = pasta / "voz_crua.wav"
     sf.write(crua, np.concatenate(partes), taxa)
-    # Deixa a voz um pouco mais grave e encorpada sem mudar a duracao, e normaliza o volume.
+    # Deixa a voz levemente mais grave e suave (sem mudar a duracao), com um pouco de ambiencia.
     subprocess.run([
         "ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-i", str(crua), "-af",
-        f"asetrate={taxa}*{tom},aresample={taxa},atempo=1/{tom},bass=g=4:f=110,"
-        "aecho=0.8:0.5:40:0.12,loudnorm=I=-15:TP=-1.5",
+        f"asetrate={taxa}*{tom},aresample={taxa},atempo=1/{tom},bass=g=2:f=110,"
+        "treble=g=-3:f=6000,aecho=0.8:0.6:60:0.15,loudnorm=I=-16:TP=-1.5",
         "-ar", "44100", str(pasta / "narracao.wav"),
     ], check=True)
     crua.unlink()
