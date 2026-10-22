@@ -1,0 +1,7 @@
+# Arquivos gerados ao montar os videos
+shorts/**/short.mp4
+shorts/**/legendas.ass
+shorts/**/*.mp3
+shorts/**/*.wav
+shorts/**/*.png
+shorts/**/*.jpg
