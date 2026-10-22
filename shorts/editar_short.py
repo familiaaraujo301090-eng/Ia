@@ -15,9 +15,13 @@ A pasta precisa ter um arquivo video.json, por exemplo:
   "fonte": "Georgia"
 }
 
-Somente "roteiro" e "imagens" sao obrigatorios. Sem "narracao", use "duracao"
-(em segundos) para gerar uma previa sem audio. O resultado sai em
-pasta_do_video/short.mp4. Precisa do ffmpeg instalado.
+Somente "roteiro" e "imagens" sao obrigatorios. Sem "roteiro" no json, o texto
+vem de roteiro.txt (um paragrafo por linha). Sem "narracao", use "duracao"
+(em segundos) para gerar uma previa sem audio. Opcionais:
+  "tempos": arquivo json com [inicio, fim] de cada paragrafo da narracao,
+            para a legenda acompanhar a fala com precisao;
+  "inicios": segundo em que cada imagem entra (a primeira sempre em 0).
+O resultado sai em pasta_do_video/short.mp4. Precisa do ffmpeg instalado.
 """
 import json
 import re
@@ -59,11 +63,25 @@ def tempo_ass(segundos):
     return f"{h}:{m:02d}:{s:05.2f}"
 
 
-def escrever_legendas(destino, roteiro, titulo, duracao_fala, duracao_total, fonte):
-    """Gera um .ass com o titulo no topo e as legendas sincronizadas pelo tamanho do texto."""
-    blocos = dividir_legendas(roteiro)
+def distribuir(texto, inicio, fim):
+    """Divide o intervalo [inicio, fim] entre os blocos do texto, pelo tamanho de cada um."""
+    blocos = dividir_legendas(texto)
     pesos = [len(b) + 4 for b in blocos]  # +4 compensa as pausas entre blocos
-    total = sum(pesos)
+    total, t, saida = sum(pesos), inicio, []
+    for bloco, peso in zip(blocos, pesos):
+        proximo = t + (fim - inicio) * peso / total
+        saida.append((bloco, t, proximo))
+        t = proximo
+    return saida
+
+
+def escrever_legendas(destino, roteiro, titulo, duracao_fala, duracao_total, fonte, tempos=None):
+    """Gera um .ass com o titulo no topo e as legendas sincronizadas com a fala."""
+    if tempos:
+        paragrafos = [p for p in roteiro.splitlines() if p.strip()]
+        trechos = [t for p, (a, b) in zip(paragrafos, tempos) for t in distribuir(p, a, b)]
+    else:
+        trechos = distribuir(roteiro, 0.0, duracao_fala)
     linhas = [
         "[Script Info]",
         "ScriptType: v4.00+",
@@ -89,14 +107,11 @@ def escrever_legendas(destino, roteiro, titulo, duracao_fala, duracao_total, fon
             f"Dialogue: 1,{tempo_ass(0)},{tempo_ass(duracao_total)},Titulo,,0,0,0,,"
             f"{{\\fad(300,300)}}{titulo.upper()}"
         )
-    inicio = 0.0
-    for bloco, peso in zip(blocos, pesos):
-        fim = inicio + duracao_fala * peso / total
+    for bloco, inicio, fim in trechos:
         linhas.append(
             f"Dialogue: 0,{tempo_ass(inicio)},{tempo_ass(fim)},Legenda,,0,0,0,,"
             f"{{\\fad(80,80)\\fscx92\\fscy92\\t(0,120,\\fscx100\\fscy100)}}{bloco}"
         )
-        inicio = fim
     destino.write_text("\n".join(linhas) + "\n", encoding="utf-8")
 
 
@@ -110,16 +125,22 @@ def montar(pasta):
     duracao_fala = duracao_audio(narracao) if narracao else float(cfg["duracao"])
     duracao_total = duracao_fala + FOLGA_FINAL
     n = len(imagens)
-    # Cada imagem dura um pouco a mais para compensar a sobreposicao das transicoes.
-    por_imagem = (duracao_total + (n - 1) * TRANSICAO) / n
-    quadros = int(round(por_imagem * FPS))
+    # Segundo em que cada imagem entra; sem "inicios", todas duram o mesmo tempo.
+    inicios = cfg.get("inicios") or [i * duracao_total / n for i in range(n)]
+    fins = inicios[1:] + [duracao_total]
+    # Cada imagem dura um pouco a mais para cobrir a sobreposicao da transicao.
+    duracoes = [b - a + (TRANSICAO if i < n - 1 else 0)
+                for i, (a, b) in enumerate(zip(inicios, fins))]
 
-    escrever_legendas(pasta / "legendas.ass", cfg["roteiro"], cfg.get("titulo", ""),
-                      duracao_fala, duracao_total, cfg.get("fonte", "Georgia"))
+    roteiro = cfg.get("roteiro") or (pasta / "roteiro.txt").read_text(encoding="utf-8")
+    tempos = json.loads((pasta / cfg["tempos"]).read_text()) if cfg.get("tempos") else None
+    escrever_legendas(pasta / "legendas.ass", roteiro, cfg.get("titulo", ""),
+                      duracao_fala, duracao_total, cfg.get("fonte", "Georgia"), tempos)
 
     entradas, filtros = [], []
     for i, img in enumerate(imagens):
         entradas += ["-i", str(img)]
+        quadros = int(round(duracoes[i] * FPS))
         # Alterna zoom de aproximacao e afastamento (efeito Ken Burns).
         zoom = "1+0.12*on/{q}" if i % 2 == 0 else "1.12-0.12*on/{q}"
         filtros.append(
@@ -130,7 +151,7 @@ def montar(pasta):
         )
     atual = "v0"
     for i in range(1, n):
-        deslocamento = i * (por_imagem - TRANSICAO)
+        deslocamento = inicios[i]
         filtros.append(
             f"[{atual}][v{i}]xfade=transition=fade:duration={TRANSICAO}"
             f":offset={deslocamento:.3f}[x{i}]"

@@ -5,3 +5,5 @@ shorts/**/*.mp3
 shorts/**/*.wav
 shorts/**/*.png
 shorts/**/*.jpg
+shorts/modelo-voz/
+__pycache__/
