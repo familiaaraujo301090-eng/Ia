@@ -2,6 +2,28 @@
   "titulo": "Dez minutos sem celular",
   "narracao": "narracao.wav",
   "tempos": "tempos.json",
-  "imagens": ["1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg"],
-  "inicios": [0, 6.7, 22.9, 34.7, 43.7]
+  "imagens": [
+    "1.jpg",
+    "2.jpg",
+    "6.jpg",
+    "3.jpg",
+    "4.jpg",
+    "5.jpg"
+  ],
+  "cenas": [
+    1,
+    2,
+    3,
+    4,
+    6,
+    8
+  ],
+  "focos": [
+    0.55,
+    0.35,
+    0.45,
+    0.35,
+    0.45,
+    0.3
+  ]
 }

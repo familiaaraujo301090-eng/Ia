@@ -52,7 +52,8 @@ MAX_PALAVRAS, MAX_LETRAS = 5, 24  # legendas curtas sao lidas num relance
 # Palavras que nao devem fechar uma legenda: elas puxam a proxima ("na sua", "do que").
 FRACAS = {"a", "o", "as", "os", "um", "uma", "de", "do", "da", "dos", "das", "em", "no",
           "na", "nos", "nas", "e", "que", "se", "por", "para", "com", "sem", "ao", "à",
-          "mais", "sua", "seu", "suas", "seus", "meu", "minha", "não", "nem", "é", "eu"}
+          "mais", "sua", "seu", "suas", "seus", "meu", "minha", "não", "nem", "é", "eu",
+          "como", "mas", "ou", "quando", "onde", "porque", "pelo", "pela", "entre", "até"}
 FONTES = Path(__file__).parent / "fontes"
 FONTE_LEGENDA, FONTE_TITULO = "Inter ExtraBold", "Cinzel"
 
@@ -175,6 +176,17 @@ def escrever_legendas(destino, roteiro, titulo, duracao_fala, duracao_total, tem
     destino.write_text("\n".join(linhas) + "\n", encoding="utf-8")
 
 
+def faixa_escura(destino):
+    """PNG transparente que escurece de leve a area das legendas, para o texto ler bem em imagem clara."""
+    from PIL import Image
+    faixa = Image.new("RGBA", (LARGURA, ALTURA), (0, 0, 0, 0))
+    centro, raio = 1340, 330  # centro vertical das legendas e meia altura da faixa
+    for y in range(centro - raio, centro + raio):
+        alfa = int(110 * max(0.0, 1 - abs(y - centro) / raio) ** 0.8)
+        faixa.paste((0, 0, 0, alfa), (0, y, LARGURA, y + 1))
+    faixa.save(destino)
+
+
 def montar(pasta):
     pasta = Path(pasta).resolve()
     cfg = json.loads((pasta / "video.json").read_text(encoding="utf-8"))
@@ -214,6 +226,7 @@ def montar(pasta):
             planos.append((i, a + (b - a) * j / partes, a + (b - a) * (j + 1) / partes, movimento))
     focos = cfg.get("focos") or [0.36] * len(imagens)
 
+    faixa_escura(pasta / "faixa.png")
     entradas, filtros = [], []
     for k, (i, a, b, movimento) in enumerate(planos):
         entradas += ["-i", str(imagens[i])]
@@ -237,9 +250,11 @@ def montar(pasta):
             f":offset={planos[k][1]:.3f}[x{k}]"
         )
         atual = f"x{k}"
-    n = len(planos)
+    n = len(planos) + 1  # planos + faixa escura
+    entradas += ["-i", "faixa.png"]
+    filtros.append(f"[{atual}][{len(planos)}:v]overlay=0:0[escurecido]")
     filtros.append(
-        f"[{atual}]trim=duration={duracao_total:.3f},eq=contrast=1.06:saturation=0.92,"
+        f"[escurecido]trim=duration={duracao_total:.3f},eq=contrast=1.06:saturation=0.92,"
         f"vignette=PI/4.5,subtitles=legendas.ass:fontsdir='{fontes}',"
         f"fade=t=in:st=0:d=0.4,fade=t=out:st={duracao_total - 0.5:.3f}:d=0.5[video]"
     )

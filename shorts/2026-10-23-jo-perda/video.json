@@ -1,0 +1,26 @@
+{
+  "narracao": "narracao.wav",
+  "tempos": "tempos.json",
+  "titulo": "Quando você perde tudo",
+  "imagens": [
+    "1.jpg",
+    "2.jpg",
+    "3.jpg",
+    "4.jpg",
+    "5.jpg"
+  ],
+  "cenas": [
+    1,
+    2,
+    3,
+    4,
+    6
+  ],
+  "focos": [
+    0.3,
+    0.4,
+    0.45,
+    0.4,
+    0.35
+  ]
+}
