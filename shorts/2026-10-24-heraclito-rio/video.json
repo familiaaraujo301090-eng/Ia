@@ -1,0 +1,29 @@
+{
+  "titulo": "Você não é mais o mesmo",
+  "narracao": "narracao.wav",
+  "tempos": "tempos.json",
+  "imagens": [
+    "1.jpg",
+    "2.jpg",
+    "3.jpg",
+    "4.jpg",
+    "5.jpg",
+    "6.jpg"
+  ],
+  "cenas": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "focos": [
+    0.45,
+    0.3,
+    0.5,
+    0.45,
+    0.5,
+    0.45
+  ]
+}

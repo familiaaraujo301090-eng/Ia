@@ -34,3 +34,18 @@ imagem numa pagina do design de exportacao `DAHYxf_hmrY` (`add_page` + `insert_f
 - memento-mori: MAHYx-DYN68 MAHYxyqc7AQ MAHYx2ptNFs MAHYx7bKF-Q MAHYx18OLZI MAHYx1fTblc
 - salmo-23: MAHYx1qUfm0 MAHYx2z7Sgo MAHYx1S1y3M MAHYx9f-CEQ MAHYx70SSBE MAHYx_-KLGc
 - design de exportacao: paginas 1..20 tem um retangulo de imagem cada; trocar com update_fill
+- nietzsche-porque: MAHYx_ON_d4 MAHYx-mkDso MAHYx8Dallk MAHYx43HZX8 MAHYx0DefVI MAHYx_dIVBI
+- agostinho-inquieto: (1 refazer) MAHYxyR_4qc MAHYx8kolic MAHYx_RePs4 MAHYx3-ZAP8 MAHYx6zPcbQ
+- design de exportacao agora tem 24 paginas (21-24: PBlwvty7CT9wnVJp PBdMG1nWDdHZxYzN PBPySVm0vtl02g97 PBvKrJLN1dDvvR0q)
+- agostinho-inquieto 1: MAHYx4j3xfw
+- heraclito-rio: MAHYx1cP5iA MAHYx-qwPwI MAHYx3pucFc MAHYx_EHHGU MAHYx3z_uKo MAHYx2kyFqY
+- eclesiastes-vaidade: MAHYx2VBev0 MAHYx4mQT0U MAHYx3TehUc MAHYx1CjbcI MAHYxySs_30 MAHYx-3A1nc
+- localizadores das 24 paginas (para update_fill), na ordem:
+  PBdWYXWM1Yt95vYD-LBMkzHdfpFxrPzJj PBKTDQyT29H00c1Y-LB1rQ9Ts2vJHLtny PBbxBtk4R8KZSX8D-LBM891ksHnqwW81p
+  PBr0S07shDZL9MB7-LBcVSbh7dNC083T0 PBWyH6jt4Kgmnh8T-LB00PBxM3Jsmygzl PBrH4N80xkbgJ0fp-LBtq6lN4Q13tlMWg
+  PBsH4pkcYPcbqKh2-LB37c5kK9wddt928 PBjMl0D9Nz4SMFKN-LBPZ4v8mp6TGGDVg PBx26gVrhtbdzfFW-LBX17ySyygjGpRFJ
+  PBVhrB2lWv6gszTp-LBLsF86mV9js9n97 PBP7xDZgsS1hlWvw-LBC3BMMbvXV0plYR PBKphmPHjd1mTcBv-LBYqqmSf121Hx8W8
+  PBq73bX4yM2WD9vX-LBB7HvJBZBm6JY4Y PBvY41tDv4Vt8F35-LBp0YD50J4mHQ182 PBbrgLJfjllqCHjx-LBGM595yPhW5LjpV
+  PBrFDwP1jSM9ywjZ-LBqdNm3wqsdwPqJ3 PBgZpNrP94DpKtTS-LB2ZCvnfHhdwTbZz PBvGhRvt5bkhs2fx-LBpWJjsYt1nMYKcQ
+  PBWYWS8mHwJlTw1c-LBYDKHCxKP14lBPw PBCBLqRlllxMgmMW-LBMvxqM5GJgxsfcp PBlwvty7CT9wnVJp-LBtTrqj4l6xZzymt
+  PBdMG1nWDdHZxYzN-LB36Jfq7Cy3BnNCK PBPySVm0vtl02g97-LB343gQffhGDxn0b PBvKrJLN1dDvvR0q-LBk9nKsFpvCykWnR
