@@ -28,3 +28,4 @@ A ordem alterna filosofia e fé para o canal não ficar repetitivo.
 | 18 | 2026-10-25-frankl-liberdade | O que ninguém pode tirar de você | Viktor Frankl: a última das liberdades é escolher a própria atitude. 🕯️ #filosofia #viktorfrankl #resiliência #sentido |
 | 19 | 2026-10-25-diogenes-sol | Suas coisas possuem você? | Diógenes a Alexandre: saia da frente do meu sol. 🕯️ #filosofia #diógenes #minimalismo #liberdade |
 | 20 | 2026-10-25-platao-caverna | E se tudo for sombra? | O mito da caverna de Platão e a tela na palma da mão. 🕯️ #filosofia #platão #mitodacaverna #celular |
+| 21 | 2026-10-26-obstaculo-caminho | O obstáculo é o caminho | Marco Aurélio: o que está no caminho se torna o caminho. 🕯️ #estoicismo #marcoaurelio #resiliência #recomeço |

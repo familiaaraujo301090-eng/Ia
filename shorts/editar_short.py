@@ -53,7 +53,8 @@ MAX_PALAVRAS, MAX_LETRAS = 5, 24  # legendas curtas sao lidas num relance
 FRACAS = {"a", "o", "as", "os", "um", "uma", "de", "do", "da", "dos", "das", "em", "no",
           "na", "nos", "nas", "e", "que", "se", "por", "para", "com", "sem", "ao", "à",
           "mais", "sua", "seu", "suas", "seus", "meu", "minha", "não", "nem", "é", "eu",
-          "como", "mas", "ou", "quando", "onde", "porque", "pelo", "pela", "entre", "até"}
+          "como", "mas", "ou", "quando", "onde", "porque", "pelo", "pela", "entre", "até",
+          "te", "me", "se", "lhe", "nos", "vos"}
 FONTES = Path(__file__).parent / "fontes"
 FONTE_LEGENDA, FONTE_TITULO = "Inter ExtraBold", "Cinzel"
 

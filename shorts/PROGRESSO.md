@@ -27,6 +27,7 @@ imagem numa pagina do design de exportacao `DAHYxf_hmrY` (`add_page` + `insert_f
 | 18 | perdao-setenta-vezes | Mateus 18:22: setenta vezes sete | pronto |
 | 19 | frankl-liberdade | Viktor Frankl: a última das liberdades | pronto |
 | 20 | platao-caverna | Platão: o mito da caverna | pronto |
+| 21 | obstaculo-caminho | Marco Aurélio 5.20: o obstáculo é o caminho | pronto |
 
 ## Imagens geradas (ids do Canva, na ordem 1..6 de cada pasta)
 - kierkegaard-olhar-tras: MAHYxzVe9RU MAHYx1427kA MAHYx4wRxsg MAHYx5XUVQY MAHYxzFUhL8 MAHYxxbxnII
@@ -55,3 +56,4 @@ imagem numa pagina do design de exportacao `DAHYxf_hmrY` (`add_page` + `insert_f
 - frankl-liberdade: MAHY1CirHcw MAHY1AXV1GM MAHY1HoSPlo MAHY1MlnRhQ MAHY1GLeBxw MAHY1A2NPr0
 - platao-caverna: MAHY1PlhB9s MAHY1Ftk24o MAHY1CfUgZg MAHY1KMSP0M MAHY1Edxsak MAHY1EarVmI
 - pagina 25: PB5X23hYjD483Jrp-LBLb6D4XxpF26jsY
+- obstaculo-caminho: MAHY1KPCJIk MAHY1LrHM00 MAHY1KzB-iA MAHY1KImcYE MAHY1A9cHPw MAHY1BeAc_0 MAHY1C4Eilg
