@@ -19,14 +19,14 @@ imagem numa pagina do design de exportacao `DAHYxf_hmrY` (`add_page` + `insert_f
 | 10 | filho-prodigo | Lucas 15: voltar para casa | pronto |
 | 11 | memento-mori | Marco Aurélio 4.17: não viva como se fosse viver dez mil anos | pronto |
 | 12 | salmo-23 | Salmo 23: o vale da sombra da morte | pronto |
-| 13 | nietzsche-porque | Nietzsche: quem tem um porquê | a fazer |
-| 14 | agostinho-inquieto | Confissões I.1: coração inquieto | a fazer |
-| 15 | heraclito-rio | Heráclito: ninguém entra no mesmo rio duas vezes | a fazer |
-| 16 | eclesiastes-vaidade | Eclesiastes 1:2: vaidade de vaidades | a fazer |
-| 17 | diogenes-sol | Diógenes e Alexandre: saia da frente do meu sol | a fazer |
-| 18 | perdao-setenta-vezes | Mateus 18:22: setenta vezes sete | a fazer |
-| 19 | frankl-liberdade | Viktor Frankl: a última das liberdades | a fazer |
-| 20 | platao-caverna | Platão: o mito da caverna | a fazer |
+| 13 | nietzsche-porque | Nietzsche: quem tem um porquê | pronto |
+| 14 | agostinho-inquieto | Confissões I.1: coração inquieto | pronto |
+| 15 | heraclito-rio | Heráclito: ninguém entra no mesmo rio duas vezes | pronto |
+| 16 | eclesiastes-vaidade | Eclesiastes 1:2: vaidade de vaidades | pronto |
+| 17 | diogenes-sol | Diógenes e Alexandre: saia da frente do meu sol | pronto |
+| 18 | perdao-setenta-vezes | Mateus 18:22: setenta vezes sete | pronto |
+| 19 | frankl-liberdade | Viktor Frankl: a última das liberdades | pronto |
+| 20 | platao-caverna | Platão: o mito da caverna | pronto |
 
 ## Imagens geradas (ids do Canva, na ordem 1..6 de cada pasta)
 - kierkegaard-olhar-tras: MAHYxzVe9RU MAHYx1427kA MAHYx4wRxsg MAHYx5XUVQY MAHYxzFUhL8 MAHYxxbxnII
@@ -49,3 +49,9 @@ imagem numa pagina do design de exportacao `DAHYxf_hmrY` (`add_page` + `insert_f
   PBrFDwP1jSM9ywjZ-LBqdNm3wqsdwPqJ3 PBgZpNrP94DpKtTS-LB2ZCvnfHhdwTbZz PBvGhRvt5bkhs2fx-LBpWJjsYt1nMYKcQ
   PBWYWS8mHwJlTw1c-LBYDKHCxKP14lBPw PBCBLqRlllxMgmMW-LBMvxqM5GJgxsfcp PBlwvty7CT9wnVJp-LBtTrqj4l6xZzymt
   PBdMG1nWDdHZxYzN-LB36Jfq7Cy3BnNCK PBPySVm0vtl02g97-LB343gQffhGDxn0b PBvKrJLN1dDvvR0q-LBk9nKsFpvCykWnR
+- eclesiastes-vaidade 7 (carro): MAHY1DwLrng
+- diogenes-sol: MAHY1Nhh4Gk MAHY1K1sEjM MAHY1OcNJTs MAHY1FgHT0Y MAHY1P7hCf8 MAHY1Kg_2vA
+- perdao-setenta-vezes: MAHY1M-rKdo MAHY1A-D7kY MAHY1AT4vIc MAHY1Nba9JE MAHY1H7ukSI MAHY1PTxlbg
+- frankl-liberdade: MAHY1CirHcw MAHY1AXV1GM MAHY1HoSPlo MAHY1MlnRhQ MAHY1GLeBxw MAHY1A2NPr0
+- platao-caverna: MAHY1PlhB9s MAHY1Ftk24o MAHY1CfUgZg MAHY1KMSP0M MAHY1Edxsak MAHY1EarVmI
+- pagina 25: PB5X23hYjD483Jrp-LBLb6D4XxpF26jsY
