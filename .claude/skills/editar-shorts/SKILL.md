@@ -15,6 +15,15 @@ A identidade do canal (nome, personagem, tom, cores) esta em `canal.md` na raiz 
    - Uma ideia so, de um pensador ou texto real. Cite com fidelidade; se nao tiver certeza da frase exata, parafraseie e diga que e parafrase.
    - Aplicacao pratica para a vida de hoje.
    - Fechamento com frase marcante e chamada curta ("Segue a Lamparina para mais").
+   **Estrutura obrigatoria (pedido do usuario, 26/10):** narrativa, nao lista de fatos.
+   - *Hook com o espectador dentro da historia:* a primeira frase (ate 12 palavras) poe "voce"
+     numa situacao com algo em jogo ("Voce esta numa sala com sete pessoas, e todas estao erradas").
+   - *Stakes:* o que voce perde ou ganha com a escolha; deixe a pessoa decidir antes de saber.
+   - *Historia real* com nome, ano e lugar, contada em cenas curtas (uma por paragrafo).
+   - *Virada:* a resposta surpreendente, em dourado.
+   - *Payoff claro:* uma solucao pratica ou uma conclusao que justifique o tempo gasto.
+   - *Pergunta final* para comentarios, antes da chamada "Segue a Lamparina."
+   - Antes de escrever um tema novo, olhe a estrutura de um video viral parecido e copie a forma.
 3. **Pasta.** Crie `shorts/AAAA-MM-DD-tema-curto/` com `roteiro.txt` (um paragrafo por linha; cada paragrafo e uma cena) e `video.json` (modelo em `shorts/2026-10-22-seneca-imaginacao/video.json`). O `titulo` e o gancho em ate 6 palavras. Marque com `*asteriscos*` a frase-chave (a citacao ou a virada): ela aparece em dourado na legenda. Use no maximo 2 destaques por video.
 4. **Imagens.** De 6 a 7 imagens verticais, uma por paragrafo. Gere no Canva com `generate-image`, `aspectRatio: PORTRAIT_9_16`. Para cenas com o personagem, passe a foto de perfil (`MAHYw9feFys`) em `imageReferences` para manter o mesmo rosto. Estilo fixo: pintura realista, luz quente de lamparina, fundo escuro, sem texto na imagem. Para baixar em resolucao cheia (os dominios `media.canva.com` e `export-download.canva.com` precisam estar liberados na rede do ambiente): troque as imagens das paginas do design de exportacao `DAHYxf_hmrY` com `update_fill` (localizadores em `shorts/PROGRESSO.md`), salve com `commit`, exporte em JPG 1080x1920 com `export-design` e baixe cada pagina para `1.jpg`, `2.jpg`... na pasta. Gere de 6 a 7 imagens por video. Em `cenas` do json, diga em que paragrafo cada imagem entra (ex.: `[1, 2, 3, 4, 6]`) e em `focos` a altura do assunto principal de cada imagem (0.3 para rosto no alto, 0.55 para pessoa deitada ou no centro), usada nos closes.
 5. **Narracao.** Rode `python shorts/gerar_voz.py shorts/<pasta>` (voz `pm_santa`, velocidade 0.87, tom 0.96: serena, como o usuario aprovou). Gera `narracao.wav` e `tempos.json` com o tempo de cada frase. Se faltar o modelo, baixe os dois arquivos citados no topo do script para `shorts/modelo-voz/` (GitHub e PyPI funcionam aqui; Hugging Face nao). Se o usuario preferir, ele pode gravar no ElevenLabs e mandar o audio; nesse caso nao use `tempos`.

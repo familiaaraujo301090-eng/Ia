@@ -67,3 +67,16 @@ Os 21 videos publicados/postaveis continuam no classico.
 - bernays-tochas: MAHY_UqtDaI MAHY_adNL-E MAHY_VwlBWk MAHY_WY29zM MAHY_cf69rg MAHY_dLzkbU
 - voce-e-o-produto: MAHY_Zn4OEk MAHY_QI3WfU MAHY_SedG9U MAHY_a4miL4 MAHY_avVwxs MAHY_eBlgMU
 - citacao-nietzsche-monstros: MAHY_QVpQj0
+- asch-conformidade: MAHZAPuqCQM MAHZAJ8ETJI MAHZAKXslFc MAHZAAt2rfY MAHZAEUWbsg
+- milgram-botao: MAHZAOC60CM MAHZAMjk7vg MAHZAHZz_2A MAHZAK9FkTc MAHZAFx26bw
+- anel-de-giges: MAHZAFYqObw MAHZAEYnPCE MAHZADqZOKE MAHZACsDZek MAHZAGOSQ_Y
+- maquina-de-experiencias: MAHZAKtrB3o MAHZAMr-_rM MAHZAMN8BV8 MAHZABPxAbk MAHZABTTP0k
+- socrates-cicuta: MAHZABR6vTM MAHZAIISOnI MAHZAJsz3W0 MAHZAJUbnK4 MAHZAIJf8QY
+- maquiavel-temido: MAHZACFp3YY MAHZAHJvZ6k MAHZAKIV-qY MAHZAO9vI0I MAHZALKwXTA
+- pilatos-verdade: MAHZAEMKNf0 MAHZALypIzI MAHZADl6pNg MAHZALajeiA MAHZAIZzTbg
+- jonas-fugindo: MAHZAGJelrI MAHZAObaxvk MAHZABRjdEw MAHZADGiYBI MAHZABHlOaE
+- pe-na-porta: MAHZAMGqK_I MAHZAHsxGPE MAHZAFcklWo MAHZANUN6Rg MAHZANuv7_s
+- navio-de-teseu: MAHZAGnzdhs MAHZAD_Qd7w MAHZALvV6Vk MAHZAMYPwKU MAHZAJolcpE
+
+## Lote narrativo (26/10): 10 videos, modelos alternados
+gravura: asch, socrates, teseu | colagem: giges, maquiavel, pe-na-porta | tipografia: maquina, jonas | classico: milgram, pilatos
