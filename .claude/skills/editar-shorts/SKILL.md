@@ -34,6 +34,11 @@ A identidade do canal (nome, personagem, tom, cores) esta em `canal.md` na raiz 
 - Gere a imagem do personagem com a foto de perfil como referencia, para o rosto do Mestre Elias nao mudar.
 - Antes de citar alguem, confira a frase e o contexto (ex.: Diogenes encontrou Alexandre em Corinto, nao em Atenas).
 - Use `python shorts/revisar.py folha.png pastas...` para ver 8 quadros de cada video de uma vez.
+- Edits virais de filosofia trocam algo na tela a cada 1 a 2 s e mostram uma palavra por vez. O
+  editor faz isso com `"estilo": "palavra"`, `"abertura"`, `"cor": "pb"`, `"grao"` e `"ritmo"`.
+  Veja `estilos-virais.md` nesta pasta (analise de 4 videos virais e o que ainda falta copiar).
+- Muitos planos curtos: conte os quadros em tempo absoluto, senao o xfade corta o video no meio
+  (aconteceu no primeiro teste com ritmo 1,6 s, o video parou aos 18 s).
 
 ## Regras
 

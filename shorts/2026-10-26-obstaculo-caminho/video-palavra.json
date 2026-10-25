@@ -1,0 +1,42 @@
+{
+  "titulo": "O obstáculo é o caminho",
+  "narracao": "narracao.wav",
+  "tempos": "tempos.json",
+  "imagens": [
+    "1.jpg",
+    "2.jpg",
+    "3.jpg",
+    "4.jpg",
+    "5.jpg",
+    "6.jpg",
+    "7.jpg"
+  ],
+  "cenas": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "focos": [
+    0.3,
+    0.35,
+    0.3,
+    0.45,
+    0.4,
+    0.4,
+    0.35
+  ],
+  "estilo": "palavra",
+  "cor": "pb",
+  "grao": true,
+  "ritmo": 1.6,
+  "saida": "short-palavra.mp4",
+  "abertura": {
+    "texto": "O que está no caminho se torna o caminho.",
+    "autor": "Marco Aurélio",
+    "duracao": 3
+  }
+}
