@@ -34,6 +34,10 @@ vem de roteiro.txt (um paragrafo por linha). Sem "narracao", use "duracao"
   "grao": true poe granulacao de filme;
   "ritmo": duracao maxima de cada plano em segundos (padrao 6.5); abaixo de 2 s
            os planos trocam com corte seco, no pulso da fala;
+  "gravura": true passa as imagens pelo filtro de gravura antiga (gravura.py);
+  "rajada": segundos de cortes a cada 2 quadros com recortes do banco de gravuras
+            logo depois da abertura (rode antes `python gravura.py --banco`);
+  "transicao": tipo de fusao entre imagens do xfade, por exemplo "fadewhite" (clarao);
   "saida": nome do arquivo final (padrao short.mp4).
 Palavras entre *asteriscos* no roteiro aparecem em dourado na legenda.
 O resultado sai em pasta_do_video/short.mp4. Precisa do ffmpeg instalado.
@@ -67,6 +71,7 @@ FRACAS = {"a", "o", "as", "os", "um", "uma", "de", "do", "da", "dos", "das", "em
           "como", "mas", "ou", "quando", "onde", "porque", "pelo", "pela", "entre", "até",
           "te", "me", "se", "lhe", "nos", "vos"}
 FONTES = Path(__file__).parent / "fontes"
+FOCO = "\\blur10\\t(0,100,\\blur0)"  # palavra entra desfocada e ganha foco em 100 ms
 FONTE_LEGENDA, FONTE_TITULO = "Inter ExtraBold", "Cinzel"
 
 
@@ -178,6 +183,7 @@ def escrever_legendas(destino, roteiro, titulo, duracao_fala, duracao_total, tem
                     efeito = "\\c&H4CC8F5&\\3c&H1E6EA8&\\fscx70\\fscy70\\t(0,120,\\fscx125\\fscy125)"
                 else:
                     efeito = "\\fscx75\\fscy75\\t(0,100,\\fscx100\\fscy100)"
+                efeito += FOCO
                 trechos.append((f"{{\\fad(40,0){efeito}}}{limpa}", ini, fim))
         # Pausa curta entre frases: a ultima palavra fica na tela ate a proxima entrar.
         for k in range(len(trechos) - 1):
@@ -240,7 +246,8 @@ def escrever_legendas(destino, roteiro, titulo, duracao_fala, duracao_total, tem
             # Duas camadas: o brilho borrado por baixo e a letra nitida por cima.
             linhas.append(
                 f"Dialogue: 0,{tempo_ass(inicio)},{tempo_ass(fim)},Palavra,,0,0,0,,"
-                f"{{\\pos(540,1180)\\bord14\\blur16\\alpha&H50&\\3a&H40&}}{bloco}"
+                f"{{\\pos(540,1180)\\bord14\\blur16\\alpha&H50&\\3a&H40&}}"
+                f"{bloco.replace(FOCO, '')}"  # o brilho fica sempre borrado
             )
             linhas.append(
                 f"Dialogue: 2,{tempo_ass(inicio)},{tempo_ass(fim)},Palavra,,0,0,0,,"
@@ -265,6 +272,26 @@ def faixa_escura(destino):
     faixa.save(destino)
 
 
+def fazer_rajada(destino, quadros, por_imagem=2):
+    """Video curto que troca de gravura do banco a cada 2 quadros, com leve zoom de entrada."""
+    from gravura import BANCO
+    import random
+    banco = sorted(BANCO.glob("*.jpg"))
+    if not banco:
+        sys.exit("Banco de gravuras vazio: rode `python shorts/gravura.py --banco` antes.")
+    escolhidas = random.Random(destino.parent.name).sample(banco, min(len(banco), quadros // por_imagem + 1))
+    lista = destino.with_suffix(".txt")
+    lista.write_text("".join(f"file '{c}'\nduration {por_imagem / FPS:.5f}\n" for c in escolhidas)
+                     + f"file '{escolhidas[-1]}'\n", encoding="utf-8")
+    subprocess.run(
+        ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-f", "concat", "-safe", "0",
+         "-i", str(lista), "-vf", f"scale={LARGURA}:{ALTURA},fps={FPS},format=yuv420p",
+         "-frames:v", str(quadros), "-c:v", "libx264", "-preset", "veryfast", "-crf", "18",
+         str(destino)],
+        check=True,
+    )
+
+
 def montar(pasta, arquivo_cfg="video.json"):
     pasta = Path(pasta).resolve()
     cfg = json.loads((pasta / arquivo_cfg).read_text(encoding="utf-8"))
@@ -278,6 +305,16 @@ def montar(pasta, arquivo_cfg="video.json"):
 
     duracao_fala = duracao_audio(narracao) if narracao else float(cfg["duracao"])
     duracao_total = atraso + duracao_fala + FOLGA_FINAL
+    if cfg.get("gravura"):
+        from gravura import enquadrar, gravura
+        from PIL import Image
+        convertidas = []
+        for img in imagens:
+            destino = img.with_name(f"g_{img.stem}.jpg")
+            if not destino.exists() or destino.stat().st_mtime < img.stat().st_mtime:
+                gravura(enquadrar(Image.open(img).convert("RGB"))).save(destino, quality=92)
+            convertidas.append(destino)
+        imagens = convertidas
     n = len(imagens)
     tempos = (json.loads((pasta / cfg["tempos"]).read_text(encoding="utf-8"))
               if cfg.get("tempos") else None)
@@ -292,6 +329,10 @@ def montar(pasta, arquivo_cfg="video.json"):
         # Segundo em que cada imagem entra; sem "inicios", todas duram o mesmo tempo.
         inicios = cfg.get("inicios") or [i * (duracao_total - atraso) / n for i in range(n)]
         inicios = [atraso + t for t in inicios]
+    rajada = float(cfg.get("rajada", 0))
+    if rajada:
+        # A rajada ocupa o comeco da primeira cena; a primeira imagem entra depois dela.
+        inicios[0] = atraso + rajada
     fins = inicios[1:] + [duracao_total]
 
     roteiro = cfg.get("roteiro") or (pasta / "roteiro.txt").read_text(encoding="utf-8")
@@ -315,11 +356,23 @@ def montar(pasta, arquivo_cfg="video.json"):
     corte = CORTE if ritmo >= 2 else 1 / FPS
     faixa_escura(pasta / "faixa.png")
     entradas, filtros = [], []
+    if rajada:
+        planos.insert(0, ("rajada", atraso, atraso + rajada, None))
     if atraso:
         # Tela preta da citacao de abertura; a primeira imagem entra com fusao no fim dela.
         planos.insert(0, (None, 0.0, atraso, None))
+
+    def fusao(k):
+        """Duracao da passagem do plano k-1 para o k: seca dentro da mesma imagem e na rajada."""
+        anterior, atual = planos[k - 1][0], planos[k][0]
+        if anterior == atual:
+            return corte
+        if "rajada" in (anterior, atual) or (anterior is None and rajada):
+            return 1 / FPS
+        return TRANSICAO
+
     for k, (i, a, b, movimento) in enumerate(planos):
-        sobra = 0 if k == len(planos) - 1 else (corte if planos[k + 1][0] == i else TRANSICAO)
+        sobra = 0 if k == len(planos) - 1 else fusao(k + 1)
         # Quadros contados em tempo absoluto: arredondar cada plano sozinho acumula erro e,
         # com muitos planos curtos, o xfade fica sem imagem e corta o video.
         quadros = round((b + sobra) * FPS) - round(a * FPS)
@@ -327,6 +380,11 @@ def montar(pasta, arquivo_cfg="video.json"):
             entradas += ["-f", "lavfi", "-i",
                          f"color=c=black:s={LARGURA}x{ALTURA}:r={FPS}:d={quadros / FPS:.3f}"]
             filtros.append(f"[{k}:v]format=yuv420p,setsar=1[v{k}]")
+            continue
+        if i == "rajada":
+            fazer_rajada(pasta / "rajada.mp4", quadros)
+            entradas += ["-i", "rajada.mp4"]
+            filtros.append(f"[{k}:v]fps={FPS},settb=1/{FPS},format=yuv420p,setsar=1[v{k}]")
             continue
         entradas += ["-i", str(imagens[i])]
         z0, z1, foco = MOVIMENTOS[movimento]
@@ -341,9 +399,10 @@ def montar(pasta, arquivo_cfg="video.json"):
         )
     atual = "v0"
     for k in range(1, len(planos)):
-        fusao = corte if planos[k][0] == planos[k - 1][0] else TRANSICAO
+        # Clarao (ou outra transicao) so na troca de imagem; dentro da mesma imagem, fade.
+        tipo = cfg.get("transicao", "fade") if fusao(k) == TRANSICAO else "fade"
         filtros.append(
-            f"[{atual}][v{k}]xfade=transition=fade:duration={fusao}"
+            f"[{atual}][v{k}]xfade=transition={tipo}:duration={fusao(k):.4f}"
             f":offset={round(planos[k][1] * FPS) / FPS:.4f}[x{k}]"
         )
         atual = f"x{k}"

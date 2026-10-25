@@ -34,6 +34,31 @@ Analise quadro a quadro (cortes, texto, audio) de 4 videos que o usuario mandou 
 - Arranhoes e granulacao de filme por cima de tudo.
 - **Fecha com pergunta direta** ("gosta dessa ideia ou detesta? ESCOLHA"): puxa comentario.
 
+## Quadro a quadro (o que a analise por segundo escondia)
+- **Modelo 1, rajada (5,3 a 7,3 s):** a imagem troca a cada **2 quadros** (66 ms): cerca de 30
+  gravuras em 2 s (cerebros, Vitruviano, anjos, mapas, lousa, Maquiavel). Corte seco, sem fusao.
+  As imagens nao tem a ver com o tema: sao textura de "livro antigo", e o cerebro le como energia.
+- **Modelo 1, corpo:** o fundo continua trocando a cada 2 a 4 quadros o video todo (a deteccao de
+  cena nao pegou porque e tudo cinza parecido), com opacidade baixa. A palavra troca a cada ~0,3 s
+  e sai com borrao horizontal.
+- **Modelo 3, palavra:** a frase anterior some em 2 quadros, ~0,3 s de preto, a palavra pequena
+  ("e") aparece, a grande ("cada") ganha opacidade em 3 quadros (100 ms), e a de baixo
+  ("obstaculo") entra depois. A frase se monta em degraus e some inteira.
+- **Modelo 4, transicoes:** clarao de luz branca entrando pela esquerda com borda suave (~0,5 s);
+  clarao de 3 quadros e escurecida; linha de papel rasgado cruzando a tela e textura vermelha
+  entrando atras dela. Arranhoes e poeira mexem em todos os quadros. Texto digitado letra a letra.
+
+## Imagem: mudar o jeito de fazer
+Gerar 6 imagens no Canva da para o corpo do video, mas nao para a textura de 30 imagens em 2 s.
+- `shorts/gravura.py` transforma qualquer imagem em **gravura antiga** (hachura diagonal, cruzada
+  nas sombras, tinta escura em papel envelhecido) e monta `shorts/banco/` com 240 recortes de
+  detalhes (rosto, mao, lamparina, paisagem) de todas as imagens do canal. Cada imagem nova do
+  Canva vira varias para a rajada.
+- Imagens de dominio publico (gravuras de verdade de museus) seriam o ideal, mas os sites estao
+  bloqueados na rede deste ambiente. Liberar em Allowed domains: `upload.wikimedia.org`,
+  `commons.wikimedia.org`, `api.artic.edu`, `www.artic.edu`, `collectionapi.metmuseum.org`,
+  `images.metmuseum.org`.
+
 ## O que todos fazem
 1. **Gancho visual nos 2 primeiros segundos** que nao depende de som (citacao escrita,
    palavra grande). Muita gente assiste sem audio.
@@ -57,6 +82,10 @@ Analise quadro a quadro (cortes, texto, audio) de 4 videos que o usuario mandou 
 - `abertura` gera a citacao em tela preta antes da voz (modelos 1 e 2).
 - `cor: pb` e `grao` dao o visual de gravura antiga (modelos 1 e 4).
 - `ritmo` abaixo de 2 s alterna aberto e close com corte seco (pulso do modelo 1).
+- `gravura: true` passa as imagens pelo filtro de gravura (use sem `cor: pb`, para manter o sepia).
+- `rajada: 1.5` poe 1,5 s de cortes a cada 2 quadros com o banco, logo depois da abertura.
+- `transicao: "fadewhite"` troca de cena com clarao branco (modelo 4).
+- Palavras entram desfocadas e ganham foco em 100 ms (modelo 3).
 - Para testar sem mexer no original: crie `video-palavra.json` com `"saida": "short-palavra.mp4"`
   e rode `python shorts/editar_short.py shorts/<pasta> video-palavra.json`.
 

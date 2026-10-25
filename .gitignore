@@ -9,3 +9,7 @@ shorts/**/*.jpg
 shorts/modelo-voz/
 __pycache__/
 shorts/**/faixa.png
+shorts/banco/
+shorts/**/g_*.jpg
+shorts/**/rajada.mp4
+shorts/**/rajada.txt
