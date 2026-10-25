@@ -179,19 +179,17 @@ def gravura_enquadrada(origem, zoom, cx, cy):
 
 
 def lateral(origem):
-    """Tipografia: imagem so na metade de baixo, sumindo no preto para cima."""
-    destino = cache(origem, "tipo")
+    """Tipografia: a imagem inteira, em preto e branco e escurecida, com uma sombra suave no
+    alto onde a frase se monta. (Cortar metade da imagem no preto nao agradou ao usuario.)"""
+    destino = cache(origem, "tipo2")
     if not destino.exists():
         img = grav.enquadrar(Image.open(origem).convert("RGB"))
-        # Nossas imagens ja sao escuras: so tirar a cor e abrir os tons, sem escurecer mais.
         img = ImageOps.autocontrast(ImageOps.grayscale(img), cutoff=1)
-        img = img.point(lambda v: int(255 * (v / 255) ** 0.8)).convert("RGB")
+        img = img.point(lambda v: int(255 * 0.62 * (v / 255) ** 0.9))
         y = np.arange(A)[:, None]
-        alfa = np.clip((y - 700) / 480, 0, 1) ** 1.2
-        mascara = Image.fromarray((np.repeat(alfa, L, axis=1) * 255).astype("uint8"))
-        fundo = Image.new("RGB", (L, A))
-        fundo.paste(img, (0, 0), mascara)
-        fundo.save(destino, quality=92)
+        sombra = 1 - 0.55 * np.clip(1 - np.abs(y - 640) / 520, 0, 1) ** 1.5
+        a = np.asarray(img, dtype=float) * np.repeat(sombra, L, axis=1)
+        Image.fromarray(a.astype("uint8")).convert("RGB").save(destino, quality=92)
     return destino
 
 
@@ -403,12 +401,13 @@ def modelo_tipografia(dados):
     musica, batidas = faixa_musical(dados, pausa)
     planos = []
     for i, a, b in cenas(dados, batidas):
-        planos.append(plano(lateral(dados["imagens"][i]), a, b, 1.0, 1.06, 0.5, 0.75,
+        planos.append(plano(lateral(dados["imagens"][i]), a, b, 1.0, 1.05, 0.5, 0.5,
                             fusao=0.8 if planos else 0))
     vermelho = ass_cor("#D41A1A")
     legendas = cabecalho([
-        f"Style: Frase,DM Serif Display,124,{vermelho},{vermelho},&H00000000,&H00000000,"
-        "0,0,0,0,100,100,0,0,1,0,0,5,90,90,0,1",
+        # Contorno e sombra escuros: agora a frase fica sobre a imagem inteira, nao no preto.
+        f"Style: Frase,DM Serif Display,124,{vermelho},{vermelho},&H00000000,&H64000000,"
+        "0,0,0,0,100,100,0,0,1,3,5,5,90,90,0,1",
     ])
     blocos = blocos_com_tempo(dados["tempos"])
     for bloco, fim in zip(blocos, sem_sobrepor(blocos)):
