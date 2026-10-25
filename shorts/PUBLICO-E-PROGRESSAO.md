@@ -33,7 +33,7 @@ depois de 2 a 3 semanas de postagem.
 ## Progressao: como cada video deve andar
 | Tempo | Parte | O que fazer |
 |---|---|---|
-| 0 a 2 s | **Gancho** | Voce dentro da cena, com algo em jogo. Ate 10 palavras. Imagem mais forte do video. |
+| 0 a 2 s | **Gancho falado** | A voz comeca no primeiro quadro, sem silencio nem cena muda antes: o Mestre Elias ja fala a frase que poe voce dentro da cena, com algo em jogo (ate 10 palavras). A frase aparece escrita ao mesmo tempo, para quem esta sem som. Imagem mais forte do video por tras. |
 | 2 a 6 s | **Promessa** | Por que ficar: "no fim voce vai saber..." ou a pergunta que so se responde no final. |
 | 6 a 25 s | **Escalada** | A historia real em cenas de 3 a 4 s, cada uma mais tensa que a anterior. Corte a cada 2 a 3 s. |
 | 25 a 32 s | **Virada** | Frase-chave em dourado; meio segundo de silencio antes dela (a musica para). |
@@ -43,6 +43,7 @@ depois de 2 a 3 semanas de postagem.
 **Duracao alvo:** de 50 a 58 s hoje para **38 a 45 s**. Roteiro de 105 a 120 palavras.
 
 ## Voz e ritmo mais rapidos
+- **Comeco falado:** hoje a narracao comeca com 0,3 s de silencio (`gerar_voz.py`). Cortar para quase zero (0,05 s), para a primeira palavra sair junto com a primeira imagem.
 - **Hoje:** a narracao anda entre 130 e 144 palavras por minuto (medido nos 10 ultimos videos).
 - **Alvo:** cerca de **165 palavras por minuto**, a faixa usada em Shorts de historia (155 a 165).
   Em `gerar_voz.py`: velocidade de 0,87 para **cerca de 1,05**, pausa entre frases de 0,25 para
