@@ -1,0 +1,9 @@
+{
+  "modelo": "citacao",
+  "imagens": ["1.jpg"],
+  "citacao": {
+    "texto": "Não é que tenhamos pouco tempo. É que desperdiçamos muito.",
+    "autor": "Sêneca, Sobre a brevidade da vida",
+    "duracao": 16
+  }
+}

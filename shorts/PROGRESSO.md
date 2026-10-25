@@ -57,3 +57,8 @@ imagem numa pagina do design de exportacao `DAHYxf_hmrY` (`add_page` + `insert_f
 - platao-caverna: MAHY1PlhB9s MAHY1Ftk24o MAHY1CfUgZg MAHY1KMSP0M MAHY1Edxsak MAHY1EarVmI
 - pagina 25: PB5X23hYjD483Jrp-LBLb6D4XxpF26jsY
 - obstaculo-caminho: MAHY1KPCJIk MAHY1LrHM00 MAHY1KzB-iA MAHY1KImcYE MAHY1A9cHPw MAHY1BeAc_0 MAHY1C4Eilg
+
+## Modelos de edicao (25/10)
+Alternar e nunca misturar. Testes feitos: gravura (memento-mori), tipografia (frankl-liberdade),
+colagem (nietzsche-porque), citacao (nova: 2026-10-27-citacao-seneca-tempo, ja no modelo).
+Os 21 videos publicados/postaveis continuam no classico.

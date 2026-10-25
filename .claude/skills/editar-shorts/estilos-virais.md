@@ -69,29 +69,40 @@ Gerar 6 imagens no Canva da para o corpo do video, mas nao para a textura de 30 
 5. **Personagem recortado e fixo** enquanto o fundo muda: da identidade ao canal.
 6. Final com **pergunta ou escolha**, e nao so "segue o canal".
 
-## Como usar no editor (`video.json`)
-```json
-"estilo": "palavra",
-"abertura": {"texto": "O que esta no caminho se torna o caminho.", "autor": "Marco Aurelio", "duracao": 3},
-"cor": "pb",
-"grao": true,
-"ritmo": 1.6
-```
-- `estilo: palavra` gera legendas de 1 palavra, em Cinzel grande, com brilho; os `*destaques*`
-  ficam dourados e maiores (modelos 1 e 3).
-- `abertura` gera a citacao em tela preta antes da voz (modelos 1 e 2).
-- `cor: pb` e `grao` dao o visual de gravura antiga (modelos 1 e 4).
-- `ritmo` abaixo de 2 s alterna aberto e close com corte seco (pulso do modelo 1).
-- `gravura: true` passa as imagens pelo filtro de gravura (use sem `cor: pb`, para manter o sepia).
-- `rajada: 1.5` poe 1,5 s de cortes a cada 2 quadros com o banco, logo depois da abertura.
-- `transicao: "fadewhite"` troca de cena com clarao branco (modelo 4).
-- Palavras entram desfocadas e ganham foco em 100 ms (modelo 3).
-- Para testar sem mexer no original: crie `video-palavra.json` com `"saida": "short-palavra.mp4"`
-  e rode `python shorts/editar_short.py shorts/<pasta> video-palavra.json`.
+## Musica e ritmo (medido)
+- A troca rapida de imagem segue a musica. Tempos medidos: Schopenhauer ~95 BPM (troca a cada
+  2 batidas = 1,27 s), cavaleiro 129 BPM, Berserk 81 BPM, citacao 103 BPM.
+- Nao deu para identificar as musicas exatas (TikTok bloqueado aqui) e musica famosa no YouTube
+  pode ter a monetizacao reivindicada pelo dono. Por isso `shorts/trilha.py` compoe trilhas
+  livres de direitos e grava o segundo exato de cada batida: o corte cai sempre no tempo.
+- Se o usuario mandar uma musica (mp3 com licenca livre), o caminho e o mesmo: detectar as
+  batidas com librosa e usar a lista no lugar da trilha gerada.
+
+## Regras que o usuario deu (25/10)
+- **Um modelo por video.** Os 4 edits sao para diversificar, nunca para juntar num video so.
+  Alterne: classico, gravura, tipografia, colagem, e uma citacao de vez em quando.
+- **Comeco imediato.** Nada de tela parada de introducao: a primeira frase entra no primeiro
+  segundo. Gancho nos 2 primeiros segundos ou a pessoa passa o video.
+- **Camera so avanca.** Zoom que vai e volta na mesma imagem cansa; cada plano so aproxima,
+  devagar. O ritmo vem do corte na batida, nao do zoom.
+
+## Como usar (`shorts/modelos.py`)
+No `video.json`, `"modelo": "gravura" | "tipografia" | "colagem" | "citacao"` (sem a chave, sai o
+classico). Para testar um modelo sem mexer no json: `python shorts/modelos.py <modelo> shorts/<pasta>`
+gera `short-<modelo>.mp4`.
+- **gravura:** rajada do banco no primeiro segundo junto com a voz; cada 2 batidas um novo
+  enquadramento em gravura (aberto, medio, close, lampejo do banco, outro detalhe); palavra
+  gotica vermelha com brilho, uma por vez. Trilha "sombria".
+- **tipografia:** fundo preto, imagem so embaixo; a frase se monta palavra por palavra no tempo
+  da fala, ligacoes pequenas e chave enorme, em vermelho; a musica faz silencio antes da frase-chave.
+  Trilha "epica".
+- **colagem:** papel, preto riscado e mancha vermelha; foto em xerox com borda rasgada e
+  inclinada; troca a cada compasso com transicao diferente (clarao, cortina, zoom, desfoque);
+  texto dourado digitado letra a letra na faixa de cima. Trilha "pulso". Termine o roteiro com
+  uma pergunta de escolha ("e voce, aceitaria?").
+- **citacao:** 15 a 20 s, sem voz. `"citacao": {"texto", "autor", "duracao", "imagem"}`. Texto
+  em faixa branca no topo desde o primeiro quadro, imagem surgindo do preto. Trilha "piano".
 
 ## Ainda falta (proximos passos)
-- Mestre Elias recortado e fixo na frente (modelo 1): usar `remove-background` do Canva no
-  retrato e sobrepor em PNG.
-- Pergunta de escolha no fim do roteiro, em vez de so a chamada do canal (modelo 4).
-- Musica de verdade com um silencio antes da virada (modelo 3): hoje so ha o som ambiente gerado.
-- Versao "citacao parada" de 15 a 20 s, sem voz, para postar entre os shorts narrados (modelo 2).
+- Mestre Elias recortado e fixo na frente (modelo gravura): `remove-background` do Canva.
+- Gravuras reais de dominio publico, se os dominios de museus forem liberados.
