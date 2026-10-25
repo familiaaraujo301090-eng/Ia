@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Canva__get-generate-image-job",
+      "Bash(ffprobe *)"
+    ]
+  }
+}
