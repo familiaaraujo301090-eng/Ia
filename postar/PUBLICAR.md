@@ -29,3 +29,27 @@ A ordem alterna filosofia e fé para o canal não ficar repetitivo.
 | 19 | 2026-10-25-diogenes-sol | Suas coisas possuem você? | Diógenes a Alexandre: saia da frente do meu sol. 🕯️ #filosofia #diógenes #minimalismo #liberdade |
 | 20 | 2026-10-25-platao-caverna | E se tudo for sombra? | O mito da caverna de Platão e a tela na palma da mão. 🕯️ #filosofia #platão #mitodacaverna #celular |
 | 21 | 2026-10-26-obstaculo-caminho | O obstáculo é o caminho | Marco Aurélio: o que está no caminho se torna o caminho. 🕯️ #estoicismo #marcoaurelio #resiliência #recomeço |
+
+## Serie "Como te manipulam" (modelos virais, alternando)
+| Dia | Arquivo (pasta) | Titulo | Descricao |
+|---|---|---|---|
+| 22 | 2026-10-27-gaslighting | "É coisa da sua cabeça" | Se voce vive pedindo desculpa pelo que nao fez, presta atencao. Confie no que voce viu. 🕯️ #gaslighting #manipulacao #relacionamento #psicologia |
+| 23 | 2026-10-28-citacao-nietzsche-monstros | Quem luta com monstros... | Nietzsche, Alem do bem e do mal, 146. 🕯️ #nietzsche #filosofia #frases |
+| 24 | 2026-10-27-goebbels-repeticao | Goebbels nunca disse isso | A prova de que a repeticao funciona e a propria frase. 🕯️ #manipulacao #propaganda #historia #fakenews |
+| 25 | 2026-10-28-bernays-tochas | Ele te vendeu um sentimento | Edward Bernays e as tochas da liberdade (1929). O que voce comprou este mes que nem queria? 🕯️ #marketing #manipulacao #historia #consumo |
+| 26 | 2026-10-27-citacao-seneca-tempo | Nao e que tenhamos pouco tempo | Seneca, Sobre a brevidade da vida. 🕯️ #seneca #estoicismo #tempo |
+| 27 | 2026-10-28-voce-e-o-produto | O produto e voce | Se voce nao paga pelo produto, o produto e voce. 🕯️ #celular #redessociais #seneca #foco |
+
+## Lote narrativo (hook com voce dentro da historia, payoff e pergunta)
+| Dia | Arquivo (pasta) | Titulo | Descricao |
+|---|---|---|---|
+| 28 | 2026-10-29-milgram-botao | Voce apertaria o botao? | Yale, 1961: 65% foram ate o choque maximo. A responsabilidade nunca sai das suas maos. 🕯️ #milgram #psicologia #obediencia #experimento |
+| 29 | 2026-10-29-asch-conformidade | Todos estao errados, menos voce | O experimento de Asch (1951) e o poder de quem discorda sozinho. 🕯️ #psicologia #asch #manipulacao #coragem |
+| 30 | 2026-10-29-anel-de-giges | O anel da invisibilidade | Platao: voce e honesto ou so tem medo de ser visto? 🕯️ #platao #filosofia #carater #etica |
+| 31 | 2026-10-31-pilatos-verdade | Que e a verdade? | Pilatos fez a pergunta e saiu sem ouvir a resposta. 🕯️ #biblia #fe #pilatos #verdade |
+| 32 | 2026-10-30-maquiavel-temido | Amado ou temido? | O Principe, cap. 17: e a frase que ninguem le. 🕯️ #maquiavel #poder #filosofia #lideranca |
+| 33 | 2026-10-30-maquina-de-experiencias | A vida perfeita e falsa | A maquina de experiencias de Robert Nozick (1974). 🕯️ #filosofia #nozick #felicidade #celular |
+| 34 | 2026-10-31-jonas-fugindo | Do que voce esta fugindo? | Jonas nao fugia do perigo. Fugia da graca. 🕯️ #biblia #jonas #fe #misericordia |
+| 35 | 2026-11-01-pe-na-porta | O primeiro sim | Freedman e Fraser, 1966: de 17% para 76%. 🕯️ #manipulacao #psicologia #persuasao #golpe |
+| 36 | 2026-10-30-socrates-cicuta | A porta estava aberta | Socrates podia fugir. Escolheu cumprir a palavra. 🕯️ #socrates #filosofia #historia #carater |
+| 37 | 2026-11-01-navio-de-teseu | Voce ainda e voce? | O paradoxo do navio de Teseu e quem voce esta se tornando. 🕯️ #filosofia #teseu #identidade #mudanca |
