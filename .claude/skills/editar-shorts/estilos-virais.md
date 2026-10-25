@@ -86,6 +86,9 @@ Gerar 6 imagens no Canva da para o corpo do video, mas nao para a textura de 30 
 - **Camera so avanca.** Zoom que vai e volta na mesma imagem cansa; cada plano so aproxima,
   devagar. O ritmo vem do corte na batida, nao do zoom.
 
+## Descartado
+- **colagem:** o usuario nao gostou (26/10). Nao usar mais; alterne so classico, gravura, tipografia e citacao.
+
 ## Como usar (`shorts/modelos.py`)
 No `video.json`, `"modelo": "gravura" | "tipografia" | "colagem" | "citacao"` (sem a chave, sai o
 classico). Para testar um modelo sem mexer no json: `python shorts/modelos.py <modelo> shorts/<pasta>`

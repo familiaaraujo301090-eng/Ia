@@ -46,7 +46,7 @@ A identidade do canal (nome, personagem, tom, cores) esta em `canal.md` na raiz 
 - Antes de citar alguem, confira a frase e o contexto (ex.: Diogenes encontrou Alexandre em Corinto, nao em Atenas).
 - Use `python shorts/revisar.py folha.png pastas...` para ver 8 quadros de cada video de uma vez.
 - Edits virais trocam a imagem no tempo da musica. Ha 4 modelos em `shorts/modelos.py`
-  (gravura, tipografia, colagem, citacao), com trilha propria gerada por `shorts/trilha.py`.
+  (gravura, tipografia, citacao; a colagem foi descartada pelo usuario em 26/10, nao use), com trilha propria gerada por `shorts/trilha.py`.
   **Um modelo por video**, alternando; nunca misture modelos. Comeco imediato, sem introducao
   parada; camera so avanca (zoom que vai e volta cansa). Detalhes em `estilos-virais.md`.
 - Muitos planos curtos: conte os quadros em tempo absoluto, senao o xfade corta o video no meio.
