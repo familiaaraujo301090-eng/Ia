@@ -1,0 +1,42 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+WrapStyle: 0
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Legenda,Inter ExtraBold,92,&H00FFFFFF,&H00FFFFFF,&H00141414,&H80000000,0,0,0,0,100,100,0,0,1,7,4,2,90,90,600,1
+Style: Titulo,Cinzel,66,&H004CC8F5,&H004CC8F5,&H00101010,&H96000000,1,0,0,0,100,100,2,0,1,4,3,8,90,90,190,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 1,0:00:00.00,0:00:37.00,Titulo,,0,0,0,,{\fad(300,300)}OPS! PIPO DERRUBOU O CASTELO
+Dialogue: 0,0:00:00.30,0:00:00.87,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}Ops!
+Dialogue: 0,0:00:01.12,0:00:02.05,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}O Pipo esbarrou
+Dialogue: 0,0:00:02.05,0:00:03.36,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}e derrubou o castelinho
+Dialogue: 0,0:00:03.36,0:00:04.43,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}de folhas da Tita!
+Dialogue: 0,0:00:05.03,0:00:06.61,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}A Tita ficou triste.
+Dialogue: 0,0:00:06.86,0:00:07.65,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}O Pipo ficou
+Dialogue: 0,0:00:07.65,0:00:09.42,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}com vergonha e quis sair voando,
+Dialogue: 0,0:00:09.42,0:00:10.31,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}bem rapidinho.
+Dialogue: 0,0:00:10.91,0:00:11.96,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}Mas ele parou.
+Dialogue: 0,0:00:12.21,0:00:13.43,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}Lembrou do que a vovó
+Dialogue: 0,0:00:13.43,0:00:14.60,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}coruja sempre dizia:
+Dialogue: 0,0:00:14.60,0:00:15.29,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}quem erra,
+Dialogue: 0,0:00:15.29,0:00:15.92,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}conserta.
+Dialogue: 0,0:00:16.52,0:00:17.77,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}O Pipo voltou e disse:
+Dialogue: 0,0:00:17.77,0:00:18.20,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}Tita,
+Dialogue: 0,0:00:18.20,0:00:18.97,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}me desculpa.
+Dialogue: 0,0:00:19.22,0:00:20.60,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}Eu te ajudo a construir
+Dialogue: 0,0:00:20.60,0:00:21.21,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}de novo!
+Dialogue: 0,0:00:21.81,0:00:23.34,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}Os dois juntaram folhas,
+Dialogue: 0,0:00:23.34,0:00:24.54,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}gravetos e flores.
+Dialogue: 0,0:00:24.79,0:00:26.16,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}E o castelo novo ficou
+Dialogue: 0,0:00:26.16,0:00:27.33,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}ainda mais bonito!
+Dialogue: 0,0:00:27.93,0:00:29.41,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}{\c&H4CC8F5&}Pedir{\c&HFFFFFF&} {\c&H4CC8F5&}desculpa{\c&HFFFFFF&} {\c&H4CC8F5&}é{\c&HFFFFFF&} {\c&H4CC8F5&}coisa{\c&HFFFFFF&}
+Dialogue: 0,0:00:29.41,0:00:31.17,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}{\c&H4CC8F5&}de{\c&HFFFFFF&} {\c&H4CC8F5&}quem{\c&HFFFFFF&} {\c&H4CC8F5&}tem{\c&HFFFFFF&} {\c&H4CC8F5&}coração{\c&HFFFFFF&} {\c&H4CC8F5&}grande.{\c&HFFFFFF&}
+Dialogue: 0,0:00:31.77,0:00:33.82,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}Você já pediu desculpa hoje?
+Dialogue: 0,0:00:34.07,0:00:34.58,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}Pisca,
+Dialogue: 0,0:00:34.58,0:00:35.10,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}pisca,
+Dialogue: 0,0:00:35.10,0:00:35.56,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}Pipo!

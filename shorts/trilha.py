@@ -30,7 +30,10 @@ NOTA = {"A1": 55.0, "C2": 65.41, "D2": 73.42, "E2": 82.41, "F2": 87.31, "G2": 98
 # Progressao sombria classica: Am - F - Dm - E (o E maior da a tensao de volta).
 ACORDES = [("A2", ["A3", "C4", "E4"]), ("F2", ["F3", "A3", "C4"]),
            ("D2", ["D3", "F3", "A3"]), ("E2", ["E3", "G#3", "B3"])]
-CLIMAS = {"sombria": 95, "epica": 128, "piano": 72, "pulso": 81}
+# Progressao alegre em do maior (C - G - Am - F), para o canal infantil.
+ALEGRES = [("C3", ["C4", "E4", "G4"]), ("G2", ["G3", "B3", "D4"]),
+           ("A2", ["A3", "C4", "E4"]), ("F2", ["F3", "A3", "C4"])]
+CLIMAS = {"sombria": 95, "epica": 128, "piano": 72, "pulso": 81, "alegre": 112}
 
 
 def env(n, ataque=0.005, queda=0.5):
@@ -118,7 +121,7 @@ def compor(clima, segundos, pausa=None, semente=3):
 
     for i, t in enumerate(batidas):
         compasso, tempo = divmod(i, 4)
-        grave, acorde = ACORDES[compasso % 4]
+        grave, acorde = (ALEGRES if clima == "alegre" else ACORDES)[compasso % 4]
         if pausa and pausa - batida * 2 <= t < pausa:
             continue  # silencio seco antes da virada
         if clima == "sombria":
@@ -147,6 +150,15 @@ def compor(clima, segundos, pausa=None, semente=3):
             por(tonal, piano(NOTA[acorde[tempo % 3]], 3.0, 1.6), t, 0.33)
             if tempo == 2 and compasso % 2 == 0:
                 por(tonal, piano(NOTA[acorde[1]] * 2, 2.5, 1.2), t + batida / 2, 0.14)
+        elif clima == "alegre":
+            # Baixo saltitante, acorde em colcheias (glockenspiel) e palminha no 2 e 4.
+            por(tonal, piano(NOTA[grave], batida * 0.9, 0.3), t, 0.45)
+            for k, nota in enumerate(acorde + [acorde[1]]):
+                por(tonal, piano(NOTA[nota] * 2, 0.4, 0.18), t + k * batida / 4, 0.16)
+            if tempo in (1, 3):
+                por(ritmo, ruido(0.12, 0.03, rng, passa_alta=False), t, 0.14)
+            if tempo == 0:
+                por(ritmo, bumbo(0.4, 60), t, 0.5)
         elif clima == "pulso":
             if tempo == 0 or (tempo == 2 and compasso % 2):
                 por(ritmo, bumbo(0.9, 40), t, 1.0)

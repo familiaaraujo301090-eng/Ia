@@ -1,0 +1,46 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+WrapStyle: 0
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Legenda,Inter ExtraBold,92,&H00FFFFFF,&H00FFFFFF,&H00141414,&H80000000,0,0,0,0,100,100,0,0,1,7,4,2,90,90,600,1
+Style: Titulo,Cinzel,66,&H004CC8F5,&H004CC8F5,&H00101010,&H96000000,1,0,0,0,100,100,2,0,1,4,3,8,90,90,190,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 1,0:00:00.00,0:00:38.33,Titulo,,0,0,0,,{\fad(300,300)}AI! DOR DE DENTE!
+Dialogue: 0,0:00:00.30,0:00:00.86,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}O Zeca,
+Dialogue: 0,0:00:00.86,0:00:01.57,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}o caracol,
+Dialogue: 0,0:00:01.57,0:00:02.99,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}estava com dor de dente!
+Dialogue: 0,0:00:03.24,0:00:03.58,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}Ai,
+Dialogue: 0,0:00:03.58,0:00:03.92,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}ai,
+Dialogue: 0,0:00:03.92,0:00:04.26,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}ai!
+Dialogue: 0,0:00:04.86,0:00:05.79,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}Ele comia mel,
+Dialogue: 0,0:00:05.79,0:00:06.86,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}comia fruta doce,
+Dialogue: 0,0:00:06.86,0:00:07.89,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}comia de tudo...
+Dialogue: 0,0:00:08.14,0:00:09.33,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}mas nunca escovava
+Dialogue: 0,0:00:09.33,0:00:10.08,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}os dentes.
+Dialogue: 0,0:00:10.68,0:00:11.57,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}O Pipo acendeu
+Dialogue: 0,0:00:11.57,0:00:12.79,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}a sua luzinha e olhou
+Dialogue: 0,0:00:12.79,0:00:14.12,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}dentro da boca do Zeca.
+Dialogue: 0,0:00:14.37,0:00:15.33,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}Que sujeira!
+Dialogue: 0,0:00:15.58,0:00:16.91,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}Os bichinhos da cárie
+Dialogue: 0,0:00:16.91,0:00:18.29,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}estavam fazendo festa!
+Dialogue: 0,0:00:18.89,0:00:20.12,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}Então o Pipo ensinou:
+Dialogue: 0,0:00:20.12,0:00:21.11,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}escova pra cima,
+Dialogue: 0,0:00:21.11,0:00:22.15,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}escova pra baixo,
+Dialogue: 0,0:00:22.15,0:00:22.94,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}faz bolinha,
+Dialogue: 0,0:00:22.94,0:00:23.73,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}faz bolinha!
+Dialogue: 0,0:00:24.33,0:00:25.91,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}O Zeca escovou direitinho,
+Dialogue: 0,0:00:25.91,0:00:27.33,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}depois de comer e antes
+Dialogue: 0,0:00:27.33,0:00:28.06,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}de dormir.
+Dialogue: 0,0:00:28.31,0:00:29.66,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}E a dor foi embora!
+Dialogue: 0,0:00:30.26,0:00:32.28,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}{\c&H4CC8F5&}Dente{\c&HFFFFFF&} {\c&H4CC8F5&}limpinho{\c&HFFFFFF&} {\c&H4CC8F5&}é{\c&HFFFFFF&} {\c&H4CC8F5&}dente{\c&HFFFFFF&} {\c&H4CC8F5&}feliz.{\c&HFFFFFF&}
+Dialogue: 0,0:00:32.88,0:00:33.49,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}E você,
+Dialogue: 0,0:00:33.49,0:00:35.15,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}já escovou os dentes hoje?
+Dialogue: 0,0:00:35.40,0:00:35.91,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}Pisca,
+Dialogue: 0,0:00:35.91,0:00:36.42,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}pisca,
+Dialogue: 0,0:00:36.42,0:00:36.89,Legenda,,0,0,0,,{\fad(60,60)\fscx88\fscy88\t(0,110,\fscx100\fscy100)}Pipo!
