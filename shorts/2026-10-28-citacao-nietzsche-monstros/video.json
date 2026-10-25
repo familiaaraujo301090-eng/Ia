@@ -1,0 +1,11 @@
+{
+  "modelo": "citacao",
+  "imagens": [
+    "1.jpg"
+  ],
+  "citacao": {
+    "texto": "Quem luta com monstros deve cuidar para não se tornar um.",
+    "autor": "Nietzsche, Além do bem e do mal",
+    "duracao": 16
+  }
+}

@@ -62,3 +62,8 @@ imagem numa pagina do design de exportacao `DAHYxf_hmrY` (`add_page` + `insert_f
 Alternar e nunca misturar. Testes feitos: gravura (memento-mori), tipografia (frankl-liberdade),
 colagem (nietzsche-porque), citacao (nova: 2026-10-27-citacao-seneca-tempo, ja no modelo).
 Os 21 videos publicados/postaveis continuam no classico.
+- gaslighting: MAHY_VvqV2k MAHY_YB9P1M MAHY_Y9zWXA MAHY_eOR2fI MAHY_UhuSo0 MAHY_XYvny4
+- goebbels-repeticao: MAHY_TiepbA MAHY_ap3CJA MAHY_So7f4w MAHY_aOokwU MAHY_X3cDwo MAHY_bpcquQ
+- bernays-tochas: MAHY_UqtDaI MAHY_adNL-E MAHY_VwlBWk MAHY_WY29zM MAHY_cf69rg MAHY_dLzkbU
+- voce-e-o-produto: MAHY_Zn4OEk MAHY_QI3WfU MAHY_SedG9U MAHY_a4miL4 MAHY_avVwxs MAHY_eBlgMU
+- citacao-nietzsche-monstros: MAHY_QVpQj0

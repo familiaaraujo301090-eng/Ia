@@ -29,3 +29,13 @@ A ordem alterna filosofia e fé para o canal não ficar repetitivo.
 | 19 | 2026-10-25-diogenes-sol | Suas coisas possuem você? | Diógenes a Alexandre: saia da frente do meu sol. 🕯️ #filosofia #diógenes #minimalismo #liberdade |
 | 20 | 2026-10-25-platao-caverna | E se tudo for sombra? | O mito da caverna de Platão e a tela na palma da mão. 🕯️ #filosofia #platão #mitodacaverna #celular |
 | 21 | 2026-10-26-obstaculo-caminho | O obstáculo é o caminho | Marco Aurélio: o que está no caminho se torna o caminho. 🕯️ #estoicismo #marcoaurelio #resiliência #recomeço |
+
+## Serie "Como te manipulam" (modelos virais, alternando)
+| Dia | Arquivo (pasta) | Titulo | Descricao |
+|---|---|---|---|
+| 22 | 2026-10-27-gaslighting | "É coisa da sua cabeça" | Se voce vive pedindo desculpa pelo que nao fez, presta atencao. Confie no que voce viu. 🕯️ #gaslighting #manipulacao #relacionamento #psicologia |
+| 23 | 2026-10-28-citacao-nietzsche-monstros | Quem luta com monstros... | Nietzsche, Alem do bem e do mal, 146. 🕯️ #nietzsche #filosofia #frases |
+| 24 | 2026-10-27-goebbels-repeticao | Goebbels nunca disse isso | A prova de que a repeticao funciona e a propria frase. 🕯️ #manipulacao #propaganda #historia #fakenews |
+| 25 | 2026-10-28-bernays-tochas | Ele te vendeu um sentimento | Edward Bernays e as tochas da liberdade (1929). O que voce comprou este mes que nem queria? 🕯️ #marketing #manipulacao #historia #consumo |
+| 26 | 2026-10-27-citacao-seneca-tempo | Nao e que tenhamos pouco tempo | Seneca, Sobre a brevidade da vida. 🕯️ #seneca #estoicismo #tempo |
+| 27 | 2026-10-28-voce-e-o-produto | O produto e voce | Se voce nao paga pelo produto, o produto e voce. 🕯️ #celular #redessociais #seneca #foco |
