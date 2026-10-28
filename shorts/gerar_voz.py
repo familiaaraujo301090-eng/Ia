@@ -2,7 +2,10 @@
 """Gera a narracao do Mestre Elias a partir de pasta/roteiro.txt (um paragrafo por linha).
 
 Uso:
-    python gerar_voz.py pasta_do_video/ [voz] [velocidade] [tom]
+    python gerar_voz.py pasta_do_video/ [voz] [velocidade] [tom] [--rapido]
+
+--rapido: ritmo novo (PUBLICO-E-PROGRESSAO.md), com pausas curtas e a primeira palavra ja no
+primeiro quadro; use com velocidade ~1.05.
 
 O tom abaixo de 1 deixa a voz mais grave (0.96 e o padrao, sereno; 0.9 fica bem grave).
 Cria pasta/narracao.wav e pasta/tempos.json ([inicio, fim, texto, paragrafo] de cada frase,
@@ -24,6 +27,8 @@ from kokoro_onnx import Kokoro
 MODELO = Path(__file__).parent / "modelo-voz"
 PAUSA_PARAGRAFO = 0.6  # silencio entre paragrafos: deixa a fala serena sem arrastar
 PAUSA_FRASE = 0.25
+SILENCIO_INICIAL = 0.3
+RAPIDO = {"PAUSA_PARAGRAFO": 0.3, "PAUSA_FRASE": 0.12, "SILENCIO_INICIAL": 0.05}
 
 
 def gerar(pasta, voz="pm_santa", velocidade=0.87, tom=0.96):
@@ -32,7 +37,7 @@ def gerar(pasta, voz="pm_santa", velocidade=0.87, tom=0.96):
     paragrafos = [p.strip() for p in (pasta / "roteiro.txt").read_text(encoding="utf-8").splitlines()
                   if p.strip()]
     taxa = 24000
-    partes, tempos, t = [np.zeros(int(taxa * 0.3), dtype=np.float32)], [], 0.3
+    partes, tempos, t = [np.zeros(int(taxa * SILENCIO_INICIAL), dtype=np.float32)], [], SILENCIO_INICIAL
     for n, paragrafo in enumerate(paragrafos, 1):
         # Uma frase por vez: a legenda de cada frase comeca e termina junto com a fala.
         frases = re.split(r"(?<=[.!?])\s+", paragrafo)
@@ -59,6 +64,10 @@ def gerar(pasta, voz="pm_santa", velocidade=0.87, tom=0.96):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
+    args = sys.argv[1:]
+    if "--rapido" in args:
+        args.remove("--rapido")
+        globals().update(RAPIDO)
+    if not args:
         sys.exit(__doc__)
-    gerar(sys.argv[1], *sys.argv[2:3], *[float(v) for v in sys.argv[3:5]])
+    gerar(args[0], *args[1:2], *[float(v) for v in args[2:4]])

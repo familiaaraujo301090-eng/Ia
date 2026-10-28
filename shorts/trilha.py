@@ -10,6 +10,8 @@ Climas (um para cada modelo de edicao, medidos nos videos virais de referencia):
                      virada, como no video do cavaleiro (modelo tipografia)
     piano    72 BPM  acordes lentos de piano com eco longo (modelo citacao)
     pulso    81 BPM  batida lenta pesada, sino e baixo (modelo colagem)
+    locrio   80 BPM  escala locria dominante em mi (E F G# A Bb C D): drone grave, cordas e
+                     piano no tritono, bumbo pesado em meio tempo (modelo pintura)
 
 Ao lado do .wav sai um .json com {"bpm", "batidas": [segundos...], "compassos": [...]},
 que o editor usa para cortar as imagens no tempo da musica.
@@ -33,7 +35,21 @@ ACORDES = [("A2", ["A3", "C4", "E4"]), ("F2", ["F3", "A3", "C4"]),
 # Progressao alegre em do maior (C - G - Am - F), para o canal infantil.
 ALEGRES = [("C3", ["C4", "E4", "G4"]), ("G2", ["G3", "B3", "D4"]),
            ("A2", ["A3", "C4", "E4"]), ("F2", ["F3", "A3", "C4"])]
-CLIMAS = {"sombria": 95, "epica": 128, "piano": 72, "pulso": 81, "alegre": 112}
+CLIMAS = {"sombria": 95, "epica": 128, "piano": 72, "pulso": 81, "alegre": 112, "locrio": 80}
+
+
+def hz(nome):
+    """'Bb2' -> Hz (afinacao la 440)."""
+    nomes = {"C": 0, "C#": 1, "D": 2, "Eb": 3, "E": 4, "F": 5, "F#": 6, "G": 7, "G#": 8,
+             "A": 9, "Bb": 10, "B": 11}
+    return 440.0 * 2 ** ((nomes[nome[:-1]] + 12 * (int(nome[-1]) + 1) - 69) / 12)
+
+
+# Locrio dominante em mi (E F G# A Bb C D): a terca maior com a quinta diminuta soa antiga e
+# ameacadora. Acordes so com notas da escala: E-G#-Bb, F-A-C, D-F-A, Bb-D-F.
+LOCRIOS = [("E1", ["E3", "G#3", "Bb3"]), ("F1", ["F3", "A3", "C4"]),
+           ("D1", ["D3", "F3", "A3"]), ("Bb0", ["Bb2", "D3", "F3"])]
+MOTIVO = ["E4", "F4", "G#4", "F4", "E4", "Bb3", "C4", "G#3"]
 
 
 def env(n, ataque=0.005, queda=0.5):
@@ -159,6 +175,26 @@ def compor(clima, segundos, pausa=None, semente=3):
                 por(ritmo, ruido(0.12, 0.03, rng, passa_alta=False), t, 0.14)
             if tempo == 0:
                 por(ritmo, bumbo(0.4, 60), t, 0.5)
+        elif clima == "locrio":
+            grave, acorde = LOCRIOS[compasso % 4]
+            if tempo == 0:
+                # Drone grave e cordas segurando o compasso inteiro.
+                por(tonal, piano(hz(grave) * 2, batida * 4.5, 2.5), t, 0.75)
+                por(tonal, corda(hz(grave) * 2, batida * 4, rng), t, 0.3)
+                for nota in acorde:
+                    por(tonal, corda(hz(nota), batida * 4, rng), t, 0.1)
+                por(ritmo, bumbo(1.4, 36), t, 1.0)
+            if tempo == 2 and compasso % 2:
+                por(ritmo, bumbo(0.9, 42), t, 0.6)
+            if tempo == 2:
+                por(ritmo, ruido(0.35, 0.1, rng, passa_alta=False), t, 0.16)
+            # Motivo de piano em colcheias, mais forte a partir do segundo ciclo.
+            if compasso >= 2:
+                for k in range(2):
+                    nota = MOTIVO[(i * 2 + k) % len(MOTIVO)]
+                    por(tonal, piano(hz(nota), 1.6, 0.7), t + k * batida / 2,
+                        0.2 if compasso >= 4 else 0.12)
+            por(ritmo, ruido(0.03, 0.01, rng), t + batida / 2, 0.025)
         elif clima == "pulso":
             if tempo == 0 or (tempo == 2 and compasso % 2):
                 por(ritmo, bumbo(0.9, 40), t, 1.0)

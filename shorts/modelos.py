@@ -10,6 +10,8 @@ Cada modelo copia um dos edits de referencia que o usuario mandou (analise em
                 tamanhos diferentes; a musica para antes da frase-chave (trilha "epica")
     colagem     texturas (papel, preto riscado, mancha vermelha), imagem em xerox com borda
                 rasgada, transicoes variadas na batida, texto dourado digitado (trilha "pulso")
+    pintura     fundo preto e a pintura numa faixa no meio que abre e fecha como cortina;
+                uma palavra branca por vez; trechos so de palavra no preto (trilha "locrio")
     citacao     15 a 20 s sem voz: uma imagem surgindo do preto e a citacao fixa no topo,
                 feita para assistir em loop (trilha "piano")
 
@@ -34,7 +36,8 @@ import trilha
 
 L, A, FPS = base.LARGURA, base.ALTURA, base.FPS
 FOLGA = 0.8
-CLIMA = {"gravura": "sombria", "tipografia": "epica", "colagem": "pulso", "citacao": "piano"}
+CLIMA = {"gravura": "sombria", "tipografia": "epica", "colagem": "pulso", "citacao": "piano",
+         "pintura": "locrio"}
 TEXTURAS = Path(__file__).parent / "texturas"
 CORTE_SECO = 1 / FPS
 
@@ -486,8 +489,115 @@ def modelo_citacao(dados):
     return planos, legendas, musica, pos
 
 
+# ---------- modelo 5: pintura ----------
+
+FAIXA = {"faixa": 660, "alta": 1100}  # altura do quadro aberto
+CENTRO_FAIXA = 900  # centro vertical do quadro
+
+
+def suave(x):
+    x = min(max(x, 0.0), 1.0)
+    return 1 - (1 - x) ** 3
+
+
+def video_pintura(dados, trechos, destino):
+    """Desenha quadro a quadro: preto, e a pintura recortada numa faixa que abre do centro
+    (como cortina), fica e fecha. A camera so avanca devagar dentro da faixa."""
+    total = dados["total"]
+    quadros = round(total * FPS)
+    preparadas = {}
+    for k, (fonte, formato, foco, a, b) in enumerate(trechos):
+        if fonte is None:
+            continue
+        img = Image.open(fonte).convert("RGB")
+        img = ImageOps.fit(img, (L, round(L * img.height / img.width)))
+        # Tom de pintura antiga: um pouco menos saturada e mais escura.
+        arr = np.asarray(img).astype(np.float32)
+        cinza = arr.mean(2, keepdims=True)
+        arr = (cinza + (arr - cinza) * 0.85) * 0.9
+        # Pintura muito escura some no preto do fundo: clareia ate um brilho medio minimo.
+        media = arr.mean()
+        if media < 62:
+            arr = 255 * (arr / 255) ** (np.log(62 / 255) / np.log(media / 255))
+        preparadas[k] = Image.fromarray(arr.clip(0, 255).astype(np.uint8))
+    proc = subprocess.Popen(
+        ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24",
+         "-s", f"{L}x{A}", "-r", str(FPS), "-i", "-", "-c:v", "libx264", "-preset", "veryfast",
+         "-crf", "17", "-pix_fmt", "yuv420p", str(destino)], stdin=subprocess.PIPE)
+    preto = np.zeros((A, L, 3), np.uint8)
+    for q in range(quadros):
+        t = q / FPS
+        k = next((i for i, tr in enumerate(trechos) if tr[3] <= t < tr[4]), len(trechos) - 1)
+        fonte, formato, foco, a, b = trechos[k]
+        if fonte is None:
+            proc.stdin.write(preto.tobytes())
+            continue
+        cheia = FAIXA[formato]
+        anterior = trechos[k - 1] if k else None
+        seguinte = trechos[k + 1] if k + 1 < len(trechos) else None
+        abre = not (anterior and anterior[0] is not None and anterior[1] == formato)
+        fecha = not (seguinte and seguinte[0] is not None and seguinte[1] == formato)
+        dur = b - a
+        abertura = min(1.6, dur * 0.35) if abre else 0
+        fechamento = min(0.45, dur * 0.15) if fecha else 0
+        h = cheia
+        if abertura and t - a < abertura:
+            h = 8 + (cheia - 8) * suave((t - a) / abertura)
+        if fechamento and b - t < fechamento:
+            h = min(h, 8 + (cheia - 8) * suave((b - t) / fechamento))
+        h = max(2, int(h) // 2 * 2)
+        img = preparadas[k]
+        zoom = 1.0 + 0.06 * (t - a) / max(dur, 0.1)
+        larg, alt = round(L * zoom), round(img.height * zoom)
+        grande = img.resize((larg, alt), Image.BILINEAR)
+        # O assunto (foco) fica no centro da faixa; a faixa mostra so a fatia do meio.
+        cy = foco * alt
+        topo = int(min(max(cy - h / 2, 0), alt - h))
+        esq = (larg - L) // 2
+        fatia = np.asarray(grande.crop((esq, topo, esq + L, topo + h)))
+        quadro = preto.copy()
+        y0 = CENTRO_FAIXA - h // 2
+        quadro[y0:y0 + h] = fatia
+        proc.stdin.write(quadro.tobytes())
+    proc.stdin.close()
+    proc.wait()
+    return destino
+
+
+def modelo_pintura(dados):
+    musica, batidas = faixa_musical(dados)
+    cfg = dados["cfg"]
+    formatos = cfg.get("formatos") or ["faixa"] * len(dados["imagens"])
+    focos = cfg.get("focos") or [0.5] * len(dados["imagens"])
+    trechos = []
+    for i, a, b in cenas(dados, batidas):
+        nome = cfg["imagens"][i]
+        fonte = None if nome in (None, "preto") else dados["imagens"][i]
+        trechos.append((fonte, formatos[i], focos[i], a, b))
+    video = video_pintura(dados, trechos, dados["pasta"] / "pintura.mp4")
+    planos = [plano(video, 0.0, dados["total"], tipo="video")]
+    legendas = cabecalho([
+        f"Style: Palavra,{base.FONTE_LEGENDA},84,&H00FFFFFF,&H00FFFFFF,&H00101010,&H90000000,"
+        "0,0,0,0,100,100,1,0,1,2,4,5,60,60,0,1",
+        f"Style: Marca,{base.FONTE_LEGENDA},30,&H00808080,&H00808080,&H00000000,&H00000000,"
+        "0,0,0,0,100,100,14,0,1,0,0,5,60,60,0,1",
+    ])
+    lista = palavras_com_tempo(dados["tempos"])
+    for k, (palavra, ini, fim, destaque, _) in enumerate(lista):
+        if k + 1 < len(lista) and lista[k + 1][1] - fim < 0.8:
+            fim = lista[k + 1][1]
+        texto = palavra.strip(".,;:!?").upper()
+        cor = "\\c&H4CC8F5&" if destaque else ""
+        # Cada palavra entra com um pequeno "pulo" (de 88% a 100% em 80 ms).
+        legendas.append(dialogo(0, ini, fim, "Palavra",
+                                f"{{\\pos(540,1110){cor}\\fscx88\\fscy88\\t(0,80,\\fscx100\\fscy100)}}{texto}"))
+    legendas.append(dialogo(0, 0, dados["total"], "Marca", "{\\pos(540,1530)}@LAMPARINA"))
+    pos = "noise=alls=6:allf=t,vignette=PI/5,"
+    return planos, legendas, musica, pos
+
+
 MONTADORES = {"gravura": modelo_gravura, "tipografia": modelo_tipografia,
-              "colagem": modelo_colagem, "citacao": modelo_citacao}
+              "colagem": modelo_colagem, "citacao": modelo_citacao, "pintura": modelo_pintura}
 
 
 def montar(pasta, cfg, modelo=None, saida=None):

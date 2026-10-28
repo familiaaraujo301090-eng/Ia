@@ -48,6 +48,16 @@ Analise quadro a quadro (cortes, texto, audio) de 4 videos que o usuario mandou 
   clarao de 3 quadros e escurecida; linha de papel rasgado cruzando a tela e textura vermelha
   entrando atras dela. Arranhoes e poeira mexem em todos os quadros. Texto digitado letra a letra.
 
+## 5. "Pintura em faixa" (@vozfilosofa, TikTok, vertical, 64 s), recebido em 28/10
+- Fundo preto o video todo. A pintura classica aparece numa **faixa horizontal no meio**
+  (largura toda, ~1/3 da altura) que **abre do centro como cortina**, a partir de uma linha fina,
+  fica aberta e **fecha** antes do trecho seguinte. Algumas pinturas usam faixa mais alta (retrato).
+- Entre as pinturas, trechos **so de palavra no preto** (a frase de impacto).
+- **Uma palavra por vez**, branca, sem serifa e grossa, em maiusculas, no terco de baixo da faixa,
+  trocando no ritmo da fala (~0,35 s). Marca d'agua do perfil, cinza e espacada, embaixo.
+- So 5 ou 6 pinturas em 60 s: quem segura e a voz rapida (~160 palavras/min) e a palavra.
+- Musica escura e lenta (~80 BPM) por baixo da narracao. O usuario pediu "Locrian Dominant".
+
 ## Imagem: mudar o jeito de fazer
 Gerar 6 imagens no Canva da para o corpo do video, mas nao para a textura de 30 imagens em 2 s.
 - `shorts/gravura.py` transforma qualquer imagem em **gravura antiga** (hachura diagonal, cruzada
@@ -103,6 +113,11 @@ gera `short-<modelo>.mp4`.
   inclinada; troca a cada compasso com transicao diferente (clarao, cortina, zoom, desfoque);
   texto dourado digitado letra a letra na faixa de cima. Trilha "pulso". Termine o roteiro com
   uma pergunta de escolha ("e voce, aceitaria?").
+- **pintura:** fundo preto e a faixa que abre e fecha. No video.json: `"formatos"` (uma por
+  imagem: `"faixa"` ou `"alta"`) e `"preto"` no lugar do nome da imagem para um trecho so de
+  palavra. `focos` diz que altura da imagem fica no centro da faixa. Imagens escuras sao
+  clareadas sozinhas. Trilha "locrio" (escala locria dominante, 80 BPM). Voz com
+  `gerar_voz.py pasta pm_santa 1.05 0.96 --rapido`.
 - **citacao:** 15 a 20 s, sem voz. `"citacao": {"texto", "autor", "duracao", "imagem"}`. Texto
   em faixa branca no topo desde o primeiro quadro, imagem surgindo do preto. Trilha "piano".
 

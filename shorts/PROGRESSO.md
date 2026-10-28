@@ -80,3 +80,7 @@ Os 21 videos publicados/postaveis continuam no classico.
 
 ## Lote narrativo (26/10): 10 videos, modelos alternados
 gravura: asch, socrates, teseu | colagem: giges, maquiavel, pe-na-porta | tipografia: maquina, jonas | classico: milgram, pilatos
+
+## Modelo novo "pintura" (28/10), copiado do edit viral do @vozfilosofa
+- epicteto-perna: MAHZRU8Awno MAHZRTXj9po MAHZRQjPzHM MAHZRbH1A7Y MAHZRWsSF2I MAHZRfVXjgc MAHZRedNCsU
+  Primeiro video no ritmo rapido (voz 1.05, `--rapido`, 161 palavras/min) e com a trilha "locrio".
