@@ -27,3 +27,4 @@ animacao3d/saida/*/cena.blend*
 animacao3d/saida/render.log
 animacao3d/teste_eevee.py
 __pycache__/
+animacao3d/saida/*.log
