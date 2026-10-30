@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Pipeline completo de um curta 3D, sem editor de video:
 
+    python gerar.py preparar [historia]  (historia: chave de historia.HISTORIAS)
     python gerar.py preparar   narracao + cena 3D (.blend) + folhas (personagem, cenario, storyboard)
     python gerar.py quadros    renderiza os quadros (retoma de onde parou; pode rodar em segundo plano)
     python gerar.py finalizar  junta quadros, voz, trilha e legendas em saida/<nome>/video.mp4
@@ -27,10 +28,11 @@ import historia  # noqa: E402
 import materiais  # noqa: E402
 import personagem  # noqa: E402
 
-NOME = "lamparina-mais-antiga"
-HIST = historia.LAMPARINA
+NOME = sys.argv[2] if len(sys.argv) > 2 else "lamparina-mais-antiga"
+HIST = historia.HISTORIAS[NOME]
 SAIDA = AQUI / "saida" / NOME
-LARG, ALT, AMOSTRAS = 540, 960, 10
+LARG, ALT, AMOSTRAS = 540, 960, 8
+PASSO = 2  # renderiza 1 quadro a cada 2; o ffmpeg interpola os do meio (metade do tempo)
 VOZ = ("pm_alex", "1.0", "0.95")  # voz nova, a pedido do usuario (a pm_santa cansou)
 
 
@@ -60,7 +62,7 @@ def construir(tempos, total):
     cenario.criar(col, m)
     p = personagem.criar(col, m)
     faixas = historia.tempos_dos_planos(tempos, total)
-    historia.aplicar_acoes(p, HIST["planos"], faixas)
+    historia.aplicar_acoes(p, HIST["planos"], faixas, HIST.get("inicio"))
     historia.criar_cameras(HIST["planos"], faixas, col, cena)
     cena.frame_start, cena.frame_end = 0, faixas[-1][1]
     personagem.tremular(p, 0, cena.frame_end)
@@ -136,7 +138,7 @@ def quadros():
     cena.render.use_persistent_data = True
     pasta = SAIDA / "quadros"
     pasta.mkdir(exist_ok=True)
-    for f in range(cena.frame_start, cena.frame_end + 1):
+    for f in range(cena.frame_start, cena.frame_end + 1, PASSO):
         destino = pasta / f"{f:05d}.png"
         if destino.exists():
             continue
@@ -160,14 +162,18 @@ def finalizar():
         leg.append(modelos.dialogo(0, a, b, "P", f"{{{cor}\\fscx88\\fscy88\\t(0,80,\\fscx100\\fscy100)}}{w.strip('.,;:!?').upper()}"))
     (SAIDA / "legendas.ass").write_text("\n".join(leg) + "\n", encoding="utf-8")
     import trilha
-    total = len(list((SAIDA / "quadros").glob("*.png"))) / historia.FPS
+    feitos = sorted(q for q in (SAIDA / "quadros").glob("*.png") if int(q.stem) % PASSO == 0)
+    total = len(feitos) * PASSO / historia.FPS
+    (SAIDA / "quadros.txt").write_text("".join(f"file 'quadros/{q.name}'\nduration {PASSO / historia.FPS:.5f}\n"
+                                                for q in feitos), encoding="utf-8")
     audio, info = trilha.compor("piano", total + 0.5)
     trilha.salvar(SAIDA / "trilha.wav", audio, info)
     fontes = SHORTS / "fontes"
     subprocess.run([
-        "ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-framerate", str(historia.FPS),
-        "-i", "quadros/%05d.png", "-i", "narracao.wav", "-i", "trilha.wav", "-filter_complex",
-        f"[0:v]scale=1080:1920:flags=lanczos,subtitles=legendas.ass:fontsdir='{fontes}',"
+        "ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-f", "concat", "-safe", "0",
+        "-i", "quadros.txt", "-i", "narracao.wav", "-i", "trilha.wav", "-filter_complex",
+        f"[0:v]fps={historia.FPS / PASSO},minterpolate=fps={historia.FPS}:mi_mode=mci:mc_mode=aobmc:vsbmc=1,"
+        f"scale=1080:1920:flags=lanczos,subtitles=legendas.ass:fontsdir='{fontes}',"
         f"fade=t=in:st=0:d=0.3,fade=t=out:st={total - 0.5:.2f}:d=0.5[v];"
         "[2:a]volume=0.09[m];[1:a]apad[voz];[voz][m]amix=inputs=2:duration=shortest:normalize=0,"
         "loudnorm=I=-14:TP=-1.5[a]",

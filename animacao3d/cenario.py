@@ -100,7 +100,7 @@ def criar(col, m, semente=3):
     for i in range(5):
         _cubo("livro_mesa", (1.3 + 0.02 * i, -0.2, 0.84 + 0.05 * i), (0.32, 0.24, 0.045),
               rnd.choice([m["capa1"], m["capa2"], m["capa3"]]), col).rotation_euler = (0, 0, rnd.uniform(-0.3, 0.3))
-    _cubo("livro_aberto", (1.9, -0.5, 0.82), (0.5, 0.34, 0.02), m["papel"], col)
+    _cubo("livro_aberto", (1.9, -0.5, 0.82), (0.5, 0.34, 0.02), m["pagina"], col)
     bpy.ops.mesh.primitive_cylinder_add(radius=0.03, depth=0.18, location=(2.2, -0.2, 0.9))
     bpy.context.object.data.materials.append(m["papel"])
     bpy.ops.mesh.primitive_uv_sphere_add(radius=1, location=(2.2, -0.2, 1.01))

@@ -58,6 +58,28 @@ def emissao(nome, cor, forca):
     return m
 
 
+def pagina(nome="pagina"):
+    """Papel com linhas de escrita (faixas finas de tinta) e manchas de desenho."""
+    m, nt = _base(nome)
+    if nt is None:
+        return m
+    p = nt.nodes["Principled BSDF"]
+    p.inputs["Roughness"].default_value = 0.9
+    ondas = nt.nodes.new("ShaderNodeTexWave")
+    ondas.bands_direction = "Y"
+    ondas.inputs["Scale"].default_value = 12
+    ondas.inputs["Distortion"].default_value = 2
+    ondas.inputs["Detail"].default_value = 2
+    rampa = nt.nodes.new("ShaderNodeValToRGB")
+    rampa.color_ramp.elements[0].position = 0.82
+    rampa.color_ramp.elements[0].color = (0.70, 0.60, 0.42, 1)
+    rampa.color_ramp.elements[1].position = 0.9
+    rampa.color_ramp.elements[1].color = (0.18, 0.12, 0.08, 1)
+    nt.links.new(ondas.outputs["Fac"], rampa.inputs["Fac"])
+    nt.links.new(rampa.outputs["Color"], p.inputs["Base Color"])
+    return m
+
+
 def paleta():
     return {
         "la": simples("la_marrom", (0.075, 0.04, 0.022), 0.95, ruido=0.35, escala_ruido=120, bump=0.25),
@@ -70,6 +92,7 @@ def paleta():
         "chama": emissao("chama", (1.0, 0.55, 0.15), 10),
         "pedra": simples("pedra", (0.22, 0.20, 0.18), 0.9, ruido=0.5, escala_ruido=6, bump=0.4),
         "madeira": simples("madeira", (0.13, 0.07, 0.035), 0.7, ruido=0.45, escala_ruido=12, bump=0.15),
+        "pagina": pagina(),
         "papel": simples("papel", (0.70, 0.60, 0.42), 0.9, ruido=0.2, escala_ruido=15),
         "capa1": simples("capa1", (0.30, 0.06, 0.04), 0.7, ruido=0.3, escala_ruido=20),
         "capa2": simples("capa2", (0.07, 0.12, 0.08), 0.7, ruido=0.3, escala_ruido=20),

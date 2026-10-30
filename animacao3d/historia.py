@@ -8,7 +8,8 @@ Camera de cada plano:
     {"de", "ate", "alvo" ou "alvo_de"/"alvo_ate", "lente", "dof"}   -> travelling / grua / aproximacao
     {"orbita": True, "centro", "raio", "a0", "a1", "h", "lente"}     -> gira em volta (angulos em graus,
                                                                        0 = de frente para o personagem)
-Acoes: ("andar", t0, t1, y_de, y_ate), ("girar", t0, t1, graus_de, graus_ate),
+Inicio opcional: "inicio": {"pos": (x, y), "rot": graus} (posicao e direcao do personagem no quadro 0).
+Acoes: ("andar", t0, t1, y_de, y_ate), ("olhar", t0, t1, (incl_de, giro_de), (incl_ate, giro_ate)), ("girar", t0, t1, graus_de, graus_ate),
        ("erguer", t0, t1, graus_de, graus_ate), ("acenar", t0, t1). t0/t1 = fracao do plano.
 """
 import math
@@ -69,10 +70,11 @@ def _suave(t):
     return t * t * (3 - 2 * t)
 
 
-def aplicar_acoes(p, planos, faixas):
+def aplicar_acoes(p, planos, faixas, inicio=None):
     raiz, bracos, cab = p["raiz"], p["bracos"], p["cabeca"]
-    _chave(raiz, "location", (0, 1.6, 0), 0)
-    _chave(raiz, "rotation_euler", (0, 0, 0), 0)
+    ini = inicio or {"pos": (0, 1.6), "rot": 0}
+    _chave(raiz, "location", (*ini["pos"], 0), 0)
+    _chave(raiz, "rotation_euler", (0, 0, math.radians(ini["rot"])), 0)
     _chave(bracos, "rotation_euler", (0, 0, 0), 0)
     _chave(cab, "rotation_euler", (0, 0, 0), 0)
     for plano, (q0, q1) in zip(planos, faixas):
@@ -99,6 +101,10 @@ def aplicar_acoes(p, planos, faixas):
             elif nome == "erguer":
                 _chave(bracos, "rotation_euler", (math.radians(acao[3]), 0, 0), f0)
                 _chave(bracos, "rotation_euler", (math.radians(acao[4]), 0, 0), f1)
+            elif nome == "olhar":
+                (i0, g0), (i1, g1) = acao[3], acao[4]
+                _chave(cab, "rotation_euler", (math.radians(i0), 0, math.radians(g0)), f0)
+                _chave(cab, "rotation_euler", (math.radians(i1), 0, math.radians(g1)), f1)
             elif nome == "acenar":
                 meio = (f0 + f1) // 2
                 _chave(cab, "rotation_euler", (0, 0, 0), f0)
@@ -149,3 +155,39 @@ def criar_cameras(planos, faixas, col, cena):
         cams.append(cam)
     cena.camera = cams[0]
     return cams
+
+
+CODEX = {
+    "titulo": "O caderno de 30 milhoes",
+    "inicio": {"pos": (0.85, -0.4), "rot": 90},
+    "roteiro": [
+        "Existe um caderno que vale mais do que esta biblioteca inteira.",
+        "No começo do século dezesseis, Leonardo da Vinci encheu suas páginas com desenhos sobre a água, a Lua e as rochas.",
+        "E escreveu quase tudo ao contrário, da direita para a esquerda. Para ler com facilidade, só com um espelho.",
+        "Em 1994, Bill Gates comprou esse caderno, o Codex Leicester, por mais de trinta milhões de dólares.",
+        "*Uma ideia anotada à mão pode valer mais que ouro.*",
+        "E você, anota as suas ideias? Segue a Lamparina.",
+    ],
+    "planos": [
+        {"desc": "Plano geral. Elias esta de pe diante da mesa, iluminando os livros.",
+         "cam": {"de": (-1.3, -3.7, 1.75), "ate": (-0.5, -2.9, 1.55), "alvo": (1.3, -0.4, 1.1), "lente": 30},
+         "acoes": [("olhar", 0, 1, (10, 0), (20, 0))]},
+        {"desc": "Close no livro aberto sobre a mesa; Elias aproxima a lamparina das paginas.",
+         "cam": {"de": (1.55, -1.2, 1.4), "ate": (1.75, -0.9, 1.2), "alvo": (1.9, -0.5, 0.83), "lente": 45, "dof": True},
+         "acoes": [("erguer", 0, 0.5, 0, 18)]},
+        {"desc": "A camera gira em volta de Elias e da mesa, mostrando a biblioteca.",
+         "cam": {"orbita": True, "centro": (1.2, -0.4, 1.2), "raio": 2.1, "a0": -25, "a1": 30, "h": 1.6, "lente": 30},
+         "acoes": [("erguer", 0, 0.3, 18, 0), ("olhar", 0.2, 0.8, (20, 0), (5, 25))]},
+        {"desc": "Elias se vira para quem assiste; aproximacao lenta ate o close.",
+         "cam": {"de": (0.95, -2.7, 1.7), "ate": (0.87, -1.5, 1.68), "alvo": (0.85, -0.46, 1.66), "lente": 50, "dof": True},
+         "acoes": [("olhar", 0, 0.2, (5, 25), (0, 0)), ("girar", 0, 0.35, 90, 0)]},
+        {"desc": "Contra-plongee: Elias ergue a lamparina bem alto; a camera gira por baixo.",
+         "cam": {"orbita": True, "centro": (0.85, -0.4, 1.55), "raio": 2.2, "a0": -40, "a1": -80, "h": 0.45, "lente": 26},
+         "acoes": [("erguer", 0.1, 0.45, 0, -80)]},
+        {"desc": "Final: Elias abaixa a lamparina, olha para a camera e acena com a cabeca.",
+         "cam": {"de": (0.85, -3.3, 1.5), "ate": (0.85, -2.5, 1.55), "alvo": (0.85, -0.4, 1.45), "lente": 40},
+         "acoes": [("erguer", 0, 0.3, -80, 0), ("acenar", 0.45, 0.8)]},
+    ],
+}
+
+HISTORIAS = {"lamparina-mais-antiga": LAMPARINA, "codex-leicester": CODEX}
