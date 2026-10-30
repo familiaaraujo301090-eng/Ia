@@ -27,6 +27,7 @@ import folhas  # noqa: E402
 import historia  # noqa: E402
 import materiais  # noqa: E402
 import personagem  # noqa: E402
+import processo  # noqa: E402
 
 NOME = sys.argv[2] if len(sys.argv) > 2 else "lamparina-mais-antiga"
 HIST = historia.HISTORIAS[NOME]
@@ -64,6 +65,8 @@ def construir(tempos, total):
     faixas = historia.tempos_dos_planos(tempos, total)
     historia.aplicar_acoes(p, HIST["planos"], faixas, HIST.get("inicio"))
     historia.criar_cameras(HIST["planos"], faixas, col, cena)
+    if HIST.get("extra"):
+        getattr(processo, HIST["extra"])(col, m, faixas)
     cena.frame_start, cena.frame_end = 0, faixas[-1][1]
     personagem.tremular(p, 0, cena.frame_end)
     bpy.ops.wm.save_as_mainfile(filepath=str(SAIDA / "cena.blend"))
@@ -148,6 +151,36 @@ def quadros():
         print(f"quadro {f}/{cena.frame_end}", flush=True)
 
 
+def contador_de_passos(tempos):
+    """Formato processo: 'PASSO n/N' + nome do passo + barra de progresso no topo, um por plano."""
+    import modelos
+    tot = float(subprocess.check_output(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of",
+                                         "csv=p=0", str(SAIDA / "narracao.wav")])) + 1.0
+    faixas = historia.tempos_dos_planos(tempos, tot)[1:1 + len(HIST["passos"])]
+    n = len(HIST["passos"])
+    linhas = [
+        "Style: Passo,Inter ExtraBold,64,&H004CC8F5,&H004CC8F5,&H00101010,&H96000000,0,0,0,0,100,100,2,0,1,3,2,8,60,60,150,1",
+        "Style: Nome,Inter ExtraBold,40,&H00FFFFFF,&H00FFFFFF,&H00101010,&H96000000,0,0,0,0,100,100,6,0,1,3,2,8,60,60,235,1",
+        "Style: Barra,Inter ExtraBold,20,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,7,0,0,0,1",
+    ]
+    eventos = []
+    largura = 760
+    for i, (nome, (q0, q1)) in enumerate(zip(HIST["passos"], faixas), 1):
+        a, b = q0 / historia.FPS, (q1 + 1) / historia.FPS
+        eventos.append(modelos.dialogo(2, a, b, "Passo", f"{{\\fad(120,0)}}PASSO {i}/{n}"))
+        eventos.append(modelos.dialogo(2, a, b, "Nome", f"{{\\fad(120,0)}}{nome}"))
+        x0, y0 = (1080 - largura) // 2, 310
+        fundo = f"{{\\pos({x0},{y0})\\c&H303030&\\alpha&H40&\\p1}}m 0 0 l {largura} 0 {largura} 14 0 14{{\\p0}}"
+        cheio = largura * i // n
+        antes = largura * (i - 1) // n
+        barra = (f"{{\\pos({x0},{y0})\\c&H4CC8F5&\\p1\\clip(0,0,{x0 + antes},1920)\\t(0,600,\\clip(0,0,{x0 + cheio},1920))}}"
+                 f"m 0 0 l {largura} 0 {largura} 14 0 14{{\\p0}}")
+        eventos.append(modelos.dialogo(1, a, b, "Barra", fundo))
+        eventos.append(modelos.dialogo(2, a, b, "Barra", barra))
+    # Os estilos novos entram junto com os do cabecalho principal.
+    return ["#ESTILOS#" + "|".join(linhas)] + eventos
+
+
 def finalizar():
     import modelos
     tempos = json.loads((SAIDA / "tempos.json").read_text(encoding="utf-8"))
@@ -160,6 +193,12 @@ def finalizar():
             b = pal[k + 1][1]
         cor = "\\c&H4CC8F5&" if dest else ""
         leg.append(modelos.dialogo(0, a, b, "P", f"{{{cor}\\fscx88\\fscy88\\t(0,80,\\fscx100\\fscy100)}}{w.strip('.,;:!?').upper()}"))
+    if HIST.get("passos"):
+        extra = contador_de_passos(tempos)
+        estilos = extra[0].replace("#ESTILOS#", "").split("|")
+        i = next(k for k, l in enumerate(leg) if l.startswith("Style: P,"))
+        leg[i + 1:i + 1] = estilos
+        leg += extra[1:]
     (SAIDA / "legendas.ass").write_text("\n".join(leg) + "\n", encoding="utf-8")
     import trilha
     feitos = sorted(q for q in (SAIDA / "quadros").glob("*.png") if int(q.stem) % PASSO == 0)

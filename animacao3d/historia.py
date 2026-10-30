@@ -190,4 +190,47 @@ CODEX = {
     ],
 }
 
-HISTORIAS = {"lamparina-mais-antiga": LAMPARINA, "codex-leicester": CODEX}
+LIVRO_MEDIEVAL = {
+    "titulo": "Como se fazia um livro",
+    "inicio": {"pos": (0.85, -0.4), "rot": 90},
+    "extra": "criar_livro_medieval",  # funcao de processo.py que monta o objeto passo a passo
+    "passos": ["PERGAMINHO", "TINTA", "PENA", "COPIA", "ENCADERNACAO"],  # planos 2 a 6
+    "roteiro": [
+        "Para fazer um único livro na Idade Média, eram precisas as peles de centenas de animais. Veja o processo.",
+        "Passo um: a pele era lavada, raspada e esticada num bastidor até virar pergaminho.",
+        "Passo dois: a tinta vinha de galhas de carvalho, misturadas com ferro.",
+        "Passo três: uma pena de ganso, cortada na ponta, virava a caneta.",
+        "Passo quatro: um monge copiava cada letra à mão, durante meses.",
+        "Passo cinco: as folhas eram costuradas e presas entre tábuas cobertas de couro.",
+        "*Cada livro desta sala custou meses de trabalho de alguém.*",
+        "Qual passo você não aguentaria fazer? Segue a Lamparina.",
+    ],
+    "planos": [
+        {"desc": "Gancho: plano geral, Elias diante da mesa vazia.",
+         "cam": {"de": (-1.3, -3.7, 1.75), "ate": (-0.5, -2.9, 1.55), "alvo": (1.3, -0.4, 1.0), "lente": 30},
+         "acoes": [("olhar", 0, 1, (10, 0), (22, 0))]},
+        {"desc": "Passo 1: o bastidor surge e o pergaminho se desenrola.",
+         "cam": {"de": (1.55, -1.35, 1.5), "ate": (1.55, -1.1, 1.32), "alvo": (1.58, -0.45, 0.82), "lente": 38, "dof": True},
+         "acoes": []},
+        {"desc": "Passo 2: tinteiro e galhas de carvalho aparecem; a camera gira.",
+         "cam": {"orbita": True, "centro": (1.95, -0.6, 0.86), "raio": 0.7, "a0": -25, "a1": 25, "h": 1.15, "lente": 45, "dof": True},
+         "acoes": []},
+        {"desc": "Passo 3: a pena de ganso surge e desce ate o tinteiro.",
+         "cam": {"de": (2.4, -1.05, 1.12), "ate": (2.25, -0.95, 1.02), "alvo": (1.95, -0.64, 0.95), "lente": 50, "dof": True},
+         "acoes": []},
+        {"desc": "Passo 4: as linhas de texto vao sendo escritas no pergaminho.",
+         "cam": {"de": (1.58, -0.95, 1.65), "ate": (1.58, -0.8, 1.38), "alvo": (1.58, -0.45, 0.83), "lente": 40},
+         "acoes": []},
+        {"desc": "Passo 5: o miolo cresce e a capa de couro fecha o livro; a camera gira.",
+         "cam": {"orbita": True, "centro": (1.55, -0.45, 0.86), "raio": 0.85, "a0": 30, "a1": -30, "h": 1.2, "lente": 40, "dof": True},
+         "acoes": []},
+        {"desc": "Elias se vira para quem assiste; aproximacao ate o close.",
+         "cam": {"de": (0.95, -2.7, 1.7), "ate": (0.87, -1.5, 1.68), "alvo": (0.85, -0.46, 1.66), "lente": 50, "dof": True},
+         "acoes": [("olhar", 0, 0.2, (22, 0), (0, 0)), ("girar", 0, 0.35, 90, 0)]},
+        {"desc": "Final: Elias olha para a camera e acena com a cabeca.",
+         "cam": {"de": (0.85, -3.3, 1.5), "ate": (0.85, -2.5, 1.55), "alvo": (0.85, -0.4, 1.45), "lente": 40},
+         "acoes": [("acenar", 0.3, 0.7)]},
+    ],
+}
+
+HISTORIAS = {"lamparina-mais-antiga": LAMPARINA, "codex-leicester": CODEX, "livro-medieval": LIVRO_MEDIEVAL}
