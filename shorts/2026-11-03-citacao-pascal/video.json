@@ -1,0 +1,11 @@
+{
+  "modelo": "citacao",
+  "imagens": [
+    "1.jpg"
+  ],
+  "citacao": {
+    "texto": "O coração tem razões que a própria razão desconhece.",
+    "autor": "Blaise Pascal, Pensamentos",
+    "duracao": 16
+  }
+}

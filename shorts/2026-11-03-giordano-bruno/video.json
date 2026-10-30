@@ -1,0 +1,38 @@
+{
+  "titulo": "Ele não negou nem diante da fogueira",
+  "narracao": "narracao.wav",
+  "tempos": "tempos.json",
+  "imagens": [
+    "1.jpg",
+    "2.jpg",
+    "3.jpg",
+    "preto",
+    "4.jpg",
+    "5.jpg"
+  ],
+  "cenas": [
+    1,
+    2,
+    4,
+    5,
+    6,
+    7
+  ],
+  "modelo": "pintura",
+  "formatos": [
+    "faixa",
+    "alta",
+    "faixa",
+    "faixa",
+    "alta",
+    "faixa"
+  ],
+  "focos": [
+    0.35,
+    0.35,
+    0.35,
+    0.5,
+    0.35,
+    0.4
+  ]
+}

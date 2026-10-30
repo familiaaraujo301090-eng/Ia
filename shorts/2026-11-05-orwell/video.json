@@ -1,0 +1,20 @@
+{
+  "titulo": "Sem a palavra, sem a ideia",
+  "narracao": "narracao.wav",
+  "tempos": "tempos.json",
+  "imagens": [
+    "1.jpg",
+    "2.jpg",
+    "3.jpg",
+    "4.jpg",
+    "5.jpg"
+  ],
+  "cenas": [
+    1,
+    2,
+    3,
+    5,
+    6
+  ],
+  "modelo": "tipografia"
+}

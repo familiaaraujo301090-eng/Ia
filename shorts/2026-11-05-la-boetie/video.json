@@ -1,0 +1,38 @@
+{
+  "titulo": "Um só homem manda em milhões",
+  "narracao": "narracao.wav",
+  "tempos": "tempos.json",
+  "imagens": [
+    "1.jpg",
+    "2.jpg",
+    "3.jpg",
+    "4.jpg",
+    "preto",
+    "5.jpg"
+  ],
+  "cenas": [
+    1,
+    2,
+    4,
+    5,
+    6,
+    7
+  ],
+  "modelo": "pintura",
+  "formatos": [
+    "faixa",
+    "alta",
+    "faixa",
+    "alta",
+    "faixa",
+    "faixa"
+  ],
+  "focos": [
+    0.4,
+    0.35,
+    0.4,
+    0.35,
+    0.5,
+    0.4
+  ]
+}

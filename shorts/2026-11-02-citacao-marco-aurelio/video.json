@@ -1,0 +1,11 @@
+{
+  "modelo": "citacao",
+  "imagens": [
+    "1.jpg"
+  ],
+  "citacao": {
+    "texto": "A melhor vingança é não ser como quem te feriu.",
+    "autor": "Marco Aurélio, Meditações 6.6",
+    "duracao": 16
+  }
+}

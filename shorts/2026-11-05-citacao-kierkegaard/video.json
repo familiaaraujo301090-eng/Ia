@@ -1,0 +1,11 @@
+{
+  "modelo": "citacao",
+  "imagens": [
+    "1.jpg"
+  ],
+  "citacao": {
+    "texto": "A vida só pode ser compreendida olhando para trás, mas deve ser vivida olhando para frente.",
+    "autor": "Søren Kierkegaard, Diários (paráfrase)",
+    "duracao": 16
+  }
+}

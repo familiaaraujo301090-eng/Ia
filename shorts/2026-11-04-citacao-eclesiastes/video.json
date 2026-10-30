@@ -1,0 +1,11 @@
+{
+  "modelo": "citacao",
+  "imagens": [
+    "1.jpg"
+  ],
+  "citacao": {
+    "texto": "O que foi, isso será; nada há de novo debaixo do sol.",
+    "autor": "Eclesiastes 1:9",
+    "duracao": 16
+  }
+}

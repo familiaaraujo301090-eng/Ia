@@ -1,0 +1,28 @@
+{
+  "titulo": "Bom demais para ser verdade",
+  "narracao": "narracao.wav",
+  "tempos": "tempos.json",
+  "imagens": [
+    "1.jpg",
+    "2.jpg",
+    "3.jpg",
+    "4.jpg",
+    "5.jpg"
+  ],
+  "cenas": [
+    1,
+    3,
+    4,
+    5,
+    7
+  ],
+  "musica": "trilha-piano.wav",
+  "volume_musica": 0.12,
+  "focos": [
+    0.4,
+    0.45,
+    0.4,
+    0.4,
+    0.4
+  ]
+}
