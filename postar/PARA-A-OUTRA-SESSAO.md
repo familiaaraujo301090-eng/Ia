@@ -78,3 +78,11 @@ os outros.
 ## Cuidado
 5 por dia e um ritmo alto para um canal novo. Se nas duas primeiras semanas a media ficar abaixo
 de 100 visualizacoes, diminua para 2 por dia, priorizando os de pintura.
+
+## URGENTE: postar HOJE (30/10), assim que possivel
+| Arquivo (pasta `postar/`) | Titulo | Descricao |
+|---|---|---|
+| `59-neymar-ira-SEM-MUSICA.mp4` **[LOCRIAN]** | Neymar suspenso de novo: o que Seneca diria | O STJD suspendeu Neymar por dois jogos. Ha 2.000 anos, Seneca escreveu um livro inteiro sobre isso. #neymar #santos #estoicismo #seneca #brasileirao |
+
+Assunto do momento: quanto antes postar, mais visualizacoes. Poste no TikTok, no YouTube Shorts
+e no Instagram Reels. Responda os primeiros comentarios para o video ganhar alcance.
