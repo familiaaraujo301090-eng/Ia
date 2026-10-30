@@ -28,3 +28,7 @@ animacao3d/saida/render.log
 animacao3d/teste_eevee.py
 __pycache__/
 animacao3d/saida/*.log
+animacao3d/saida/*/quadros.txt
+animacao3d/saida/*/trilha.*
+animacao3d/saida/*/legendas.ass
+animacao3d/saida/*/video.mp4
