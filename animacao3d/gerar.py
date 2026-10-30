@@ -156,18 +156,19 @@ def contador_de_passos(tempos):
     import modelos
     tot = float(subprocess.check_output(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of",
                                          "csv=p=0", str(SAIDA / "narracao.wav")])) + 1.0
-    faixas = historia.tempos_dos_planos(tempos, tot)[1:1 + len(HIST["passos"])]
-    n = len(HIST["passos"])
+    n = len(HIST.get("contador") or HIST["passos"])
+    itens = HIST.get("contador") or [(f"PASSO {i}/{n}", nome) for i, nome in enumerate(HIST["passos"], 1)]
+    faixas = historia.tempos_dos_planos(tempos, tot)[1:1 + n]
     linhas = [
         "Style: Passo,Inter ExtraBold,64,&H004CC8F5,&H004CC8F5,&H00101010,&H96000000,0,0,0,0,100,100,2,0,1,3,2,8,60,60,150,1",
-        "Style: Nome,Inter ExtraBold,40,&H00FFFFFF,&H00FFFFFF,&H00101010,&H96000000,0,0,0,0,100,100,6,0,1,3,2,8,60,60,235,1",
+        "Style: Nome,Inter ExtraBold,54,&H00FFFFFF,&H00FFFFFF,&H00101010,&H96000000,0,0,0,0,100,100,6,0,1,3,2,8,60,60,235,1",
         "Style: Barra,Inter ExtraBold,20,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,7,0,0,0,1",
     ]
     eventos = []
     largura = 760
-    for i, (nome, (q0, q1)) in enumerate(zip(HIST["passos"], faixas), 1):
+    for i, ((rotulo, nome), (q0, q1)) in enumerate(zip(itens, faixas), 1):
         a, b = q0 / historia.FPS, (q1 + 1) / historia.FPS
-        eventos.append(modelos.dialogo(2, a, b, "Passo", f"{{\\fad(120,0)}}PASSO {i}/{n}"))
+        eventos.append(modelos.dialogo(2, a, b, "Passo", f"{{\\fad(120,0)}}{rotulo}"))
         eventos.append(modelos.dialogo(2, a, b, "Nome", f"{{\\fad(120,0)}}{nome}"))
         x0, y0 = (1080 - largura) // 2, 310
         fundo = f"{{\\pos({x0},{y0})\\c&H303030&\\alpha&H40&\\p1}}m 0 0 l {largura} 0 {largura} 14 0 14{{\\p0}}"
@@ -193,7 +194,7 @@ def finalizar():
             b = pal[k + 1][1]
         cor = "\\c&H4CC8F5&" if dest else ""
         leg.append(modelos.dialogo(0, a, b, "P", f"{{{cor}\\fscx88\\fscy88\\t(0,80,\\fscx100\\fscy100)}}{w.strip('.,;:!?').upper()}"))
-    if HIST.get("passos"):
+    if HIST.get("passos") or HIST.get("contador"):
         extra = contador_de_passos(tempos)
         estilos = extra[0].replace("#ESTILOS#", "").split("|")
         i = next(k for k, l in enumerate(leg) if l.startswith("Style: P,"))

@@ -116,3 +116,134 @@ def criar_livro_medieval(col, m, faixas):
     fecho = bpy.context.object
     fecho.data.materials.append(m["latao"])
     pop(fecho, f0 + (f1 - f0) // 2 + 2)
+
+
+def _raiz(nome, pontos, espessura, mat, col):
+    """Curva com espessura que pode 'crescer' animando bevel_factor_end de 0 a 1."""
+    c = bpy.data.curves.new(nome, "CURVE")
+    c.dimensions = "3D"
+    c.bevel_depth = espessura
+    c.bevel_resolution = 2
+    c.use_fill_caps = True
+    s = c.splines.new("POLY")
+    s.points.add(len(pontos) - 1)
+    for p, xyz in zip(s.points, pontos):
+        p.co = (*xyz, 1)
+    s.use_smooth = True
+    c.splines[0].order_u = 3
+    o = bpy.data.objects.new(nome, c)
+    o.data.materials.append(mat)
+    col.objects.link(o)
+    return o
+
+
+def crescer(o, f0, f1, de=0.0, ate=1.0):
+    o.data.bevel_factor_end = de
+    o.data.keyframe_insert("bevel_factor_end", frame=0 if de == 0 else f0)
+    o.data.keyframe_insert("bevel_factor_end", frame=f0)
+    o.data.bevel_factor_end = ate
+    o.data.keyframe_insert("bevel_factor_end", frame=f1)
+
+
+def criar_semente(col, m, faixas):
+    """Corte de terra sobre a mesa: em cima nada muda; embaixo a semente enfrenta escuro, peso,
+    raizes e pressao ate a flor romper a superficie (planos 2 a 6)."""
+    import random
+
+    import materiais
+    rnd = random.Random(7)
+    passos = faixas[1:6]
+    bpy.data.objects["livro_aberto"].hide_render = True
+    terra = materiais.simples("terra", (0.075, 0.042, 0.022), 1.0, ruido=0.8, escala_ruido=90, bump=0.8)
+    raiz = materiais.simples("raiz", (0.55, 0.45, 0.32), 0.6, sss=0.2)
+    folha = materiais.simples("folha", (0.06, 0.25, 0.04), 0.5, sss=0.3)
+    petala = materiais.simples("petala", (0.9, 0.62, 0.12), 0.45, sss=0.4)
+    cx, cy, z = 1.6, -0.45, MESA_Z
+    alt = 0.24
+    topo = z + alt
+    frente = cy - 0.077  # tudo o que cresce fica colado na face cortada da terra
+    # Luz quente e suave so na face cortada, para o corte de terra ler bem no escuro da biblioteca.
+    luz = bpy.data.lights.new("luz_corte", "AREA")
+    luz.energy, luz.size, luz.color = 9, 0.5, (1.0, 0.8, 0.6)
+    lo = bpy.data.objects.new("luz_corte", luz)
+    lo.location = (cx - 0.25, cy - 0.75, z + 0.45)
+    col.objects.link(lo)
+    from mathutils import Vector
+    lo.rotation_euler = (Vector((cx, frente, z + 0.12)) - lo.location).to_track_quat("-Z", "Y").to_euler()
+    _caixa("terra", (cx, cy, z + alt / 2), (0.36, 0.14, alt), terra, col)
+    for dx in (-0.19, 0.19):
+        _caixa("caixa_lado", (cx + dx, cy, z + 0.14), (0.02, 0.16, 0.28), m["madeira"], col)
+    _caixa("caixa_fundo", (cx, cy + 0.08, z + 0.14), (0.4, 0.02, 0.28), m["madeira"], col)
+    _caixa("caixa_base", (cx, cy, z + 0.01), (0.4, 0.17, 0.02), m["madeira"], col)
+    _caixa("moldura", (cx, cy - 0.08, z + 0.27), (0.4, 0.012, 0.012), m["madeira"], col)
+
+    # Dia 1: a semente cai no escuro.
+    f0, f1 = passos[0]
+    sz = topo - 0.07
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=1, location=(cx, frente, sz))
+    sem = bpy.context.object
+    sem.data.materials.append(materiais.simples("semente", (0.3, 0.14, 0.05), 0.35))
+    bpy.ops.object.shade_smooth()
+    pop(sem, f0 + 4, (0.02, 0.013, 0.013))
+    _chave(sem, "location", (cx, frente, topo + 0.12), f0 + 4)
+    _chave(sem, "location", (cx, frente, sz), f0 + 16)
+
+    # Dia 12: o peso; a semente treme, racha e solta a primeira raiz.
+    f0, f1 = passos[1]
+    for k in range(0, 24, 3):
+        sem.rotation_euler = (0, math.radians(8 if k % 2 else -8), 0)
+        sem.keyframe_insert("rotation_euler", frame=f0 + k)
+    sem.rotation_euler = (0, 0, 0)
+    sem.keyframe_insert("rotation_euler", frame=f0 + 26)
+    principal = [(cx + 0.003 * math.sin(i), frente, sz - 0.012 * i) for i in range(12)]
+    r0 = _raiz("raiz_principal", principal, 0.003, raiz, col)
+    crescer(r0, f0 + 10, f1, 0, 0.35)
+
+    # Dia 30: em cima nada; embaixo as raizes se espalham.
+    f0, f1 = passos[2]
+    crescer(r0, f0, f1, 0.35, 1.0)
+    for i in range(7):
+        x, zz = cx, sz - 0.015 - 0.016 * i
+        lado = -1 if i % 2 else 1
+        pts = [(x, frente, zz)]
+        for _ in range(7):
+            x += lado * rnd.uniform(0.008, 0.02)
+            zz -= rnd.uniform(0.002, 0.012)
+            pts.append((x, frente, max(zz, z + 0.03)))
+        r = _raiz(f"raiz_{i}", pts, 0.0016, raiz, col)
+        crescer(r, f0 + 4 * i, f1 - 2)
+
+    # Dia 60 e 90: o broto empurra a terra, rompe a superficie e vira flor.
+    f0, f1 = passos[3]
+    caule = [(cx + 0.012 * math.sin(i * 0.5), frente, sz + 0.015 * i) for i in range(24)]
+    c = _raiz("caule", caule, 0.0035, folha, col)
+    acima = (topo - sz) / (caule[-1][2] - sz)
+    crescer(c, f0 + 6, f1, 0, acima + 0.04)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=1, location=(cx, frente + 0.03, topo))
+    monte = bpy.context.object
+    monte.data.materials.append(terra)
+    pop(monte, f0 + 10, (0.05, 0.05, 0.012))
+    f0, f1 = passos[4]
+    crescer(c, f0, f0 + (f1 - f0) // 2, acima + 0.04, 1.0)
+    ponta = caule[-1]
+    meio = f0 + (f1 - f0) // 2
+    for i, (h, lado) in enumerate(((0.09, 1), (0.15, -1))):
+        bpy.ops.mesh.primitive_uv_sphere_add(radius=1, location=(cx + lado * 0.035, frente + 0.01, topo + h))
+        fo = bpy.context.object
+        fo.data.materials.append(folha)
+        bpy.ops.object.shade_smooth()
+        fo.rotation_euler = (0, math.radians(-lado * 30), 0)
+        pop(fo, f0 + 8 + 6 * i, (0.04, 0.012, 0.004))
+    for i in range(6):
+        a = i * math.pi / 3
+        bpy.ops.mesh.primitive_uv_sphere_add(radius=1, location=(ponta[0] + 0.028 * math.cos(a), frente,
+                                                                 ponta[2] + 0.028 * math.sin(a)))
+        pe = bpy.context.object
+        pe.data.materials.append(petala)
+        bpy.ops.object.shade_smooth()
+        pe.rotation_euler = (0, -a, 0)
+        pop(pe, meio + 2 * i, (0.028, 0.006, 0.012))
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.012, location=(ponta[0], frente - 0.004, ponta[2]))
+    miolo = bpy.context.object
+    miolo.data.materials.append(m["couro"])
+    pop(miolo, meio + 12)

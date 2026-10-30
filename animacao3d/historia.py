@@ -233,4 +233,49 @@ LIVRO_MEDIEVAL = {
     ],
 }
 
-HISTORIAS = {"lamparina-mais-antiga": LAMPARINA, "codex-leicester": CODEX, "livro-medieval": LIVRO_MEDIEVAL}
+VIDA_PARADA = {
+    "titulo": "Sua vida nao esta parada",
+    "inicio": {"pos": (0.85, -0.4), "rot": 90},
+    "extra": "criar_semente",
+    # Jornada: promessa no gancho, os obstaculos dia a dia e o resultado no fim.
+    "contador": [("DIA 1", "ESCURO"), ("DIA 12", "PESO"), ("DIA 30", "NINGUÉM VÊ"), ("DIA 60", "PRESSÃO"),
+                 ("DIA 90", "A FLOR")],
+    "roteiro": [
+        "Sua vida parece parada? Fica até o fim, porque eu vou te mostrar o que acontece onde ninguém vê.",
+        "Dia um. A semente cai no escuro. Sozinha. Ninguém vê.",
+        "Dia doze. O peso da terra em cima. Ela racha por dentro, e parece que está morrendo.",
+        "Dia trinta. Lá em cima, nada mudou. Mas aqui embaixo, as raízes já se espalham.",
+        "Dia sessenta. A terra resiste. E ela empurra mesmo assim.",
+        "Dia noventa. E aquilo que todo mundo chama de sorte, finalmente aparece.",
+        "*Tudo tem o seu tempo determinado*, diz Eclesiastes. Você não está parado. Está sendo preparado.",
+        "Não arranque a semente só porque ainda não viu a flor. Segue a Lamparina.",
+    ],
+    "planos": [
+        {"desc": "Gancho: Elias olha para a caixa de terra sobre a mesa; em cima, nada.",
+         "cam": {"de": (-1.3, -3.7, 1.75), "ate": (-0.5, -2.9, 1.55), "alvo": (1.4, -0.45, 1.0), "lente": 30},
+         "acoes": [("olhar", 0, 1, (10, 0), (22, 0))]},
+        {"desc": "Dia 1: a semente cai e afunda no escuro do corte de terra.",
+         "cam": {"de": (1.6, -1.25, 1.02), "ate": (1.6, -1.0, 0.99), "alvo": (1.6, -0.52, 0.98), "lente": 50, "dof": True},
+         "acoes": []},
+        {"desc": "Dia 12: a semente treme, racha e solta a primeira raiz.",
+         "cam": {"de": (1.63, -0.86, 0.98), "ate": (1.61, -0.74, 0.97), "alvo": (1.6, -0.52, 0.97), "lente": 60, "dof": True},
+         "acoes": []},
+        {"desc": "Dia 30: as raizes se espalham embaixo enquanto a superficie segue vazia; camera gira.",
+         "cam": {"orbita": True, "centro": (1.6, -0.52, 0.93), "raio": 0.75, "a0": -20, "a1": 20, "h": 0.97, "lente": 45, "dof": True},
+         "acoes": []},
+        {"desc": "Dia 60: o broto sobe e empurra a terra ate romper a superficie.",
+         "cam": {"de": (1.6, -0.95, 0.97), "ate": (1.6, -0.88, 1.1), "alvo": (1.6, -0.5, 1.04), "lente": 50, "dof": True},
+         "acoes": []},
+        {"desc": "Dia 90: o caule cresce, as folhas abrem e a flor nasce; grua subindo.",
+         "cam": {"de": (1.6, -1.0, 1.02), "ate": (1.6, -1.1, 1.35), "alvo": (1.6, -0.5, 1.15), "lente": 40, "dof": True},
+         "acoes": []},
+        {"desc": "Elias se vira para quem assiste; aproximacao ate o close.",
+         "cam": {"de": (0.95, -2.7, 1.7), "ate": (0.87, -1.5, 1.68), "alvo": (0.85, -0.46, 1.66), "lente": 50, "dof": True},
+         "acoes": [("olhar", 0, 0.2, (22, 0), (0, 0)), ("girar", 0, 0.35, 90, 0)]},
+        {"desc": "Final: Elias acena; a flor ao lado, na mesa.",
+         "cam": {"de": (1.0, -3.3, 1.5), "ate": (1.05, -2.5, 1.5), "alvo": (1.15, -0.4, 1.3), "lente": 38},
+         "acoes": [("acenar", 0.3, 0.7)]},
+    ],
+}
+
+HISTORIAS = {"vida-nao-esta-parada": VIDA_PARADA, "lamparina-mais-antiga": LAMPARINA, "codex-leicester": CODEX, "livro-medieval": LIVRO_MEDIEVAL}
