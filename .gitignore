@@ -20,3 +20,10 @@ shorts/**/trilha-*.wav
 shorts/**/trilha-*.json
 shorts/texturas/
 shorts/*/pintura.mp4
+animacao3d/tmp/
+animacao3d/saida/*/tmp/
+animacao3d/saida/*/quadros/
+animacao3d/saida/*/cena.blend*
+animacao3d/saida/render.log
+animacao3d/teste_eevee.py
+__pycache__/
