@@ -86,3 +86,19 @@ de 100 visualizacoes, diminua para 2 por dia, priorizando os de pintura.
 
 Assunto do momento: quanto antes postar, mais visualizacoes. Poste no TikTok, no YouTube Shorts
 e no Instagram Reels. Responda os primeiros comentarios para o video ganhar alcance.
+
+## 5. NOVOS: videos 3D do Mestre Elias (60 a 63), sem musica Locrian
+Sao animacoes 3D feitas por codigo. Ja tem narracao, legenda e trilha: **nao adicione o Locrian**,
+poste como estao. Marque "conteudo alterado ou sintetico" (e animacao). Um por dia as **21h**,
+como sexto video do dia, comecando pelo 63 (o mais forte):
+
+| Dia | Arquivo (pasta `postar/`) | Titulo | Descricao |
+|---|---|---|---|
+| 01/11 | `63-3d-vida-nao-esta-parada.mp4` | Sua vida nao esta parada | Do dia 1 ao dia 90: o que acontece com a semente onde ninguem ve. Eclesiastes 3. 🕯️ #fe #eclesiastes #paciencia #proposito #reflexao |
+| 02/11 | `62-3d-livro-medieval-processo.mp4` | Como se fazia um livro na Idade Media | 5 passos, meses de trabalho e centenas de peles para um unico livro. 🕯️ #historia #idademedia #livros #curiosidades |
+| 03/11 | `61-3d-codex-leicester.mp4` | O caderno mais caro do mundo | O Codex Leicester de Leonardo da Vinci. 🕯️ #davinci #historia #curiosidades #livros |
+| 04/11 | `60-3d-lamparina-mais-antiga.mp4` | A lamparina mais antiga | A historia da luz que deu nome a este canal. 🕯️ #historia #curiosidades #lamparina #reflexao |
+
+Na primeira hora, fixe um comentario com a pergunta do final do video (ex.: no 63, "Em que dia
+da semente voce esta hoje?") para puxar respostas. Anote o desempenho dos 3D separado em
+`DESEMPENHO.md`: eles sao um teste de formato novo.
