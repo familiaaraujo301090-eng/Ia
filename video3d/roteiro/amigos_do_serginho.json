@@ -1,0 +1,92 @@
+{
+  "titulo": "Você sabia? Curiosidades da corrida com os Amigos do Serginho",
+  "formato": { "largura": 720, "altura": 1280, "fps": 30 },
+  "personagem": {
+    "nome": "Corredor Amigos do Serginho",
+    "cores": {
+      "uniforme": "#2246a8",
+      "uniformeEscuro": "#16307a",
+      "pele": "#e0a47a",
+      "cabelo": "#2b1a10",
+      "solado": "#f2f2f2",
+      "meia": "#ffffff"
+    },
+    "logo": "assets/logo_amigos_do_serginho.png"
+  },
+  "cenario": {
+    "cidade": "Buri - SP",
+    "ceu": { "topo": "#4a8fe0", "horizonte": "#ffd9a8" },
+    "faixas": ["AMIGOS DO SERGINHO", "BURI - SP", "BORA CORRER!"]
+  },
+  "cenas": [
+    {
+      "id": "abertura",
+      "duracao": 4.5,
+      "acao": "alongar",
+      "camera": { "tipo": "grua", "de": [3.5, 7, 9], "para": [2.6, 1.5, 4.6], "alvo": [0, 0.85, 0] },
+      "selo": "VOCÊ SABIA?",
+      "texto": "Curiosidades da corrida com a equipe Amigos do Serginho",
+      "nota": "Amanhecer em Buri. Grua desce do céu até o corredor alongando na rua."
+    },
+    {
+      "id": "maratona",
+      "duracao": 6,
+      "acao": "correr",
+      "velocidade": 6,
+      "camera": { "tipo": "lateral", "distancia": 5.5, "altura": 1.3, "avanco": 0.6 },
+      "selo": "CURIOSIDADE #1",
+      "texto": "A maratona tem 42,195 km. Essa distância foi usada pela primeira vez nos Jogos Olímpicos de Londres, em 1908.",
+      "nota": "Travelling lateral acompanhando a corrida."
+    },
+    {
+      "id": "equipe",
+      "duracao": 6,
+      "acao": "correr",
+      "velocidade": 6,
+      "camera": { "tipo": "frontal", "distanciaDe": 7, "distanciaPara": 3.2, "altura": 1.25 },
+      "selo": "CURIOSIDADE #2",
+      "texto": "Amigos do Serginho é uma equipe de corrida de rua de Buri, no interior de São Paulo.",
+      "nota": "Dolly frontal: a câmera recua na frente do corredor e se aproxima do logo na camisa."
+    },
+    {
+      "id": "camboriu",
+      "duracao": 6,
+      "acao": "correr",
+      "velocidade": 6,
+      "camera": { "tipo": "orbita", "raio": 5, "altura": 2.2, "anguloDe": -40, "anguloPara": 200 },
+      "selo": "CURIOSIDADE #3",
+      "texto": "Em 2026 a equipe levou Buri à Meia Maratona Internacional de Balneário Camboriú (SC), nos 5, 10 e 21 km, e voltou com troféus.",
+      "nota": "Órbita de 240° em volta do corredor."
+    },
+    {
+      "id": "assuncao",
+      "duracao": 6,
+      "acao": "correr",
+      "velocidade": 7,
+      "camera": { "tipo": "drone", "altura": 9, "atras": 6, "alturaPara": 3, "atrasPara": 4 },
+      "selo": "CURIOSIDADE #4",
+      "texto": "O líder da equipe, Matheus Ferreira, completou a Maratona de Assunção, no Paraguai, em cerca de 3h03 e levou troféu na categoria.",
+      "nota": "Plano de drone por trás, descendo até as costas do corredor."
+    },
+    {
+      "id": "chegada",
+      "duracao": 5.5,
+      "acao": "chegada",
+      "velocidade": 6,
+      "camera": { "tipo": "baixa", "raio": 5.2, "altura": 0.6, "anguloDe": 70, "anguloPara": 20 },
+      "selo": "CHEGADA!",
+      "texto": "Correr junto motiva: cada quilômetro fica mais leve com os amigos.",
+      "nota": "Câmera baixa na linha de chegada. Corredor rompe a fita e comemora pulando."
+    },
+    {
+      "id": "encerramento",
+      "duracao": 4.5,
+      "acao": "acenar",
+      "camera": { "tipo": "aproximar", "de": [0, 1.4, 6.0], "para": [0, 1.3, 4.4], "alvo": [0, 1.55, 0] },
+      "selo": "BORA CORRER?",
+      "texto": "Siga a equipe: @equipeamigosdoserginho_",
+      "logoFinal": true,
+      "nota": "Corredor acena para a câmera. Logo grande na tela."
+    }
+  ]
+}

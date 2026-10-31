@@ -1,0 +1,14 @@
+{
+  "name": "video3d",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Gerador automatizado de vídeos curtos de curiosidades em 3D (tudo por código).",
+  "scripts": {
+    "render": "node render.js roteiro/amigos_do_serginho.json",
+    "sheets": "node render.js roteiro/amigos_do_serginho.json --sheets",
+    "preview": "node render.js roteiro/amigos_do_serginho.json --preview"
+  },
+  "dependencies": {
+    "three": "0.160.0"
+  }
+}

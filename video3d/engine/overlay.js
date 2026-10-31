@@ -1,0 +1,141 @@
+// Camada 2D desenhada por cima do 3D: selo, legenda, marca d'água, barra de
+// progresso, logo final e transições (fade entre cenas).
+import { FONT, logoCircleCanvas } from './textures.js';
+
+const { min, max } = Math;
+const clamp01 = (v) => min(1, max(0, v));
+const easeOutBack = (x) => {
+  const c1 = 1.70158, c3 = c1 + 1;
+  return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
+};
+
+function roundRect(g, x, y, w, h, r) {
+  g.beginPath();
+  g.moveTo(x + r, y);
+  g.arcTo(x + w, y, x + w, y + h, r);
+  g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r);
+  g.arcTo(x, y, x + w, y, r);
+  g.closePath();
+}
+
+function wrap(g, text, maxW) {
+  const words = text.split(' ');
+  const lines = [];
+  let line = '';
+  for (const w of words) {
+    const test = line ? line + ' ' + w : w;
+    if (g.measureText(test).width > maxW && line) {
+      lines.push(line);
+      line = w;
+    } else line = test;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+export function makeOverlay(logoImg) {
+  const logo = logoCircleCanvas(logoImg, 512);
+
+  return function draw(g, W, H, state, total, t) {
+    const { cena, local } = state;
+    const S = W / 720;
+    const fadeIn = clamp01(local / 0.35);
+
+    // marca d'água
+    g.save();
+    g.globalAlpha = 0.9;
+    g.drawImage(logo, 24 * S, 24 * S, 92 * S, 92 * S);
+    g.restore();
+
+    // selo (pílula verde)
+    if (cena.selo) {
+      const k = easeOutBack(clamp01(local / 0.45));
+      g.save();
+      g.font = `bold ${44 * S}px ${FONT}`;
+      const tw = g.measureText(cena.selo).width;
+      const w = tw + 70 * S, h = 82 * S;
+      g.translate(W / 2, 175 * S);
+      g.scale(k, k);
+      g.shadowColor = 'rgba(0,0,0,0.35)';
+      g.shadowBlur = 18 * S;
+      g.fillStyle = '#4dd75d';
+      roundRect(g, -w / 2, -h / 2, w, h, h / 2);
+      g.fill();
+      g.shadowBlur = 0;
+      g.fillStyle = '#13296b';
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText(cena.selo, 0, 3 * S);
+      g.restore();
+    }
+
+    // logo grande no encerramento
+    if (cena.logoFinal) {
+      const k = easeOutBack(clamp01((local - 0.6) / 0.6));
+      if (k > 0) {
+        const r = 100 * S * k;
+        g.save();
+        g.shadowColor = 'rgba(0,0,0,0.45)';
+        g.shadowBlur = 30 * S;
+        g.beginPath();
+        g.arc(W / 2, 345 * S, r + 8 * S, 0, Math.PI * 2);
+        g.fillStyle = '#ffffff';
+        g.fill();
+        g.shadowBlur = 0;
+        g.drawImage(logo, W / 2 - r, 345 * S - r, r * 2, r * 2);
+        g.restore();
+      }
+    }
+
+    // legenda com texto revelado progressivamente
+    if (cena.texto) {
+      g.save();
+      g.font = `bold ${38 * S}px ${FONT}`;
+      const maxW = W - 140 * S;
+      const lines = wrap(g, cena.texto, maxW);
+      const lh = 50 * S;
+      const boxH = lines.length * lh + 56 * S;
+      const y0 = H - 140 * S - boxH;
+      const slide = (1 - fadeIn) * 60 * S;
+      g.globalAlpha = fadeIn;
+      g.shadowColor = 'rgba(0,0,0,0.35)';
+      g.shadowBlur = 24 * S;
+      g.fillStyle = 'rgba(255,255,255,0.94)';
+      roundRect(g, 40 * S, y0 + slide, W - 80 * S, boxH, 28 * S);
+      g.fill();
+      g.shadowBlur = 0;
+      g.fillStyle = '#2246a8';
+      g.fillRect(40 * S, y0 + slide + 22 * S, 10 * S, boxH - 44 * S);
+      const chars = Math.floor(clamp01((local - 0.2) / 1.6) * cena.texto.length);
+      let used = 0;
+      g.fillStyle = '#13296b';
+      g.textBaseline = 'top';
+      lines.forEach((l, i) => {
+        const vis = l.slice(0, max(0, chars - used));
+        used += l.length + 1;
+        g.fillText(vis, 72 * S, y0 + slide + 30 * S + i * lh);
+      });
+      g.restore();
+    }
+
+    // barra de progresso
+    g.fillStyle = 'rgba(255,255,255,0.35)';
+    g.fillRect(0, H - 10 * S, W, 10 * S);
+    g.fillStyle = '#4dd75d';
+    g.fillRect(0, H - 10 * S, (W * t) / total, 10 * S);
+
+    // fade preto entre cenas
+    const edge = min(local, cena.duracao - local);
+    const isFirst = cena.inicio === 0, isLast = Math.abs(cena.fim - total) < 1e-6;
+    let fade = 0;
+    if (local < 0.18 && !isFirst) fade = 1 - local / 0.18;
+    else if (cena.duracao - local < 0.18 && !isLast) fade = 1 - (cena.duracao - local) / 0.18;
+    if (isFirst && local < 0.5) fade = 1 - local / 0.5;
+    if (isLast && cena.duracao - local < 0.6) fade = 1 - (cena.duracao - local) / 0.6;
+    if (fade > 0 && edge >= 0) {
+      g.fillStyle = `rgba(0,0,0,${clamp01(fade) * 0.9})`;
+      g.fillRect(0, 0, W, H);
+    }
+  };
+}
