@@ -278,4 +278,113 @@ VIDA_PARADA = {
     ],
 }
 
-HISTORIAS = {"vida-nao-esta-parada": VIDA_PARADA, "lamparina-mais-antiga": LAMPARINA, "codex-leicester": CODEX, "livro-medieval": LIVRO_MEDIEVAL}
+def planos_jornada(cz, descs):
+    """Planos padrao do formato jornada: gancho geral, 5 etapas no objeto da mesa e o fecho com Elias."""
+    c = (1.6, -0.45, cz)
+    cams = [
+        {"de": (-1.3, -3.7, 1.75), "ate": (-0.5, -2.9, 1.55), "alvo": (1.4, -0.45, 1.0), "lente": 30},
+        {"de": (1.6, -1.4, cz + 0.28), "ate": (1.6, -1.12, cz + 0.16), "alvo": c, "lente": 45, "dof": True},
+        {"orbita": True, "centro": c, "raio": 0.8, "a0": -30, "a1": 0, "h": cz + 0.12, "lente": 45, "dof": True},
+        {"de": (1.98, -1.02, cz + 0.06), "ate": (1.86, -0.9, cz + 0.03), "alvo": c, "lente": 55, "dof": True},
+        {"orbita": True, "centro": c, "raio": 0.75, "a0": 25, "a1": -10, "h": cz + 0.2, "lente": 45, "dof": True},
+        {"de": (1.6, -1.0, cz + 0.02), "ate": (1.6, -1.2, cz + 0.36), "alvo": (1.6, -0.45, cz + 0.04), "lente": 40,
+         "dof": True},
+        {"de": (0.95, -2.7, 1.7), "ate": (0.87, -1.5, 1.68), "alvo": (0.85, -0.46, 1.66), "lente": 50, "dof": True},
+        {"de": (1.0, -3.3, 1.5), "ate": (1.05, -2.5, 1.5), "alvo": (1.15, -0.4, 1.3), "lente": 38},
+    ]
+    acoes = [[("olhar", 0, 1, (10, 0), (22, 0))], [], [], [], [], [],
+             [("olhar", 0, 0.2, (22, 0), (0, 0)), ("girar", 0, 0.35, 90, 0)], [("acenar", 0.3, 0.7)]]
+    return [{"desc": d, "cam": cam, "acoes": a} for d, cam, a in zip(descs, cams, acoes)]
+
+
+def _jornada(titulo, extra, cz, contador, roteiro, descs):
+    return {"titulo": titulo, "inicio": {"pos": (0.85, -0.4), "rot": 90}, "extra": extra, "contador": contador,
+            "roteiro": roteiro, "planos": planos_jornada(cz, descs)}
+
+
+_FECHO = ["Elias se vira para quem assiste; aproximacao ate o close.", "Final: Elias acena ao lado da mesa."]
+
+KINTSUGI = _jornada(
+    "O vaso de ouro", "criar_kintsugi", 0.94,
+    [("ETAPA 1/5", "A QUEDA"), ("ETAPA 2/5", "OS CACOS"), ("ETAPA 3/5", "A COLA"), ("ETAPA 4/5", "O OURO"),
+     ("ETAPA 5/5", "MAIS FORTE")],
+    ["No Japão, quando um vaso quebra, ele não vai para o lixo. Ele passa a valer mais. Veja como.",
+     "Primeiro, a queda. Aquilo que parecia inteiro se parte em pedaços.",
+     "Depois, os cacos. Ninguém escolhe ficar assim. Mas ninguém joga fora.",
+     "Então, cada pedaço é colado de volta. Com paciência. Um por um.",
+     "E as rachaduras não são escondidas. Elas são preenchidas com ouro.",
+     "No fim, o vaso vale mais do que antes de quebrar. Isso se chama kintsugi.",
+     "*As suas cicatrizes não te diminuem.* Elas mostram por onde a graça passou.",
+     "Comenta: qual rachadura virou ouro na sua vida? Segue a Lamparina."],
+    ["Gancho: Elias diante do vaso azul sobre a mesa.", "Etapa 1: o vaso aparece e se parte em seis cacos.",
+     "Etapa 2: os cacos espalhados; a camera gira.", "Etapa 3: os cacos voltam ao lugar, um por um.",
+     "Etapa 4: as emendas de ouro crescem pelas rachaduras.", "Etapa 5: o vaso remendado gira; grua subindo."] + _FECHO)
+
+OURO_FOGO = _jornada(
+    "O ouro no fogo", "criar_ouro_fogo", 0.95,
+    [("ETAPA 1/5", "O MINÉRIO"), ("ETAPA 2/5", "O FOGO"), ("ETAPA 3/5", "A SUJEIRA SOBE"),
+     ("ETAPA 4/5", "A ESPERA"), ("ETAPA 5/5", "O REFLEXO")],
+    ["Sabe por que o ouro precisa passar pelo fogo? Fica até o fim, porque o final explica a sua vida.",
+     "Primeiro, o minério. Ouro misturado com pedra. Ninguém vê o valor.",
+     "Depois, o fogo. Mais de mil graus. Parece que vai destruir tudo.",
+     "Mas é no calor que a sujeira sobe para a superfície.",
+     "O ourives espera, e tira a impureza. De novo. E de novo.",
+     "Conta-se que ele só para quando consegue ver o próprio rosto refletido no ouro.",
+     "A Bíblia diz que a sua fé é provada *como o ouro no fogo*. O fogo não é castigo. É processo.",
+     "Em que fase do fogo você está? Comenta. Segue a Lamparina."],
+    ["Gancho: Elias diante da fornalha apagada.", "Etapa 1: as pedras de minerio caem no cadinho.",
+     "Etapa 2: o fogo acende em volta do cadinho; a camera gira.",
+     "Etapa 3: o minerio derrete e as impurezas escuras sobem.",
+     "Etapa 4: as impurezas sao retiradas uma a uma.", "Etapa 5: o fogo apaga e o ouro vira espelho."] + _FECHO)
+
+DIAMANTE = _jornada(
+    "O diamante", "criar_diamante", 0.92,
+    [("ETAPA 1/5", "CARBONO"), ("ETAPA 2/5", "PRESSÃO"), ("ETAPA 3/5", "CALOR"), ("ETAPA 4/5", "TEMPO"),
+     ("ETAPA 5/5", "BRILHO")],
+    ["O diamante e o carvão são feitos da mesma coisa. A diferença é o que um deles enfrentou.",
+     "Primeiro, só carbono. Escuro, comum, sem valor nenhum.",
+     "Depois vem a pressão. Toneladas em cima dele, sem aviso.",
+     "Junto vem o calor. Mais de mil graus, lá no fundo da terra.",
+     "E o pior: o tempo. Ninguém vê, ninguém aplaude. Por muito, muito tempo.",
+     "Até que um dia ele é tirado do escuro. E brilha.",
+     "*A pressão que você sente hoje* pode ser o que está te formando.",
+     "Se você está debaixo de pressão, comenta: eu não desisto. Segue a Lamparina."],
+    ["Gancho: Elias diante da laje de pedra.", "Etapa 1: o pedaco de carbono aparece e gira.",
+     "Etapa 2: o bloco de pedra desce e esmaga; a camera gira.", "Etapa 3: o calor acende o carbono em vermelho.",
+     "Etapa 4: o bloco treme e o carbono encolhe com o tempo.",
+     "Etapa 5: o bloco sobe e o diamante aparece girando."] + _FECHO)
+
+AMPULHETA = _jornada(
+    "Quatro mil semanas", "criar_ampulheta", 0.99,
+    [("SEMANA 1", "NASCER"), ("SEMANA 1.000", "SONHAR"), ("SEMANA 2.000", "CORRER"), ("SEMANA 3.000", "ADIAR"),
+     ("SEMANA 4.000", "O QUE FICA")],
+    ["Se você viver até os oitenta anos, vai ter umas quatro mil semanas. Olha quantas já passaram.",
+     "Semana um. Você nasce, e a areia começa a cair.",
+     "Semana mil. Você tem uns dezenove anos e acha que o tempo não acaba.",
+     "Semana dois mil. Trabalho, contas, pressa. A areia cai mais rápido do que parece.",
+     "Semana três mil. Você começa a contar tudo o que deixou para depois.",
+     "Semana quatro mil. A areia acaba, e só fica o que você fez com ela.",
+     "Sêneca escreveu: *não é que temos pouco tempo. É que perdemos muito dele.*",
+     "Em que semana você está? Comenta. E segue a Lamparina."],
+    ["Gancho: Elias diante da ampulheta cheia.", "Semana 1: o primeiro fio de areia cai.",
+     "Semana 1.000: a areia de baixo cresce; a camera gira.", "Semana 2.000: metade da areia ja passou.",
+     "Semana 3.000: quase nada em cima.", "Semana 4.000: o ultimo grao cai."] + _FECHO)
+
+ESCULTURA = _jornada(
+    "O anjo no marmore", "criar_escultura", 0.98,
+    [("ETAPA 1/5", "O BLOCO"), ("ETAPA 2/5", "O PRIMEIRO GOLPE"), ("ETAPA 3/5", "MIL GOLPES"),
+     ("ETAPA 4/5", "A FORMA"), ("ETAPA 5/5", "O ANJO")],
+    ["Conta-se que Michelangelo olhou para um bloco de mármore e disse: tem um anjo aí dentro. Veja como ele saiu.",
+     "Primeiro, o bloco. Pesado, bruto. Ninguém vê nada além de pedra.",
+     "Então vem o primeiro golpe. E dói. Cai um pedaço que você achava que era seu.",
+     "Depois, mil golpes. Cada um tira alguma coisa que estava sobrando.",
+     "Aos poucos aparece uma forma. Ainda não dá para entender, mas já não é só pedra.",
+     "E no fim aparece o que estava escondido ali desde o começo.",
+     "*Talvez o que você está perdendo* seja só o excesso que esconde quem você é.",
+     "O que Deus está tirando de você agora? Comenta. Segue a Lamparina."],
+    ["Gancho: Elias diante do bloco de marmore.", "Etapa 1: o bloco bruto, inteiro.",
+     "Etapa 2: os primeiros pedacos caem; a camera gira.", "Etapa 3: dezenas de pedacos caem.",
+     "Etapa 4: a silhueta do anjo aparece.", "Etapa 5: os ultimos pedacos caem e o anjo se ilumina."] + _FECHO)
+
+HISTORIAS = {"kintsugi": KINTSUGI, "ouro-no-fogo": OURO_FOGO, "diamante": DIAMANTE,
+             "quatro-mil-semanas": AMPULHETA, "anjo-no-marmore": ESCULTURA, "vida-nao-esta-parada": VIDA_PARADA, "lamparina-mais-antiga": LAMPARINA, "codex-leicester": CODEX, "livro-medieval": LIVRO_MEDIEVAL}
