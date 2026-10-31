@@ -396,7 +396,7 @@ def criar_ouro_fogo(col, m, faixas):
     escoria = materiais.simples("escoria", (0.03, 0.025, 0.02), 1.0, bump=0.8)
     liquido = materiais.simples("ouro_liquido", (1.0, 0.72, 0.25), 0.4, metal=1.0)
     _no(liquido)["Emission Color"].default_value = (1.0, 0.42, 0.08, 1)
-    fogo = materiais.emissao("fogo", (1.0, 0.38, 0.06), 9)
+    fogo = materiais.emissao("fogo", (1.0, 0.3, 0.04), 2.5)
     bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=0.14, depth=0.06, location=(CX, CY, z + 0.03))
     bpy.context.object.data.materials.append(pedra)
     topo = z + 0.06 + 0.13
@@ -438,7 +438,7 @@ def criar_ouro_fogo(col, m, faixas):
         _chave(o, "scale", (0, 0, 0), fim + 10)
         chamas.append(o)
     _energia(luz, 0, f0)
-    _energia(luz, 30, f0 + 30)
+    _energia(luz, 8, f0 + 30)
     # Etapa 3: o minerio derrete e a impureza sobe.
     f0, f1 = p[2]
     for i, o in enumerate(pedras):
@@ -448,7 +448,7 @@ def criar_ouro_fogo(col, m, faixas):
     liq = bpy.context.object
     liq.data.materials.append(liquido)
     pop(liq, f0 + 6, (1, 1, 1))
-    _valor(_no(liquido)["Emission Strength"], 6.0, 0)
+    _valor(_no(liquido)["Emission Strength"], 2.0, 0)
     sujeira = []
     for i in range(7):
         a = rnd.uniform(0, 2 * math.pi)
@@ -468,9 +468,9 @@ def criar_ouro_fogo(col, m, faixas):
         sumir(o, f0 + 6 * i + 2)
     # Etapa 5: o fogo apaga e o ouro vira espelho.
     f0, f1 = p[4]
-    _energia(luz, 30, f0 + 10)
+    _energia(luz, 8, f0 + 10)
     _energia(luz, 0, f0 + 40)
-    _valor(_no(liquido)["Emission Strength"], 6.0, f0 + 10)
+    _valor(_no(liquido)["Emission Strength"], 2.0, f0 + 10)
     _valor(_no(liquido)["Emission Strength"], 0.0, f0 + 45)
     _valor(_no(liquido)["Roughness"], 0.4, f0 + 10)
     _valor(_no(liquido)["Roughness"], 0.05, f0 + 45)
@@ -486,6 +486,9 @@ def criar_diamante(col, m, faixas):
     carvao = materiais.simples("carvao", (0.025, 0.025, 0.025), 0.55, bump=0.6)
     _no(carvao)["Emission Color"].default_value = (1.0, 0.18, 0.03, 1)
     vidro = _vidro("diamante", 2.42)
+    # Sem ambiente claro para refratar, o vidro puro fica preto: um brilho frio proprio resolve.
+    _no(vidro)["Emission Color"].default_value = (0.75, 0.88, 1.0, 1)
+    _no(vidro)["Emission Strength"].default_value = 0.25
     _caixa("laje", (CX, CY, z + 0.01), (0.32, 0.22, 0.02), pedra, col)
     bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=0.05, location=(CX, CY, z + 0.065))
     c = bpy.context.object
@@ -506,9 +509,9 @@ def criar_diamante(col, m, faixas):
     f0, f1 = p[2]
     luz = _ponto("luz_calor", (CX, CY - 0.14, z + 0.07), (1.0, 0.25, 0.05), col)
     _energia(luz, 0, f0)
-    _energia(luz, 18, f0 + 30)
+    _energia(luz, 5, f0 + 30)
     _valor(_no(carvao)["Emission Strength"], 0.0, f0)
-    _valor(_no(carvao)["Emission Strength"], 2.5, f0 + 30)
+    _valor(_no(carvao)["Emission Strength"], 1.0, f0 + 30)
     # Etapa 4: o tempo; o bloco treme e o carbono encolhe.
     f0, f1 = p[3]
     for i, f in enumerate(range(f0, f1, 3)):
@@ -519,7 +522,7 @@ def criar_diamante(col, m, faixas):
     f0, f1 = p[4]
     _chave(bloco, "location", (CX, CY, z + 0.175), f0)
     _chave(bloco, "location", (CX, CY, z + 0.9), f0 + 18)
-    _energia(luz, 18, f0)
+    _energia(luz, 5, f0)
     _energia(luz, 0, f0 + 15)
     sumir(c, f0 + 10)
     d = bpy.data.objects.new("diamante", None)
@@ -536,9 +539,9 @@ def criar_diamante(col, m, faixas):
     pop(d, f0 + 14, (1.4, 1.4, 1.4))
     _chave(d, "rotation_euler", (0.3, 0, 0), f0 + 14)
     _chave(d, "rotation_euler", (0.3, 0, 2 * math.pi), f1 + 120)
-    brilho = _ponto("luz_brilho", (CX + 0.15, CY - 0.25, z + 0.35), (1, 1, 1), col)
+    brilho = _ponto("luz_brilho", (CX + 0.1, CY - 0.05, z + 0.3), (0.8, 0.9, 1), col)
     _energia(brilho, 0, f0 + 14)
-    _energia(brilho, 25, f0 + 24)
+    _energia(brilho, 6, f0 + 24)
 
 
 def criar_ampulheta(col, m, faixas):
