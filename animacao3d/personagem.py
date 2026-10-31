@@ -329,11 +329,11 @@ def cabeca_realista(colecao, m):
     return pecas
 
 
-def _la_material():
-    m = bpy.data.materials.get("la_tecida")
+def _la_material(nome="la_tecida", sujeira=False, cor=((0.04, 0.02, 0.011, 1), (0.085, 0.045, 0.025, 1))):
+    m = bpy.data.materials.get(nome)
     if m:
         return m
-    m = bpy.data.materials.new("la_tecida")
+    m = bpy.data.materials.new(nome)
     m.use_nodes = True
     nt = m.node_tree
     p = nt.nodes["Principled BSDF"]
@@ -345,10 +345,27 @@ def _la_material():
     var.inputs["Scale"].default_value = 6
     nt.links.new(tc.outputs["Object"], var.inputs["Vector"])
     rampa = nt.nodes.new("ShaderNodeValToRGB")
-    rampa.color_ramp.elements[0].color = (0.04, 0.02, 0.011, 1)
-    rampa.color_ramp.elements[1].color = (0.085, 0.045, 0.025, 1)
+    rampa.color_ramp.elements[0].color = cor[0]
+    rampa.color_ramp.elements[1].color = cor[1]
     nt.links.new(var.outputs["Fac"], rampa.inputs["Fac"])
-    nt.links.new(rampa.outputs["Color"], p.inputs["Base Color"])
+    if sujeira:
+        # Barra gasta: mais escura e empoeirada perto do chao.
+        sep = nt.nodes.new("ShaderNodeSeparateXYZ")
+        nt.links.new(tc.outputs["Object"], sep.inputs[0])
+        faixa = nt.nodes.new("ShaderNodeMapRange")
+        faixa.inputs["From Min"].default_value = 0.0
+        faixa.inputs["From Max"].default_value = 0.16
+        faixa.inputs["To Min"].default_value = 1.0
+        faixa.inputs["To Max"].default_value = 0.0
+        nt.links.new(sep.outputs["Z"], faixa.inputs["Value"])
+        mist = nt.nodes.new("ShaderNodeMix")
+        mist.data_type = "RGBA"
+        mist.inputs["B"].default_value = (0.06, 0.045, 0.035, 1)
+        nt.links.new(faixa.outputs["Result"], mist.inputs["Factor"])
+        nt.links.new(rampa.outputs["Color"], mist.inputs["A"])
+        nt.links.new(mist.outputs["Result"], p.inputs["Base Color"])
+    else:
+        nt.links.new(rampa.outputs["Color"], p.inputs["Base Color"])
     trama = nt.nodes.new("ShaderNodeTexWave")
     trama.wave_type = "BANDS"
     trama.bands_direction = "DIAGONAL"
@@ -393,32 +410,228 @@ def maos_realistas(colecao, s):
     return pecas
 
 
+# ---------------------------------------------------------------------------
+# Roupas V2: habito com forma e dobras de verdade, escapulario, murca, mangas de sino,
+# cordao franciscano com nos e bolsa de couro.
+# ---------------------------------------------------------------------------
+PROF = 0.8  # o corpo e mais estreito de frente para tras (elipse)
+
+
+def _raio_habito(z):
+    """Silhueta do habito: barra larga, cintura franzida no cordao, peito e ombros."""
+    pontos = [(0.0, 0.43), (0.15, 0.39), (0.5, 0.33), (0.85, 0.28), (0.98, 0.235), (1.02, 0.235), (1.1, 0.255),
+              (1.28, 0.23), (1.42, 0.17), (1.5, 0.11)]
+    for (z0, r0), (z1, r1) in zip(pontos, pontos[1:]):
+        if z <= z1:
+            t = (z - z0) / (z1 - z0)
+            t = t * t * (3 - 2 * t)
+            return r0 + (r1 - r0) * t
+    return pontos[-1][1]
+
+
+def _dobra_habito(a, z):
+    """Deslocamento radial das dobras: fundas e largas embaixo, miudas e franzidas acima do cordao."""
+    if z < 1.0:
+        k = 0.012 + 0.03 * _suave(0.95, 0.05, z)
+        return k * (0.65 * math.sin(11 * a + 0.7 * math.sin(2.3 * z)) + 0.35 * math.sin(23 * a + 1.3 + z))
+    k = 0.009 * _suave(1.35, 1.03, z)
+    return k * math.sin(19 * a + 0.4)
+
+
+def _torno(nome, zs, raio, dobra, mat, colecao, seg=128, prof=PROF, barra=None):
+    """Superficie de revolucao com dobras: grade (angulo x altura), aberta em cima e embaixo."""
+    bm = bmesh.new()
+    grade = []
+    for j, z in enumerate(zs):
+        anel = []
+        for i in range(seg):
+            a = 2 * math.pi * i / seg
+            r = raio(z) + dobra(a, z)
+            zz = z + (barra(a) if barra and j == 0 else 0)
+            anel.append(bm.verts.new((r * math.cos(a), r * math.sin(a) * prof, zz)))
+        grade.append(anel)
+    for j in range(len(zs) - 1):
+        for i in range(seg):
+            bm.faces.new((grade[j][i], grade[j][(i + 1) % seg], grade[j + 1][(i + 1) % seg], grade[j + 1][i]))
+    me = bpy.data.meshes.new(nome)
+    bm.to_mesh(me)
+    bm.free()
+    for p in me.polygons:
+        p.use_smooth = True
+    me.materials.append(mat)
+    o = bpy.data.objects.new(nome, me)
+    colecao.objects.link(o)
+    o.modifiers.new("espessura", "SOLIDIFY").thickness = 0.012
+    s = o.modifiers.new("sub", "SUBSURF")
+    s.levels, s.render_levels = 0, 1
+    return o
+
+
+def _faixa(nome, zs, largura, lado, mat, colecao, afasta=0.014):
+    """Escapulario: tira de pano colada na frente (lado=-1) ou nas costas (lado=1) do habito."""
+    bm = bmesh.new()
+    nx = 9
+    grade = []
+    for z in zs:
+        r = _raio_habito(z)
+        linha = []
+        for i in range(nx):
+            x = largura * (i / (nx - 1) - 0.5)
+            ry = r * PROF
+            y = lado * (ry * math.sqrt(max(1 - (x / r) ** 2, 0)) + afasta + max(_dobra_habito(-lado * math.pi / 2, z), 0))
+            linha.append(bm.verts.new((x, y, z)))
+        grade.append(linha)
+    for j in range(len(zs) - 1):
+        for i in range(nx - 1):
+            bm.faces.new((grade[j][i], grade[j][i + 1], grade[j + 1][i + 1], grade[j + 1][i]))
+    me = bpy.data.meshes.new(nome)
+    bm.to_mesh(me)
+    bm.free()
+    for p in me.polygons:
+        p.use_smooth = True
+    me.materials.append(mat)
+    o = bpy.data.objects.new(nome, me)
+    colecao.objects.link(o)
+    o.modifiers.new("espessura", "SOLIDIFY").thickness = 0.006
+    return o
+
+
+def _curva(nome, pontos, espessura, mat, colecao, fechada=False):
+    c = bpy.data.curves.new(nome, "CURVE")
+    c.dimensions = "3D"
+    c.bevel_depth = espessura
+    c.bevel_resolution = 3
+    c.use_fill_caps = True
+    sp = c.splines.new("NURBS")
+    sp.points.add(len(pontos) - 1)
+    for p, xyz in zip(sp.points, pontos):
+        p.co = (*xyz, 1)
+    sp.use_cyclic_u = fechada
+    sp.use_endpoint_u = not fechada
+    sp.order_u = 4
+    o = bpy.data.objects.new(nome, c)
+    o.data.materials.append(mat)
+    colecao.objects.link(o)
+    return o
+
+
+def _corda_material():
+    m = bpy.data.materials.get("corda_torcida")
+    if m:
+        return m
+    m = bpy.data.materials.new("corda_torcida")
+    m.use_nodes = True
+    nt = m.node_tree
+    p = nt.nodes["Principled BSDF"]
+    p.inputs["Base Color"].default_value = (0.42, 0.33, 0.2, 1)
+    p.inputs["Roughness"].default_value = 0.95
+    tc = nt.nodes.new("ShaderNodeTexCoord")
+    w = nt.nodes.new("ShaderNodeTexWave")
+    w.bands_direction = "DIAGONAL"
+    w.inputs["Scale"].default_value = 45
+    w.inputs["Distortion"].default_value = 0.5
+    nt.links.new(tc.outputs["UV"], w.inputs["Vector"])
+    b = nt.nodes.new("ShaderNodeBump")
+    b.inputs["Strength"].default_value = 0.8
+    nt.links.new(w.outputs["Fac"], b.inputs["Height"])
+    nt.links.new(b.outputs["Normal"], p.inputs["Normal"])
+    return m
+
+
+def roupas_realistas(colecao, m):
+    la = _la_material()
+    manto_m = _la_material("la_manto", sujeira=True)
+    escuro = _la_material("la_escapulario", cor=((0.025, 0.014, 0.009, 1), (0.05, 0.03, 0.018, 1)))
+    corda = _corda_material()
+    pecas = []
+    zs = [0.02 + 1.46 * (k / 70) ** 1.1 for k in range(71)]
+    pecas.append(_torno("manto", zs, _raio_habito, _dobra_habito, manto_m, colecao,
+                        barra=lambda a: 0.012 * math.sin(7 * a) + 0.01 * math.sin(3 * a + 1)))
+    zf = [0.12 + (1.44 - 0.12) * k / 50 for k in range(51)]
+    pecas.append(_faixa("escapulario_frente", zf, 0.22, -1, escuro, colecao))
+    pecas.append(_faixa("escapulario_costas", zf, 0.24, 1, escuro, colecao))
+    # Murca: capinha sobre os ombros, por cima das mangas.
+    zm = [1.2 + 0.32 * k / 24 for k in range(25)]
+    murca = _torno("murca", zm, lambda z: 0.36 - 0.9 * (z - 1.2) ** 1.4 * 1.6,
+                   lambda a, z: 0.012 * _suave(1.36, 1.2, z) * math.sin(14 * a + 0.5), la, colecao, seg=96, prof=0.72,
+                   barra=lambda a: 0.01 * math.sin(9 * a))
+    pecas.append(murca)
+    # Cordao: volta na cintura por cima do escapulario e ponta com tres nos.
+    anel = [((0.255) * math.cos(2 * math.pi * i / 24), (0.255 * PROF + 0.03) * math.sin(2 * math.pi * i / 24), 1.0)
+            for i in range(24)]
+    pecas.append(_curva("cordao", anel, 0.014, corda, colecao, fechada=True))
+    pts = []
+    for k in range(12):
+        z = 1.0 - 0.42 * k / 11
+        x = 0.085 + 0.012 * math.sin(k * 0.9)
+        r = _raio_habito(z)
+        y = -(r * PROF * math.sqrt(max(1 - (x / r) ** 2, 0)) + 0.045 + 0.015 * _suave(1.0, 0.5, z))
+        pts.append((x, y, z))
+    pecas.append(_curva("cordao_ponta", pts, 0.011, corda, colecao))
+    for z in (0.86, 0.74, 0.62):
+        i = min(range(len(pts)), key=lambda k: abs(pts[k][2] - z))
+        bpy.ops.mesh.primitive_uv_sphere_add(radius=1, location=pts[i])
+        no = _obj("no", corda, colecao)
+        no.scale = (0.021, 0.021, 0.024)
+        pecas.append(no)
+    # Bolsa de couro pendurada no cordao, do lado direito.
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(-0.235, -0.1, 0.9))
+    bolsa = _obj("bolsa", m["couro"], colecao)
+    bolsa.scale = (0.035, 0.1, 0.13)
+    bolsa.rotation_euler = (0, 0.12, -0.35)
+    bolsa.modifiers.new("bisel", "BEVEL").width = 0.012
+    sub = bolsa.modifiers.new("sub", "SUBSURF")
+    sub.levels = sub.render_levels = 2
+    pecas.append(bolsa)
+    pecas.append(_curva("alca_bolsa", [(-0.22, -0.16, 0.99), (-0.235, -0.12, 0.965), (-0.24, -0.08, 0.99)], 0.005,
+                        m["couro"], colecao))
+    return pecas
+
+
+def manga_sino(colecao, s, mat):
+    """Manga larga em forma de sino, aberta no punho, com dobras e espessura."""
+    a, b = Vector((0.19 * s, -0.02, 1.36)), Vector((0.11 * s, -0.27, 1.13))
+    d = b - a
+    bpy.ops.mesh.primitive_cone_add(vertices=48, radius1=0.075, radius2=0.12, depth=d.length, location=(a + b) / 2,
+                                    end_fill_type="NOTHING")
+    o = _obj("manga", mat, colecao)
+    o.rotation_mode = "QUATERNION"
+    o.rotation_quaternion = d.to_track_quat("Z", "Y")
+    o.modifiers.new("espessura", "SOLIDIFY").thickness = 0.01
+    _dobras(o, 0.012, 14, 2)
+    return o
+
+
 def criar(colecao, mats, local=(0, 0, 0), realista=True):
     m = dict(mats)
     if realista:
         m["la"] = _la_material()
     raiz = _vazio("elias_raiz", (0, 0, 0), colecao)
 
-    # Manto: cone largo embaixo, estreito nos ombros, com dobras.
-    bpy.ops.mesh.primitive_cone_add(vertices=64, radius1=0.38, radius2=0.19, depth=1.42, location=(0, 0, 0.81),
-                                    end_fill_type="NOTHING")
-    manto = _obj("manto", m["la"], colecao)
-    _dobras(manto, 0.03, 9)
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=1, location=(0, 0.0, 1.45))
-    ombros = _obj("ombros", m["la"], colecao)
-    ombros.scale = (0.29, 0.17, 0.14)
-    # Cinto de corda e pontas penduradas.
-    bpy.ops.mesh.primitive_torus_add(major_radius=0.27, minor_radius=0.016, location=(0, 0, 1.0))
-    cinto = _obj("cinto", m["corda"], colecao)
-    pontas = [_entre(f"corda{i}", (0.06 * s, -0.27, 1.0), (0.08 * s, -0.29, 0.62 + 0.06 * i), 0.012, 0.012,
-                     m["corda"], colecao) for i, s in enumerate((1, -1))]
+    if realista:
+        corpo = roupas_realistas(colecao, m)
+    else:
+        # Manto: cone largo embaixo, estreito nos ombros, com dobras.
+        bpy.ops.mesh.primitive_cone_add(vertices=64, radius1=0.38, radius2=0.19, depth=1.42, location=(0, 0, 0.81),
+                                        end_fill_type="NOTHING")
+        manto = _obj("manto", m["la"], colecao)
+        _dobras(manto, 0.03, 9)
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=1, location=(0, 0.0, 1.45))
+        ombros = _obj("ombros", m["la"], colecao)
+        ombros.scale = (0.29, 0.17, 0.14)
+        # Cinto de corda e pontas penduradas.
+        bpy.ops.mesh.primitive_torus_add(major_radius=0.27, minor_radius=0.016, location=(0, 0, 1.0))
+        cinto = _obj("cinto", m["corda"], colecao)
+        pontas = [_entre(f"corda{i}", (0.06 * s, -0.27, 1.0), (0.08 * s, -0.29, 0.62 + 0.06 * i), 0.012, 0.012,
+                         m["corda"], colecao) for i, s in enumerate((1, -1))]
+        corpo = [manto, ombros, cinto, *pontas]
     botas = []
     for s in (1, -1):
         bpy.ops.mesh.primitive_uv_sphere_add(radius=1, location=(0.1 * s, -0.1, 0.06))
         b = _obj("bota", m["couro"], colecao)
         b.scale = (0.075, 0.14, 0.065)
         botas.append(b)
-    for o in (manto, ombros, cinto, *pontas, *botas):
+    for o in (*corpo, *botas):
         _pai(o, raiz)
 
     # Cabeca: rosto, olhos, nariz, bigode, barba longa e capuz aberto na frente.
@@ -479,9 +692,12 @@ def criar(colecao, mats, local=(0, 0, 0), realista=True):
     bracos = _vazio("elias_bracos", (0, 0, 1.42), colecao, raiz)
     pb = []
     for s in (1, -1):
-        manga = _entre("manga", (0.25 * s, 0.0, 1.42), (0.11 * s, -0.27, 1.14), 0.08, 0.1, m["la"], colecao)
-        _dobras(manga, 0.008, 15, 1)
-        pb.append(manga)
+        if realista:
+            pb.append(manga_sino(colecao, s, m["la"]))
+        else:
+            manga = _entre("manga", (0.25 * s, 0.0, 1.42), (0.11 * s, -0.27, 1.14), 0.08, 0.1, m["la"], colecao)
+            _dobras(manga, 0.008, 15, 1)
+            pb.append(manga)
         if realista:
             pb += maos_realistas(colecao, s)
             continue
