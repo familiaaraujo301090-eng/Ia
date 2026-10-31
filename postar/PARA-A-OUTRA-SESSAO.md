@@ -89,12 +89,12 @@ e no Instagram Reels. Responda os primeiros comentarios para o video ganhar alca
 
 ## 5. NOVOS: videos 3D do Mestre Elias (60 a 63), sem musica Locrian
 Sao animacoes 3D feitas por codigo. Ja tem narracao, legenda e trilha: **nao adicione o Locrian**,
-poste como estao. Marque "conteudo alterado ou sintetico" (e animacao). O 63 vai HOJE (31/10), agora; os outros um por dia as **21h**,
+poste como estao. Marque "conteudo alterado ou sintetico" (e animacao). O 63 vai HOJE, agora (no mesmo dia em que voce ler isto); os outros um por dia as **21h**,
 como sexto video do dia:
 
 | Dia | Arquivo (pasta `postar/`) | Titulo | Descricao |
 |---|---|---|---|
-| **HOJE 31/10, assim que possivel** | `63-3d-vida-nao-esta-parada.mp4` | Sua vida nao esta parada | Do dia 1 ao dia 90: o que acontece com a semente onde ninguem ve. Eclesiastes 3. 🕯️ #fe #eclesiastes #paciencia #proposito #reflexao |
+| **HOJE, assim que possivel** | `63-3d-vida-nao-esta-parada.mp4` | Sua vida nao esta parada | Do dia 1 ao dia 90: o que acontece com a semente onde ninguem ve. Eclesiastes 3. 🕯️ #fe #eclesiastes #paciencia #proposito #reflexao |
 | 01/11 | `62-3d-livro-medieval-processo.mp4` | Como se fazia um livro na Idade Media | 5 passos, meses de trabalho e centenas de peles para um unico livro. 🕯️ #historia #idademedia #livros #curiosidades |
 | 02/11 | `61-3d-codex-leicester.mp4` | O caderno mais caro do mundo | O Codex Leicester de Leonardo da Vinci. 🕯️ #davinci #historia #curiosidades #livros |
 | 03/11 | `60-3d-lamparina-mais-antiga.mp4` | Uma chama de 17 mil anos | A lamparina de pedra da caverna de Lascaux, mais antiga que qualquer livro. 🕯️ #historia #curiosidades #lamparina #reflexao |
