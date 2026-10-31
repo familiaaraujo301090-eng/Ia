@@ -103,6 +103,20 @@ def _forma_rosto(p):
         d += 0.07 * _g(p, (0.15 * s, -0.95, -0.27), 0.065)    # asas do nariz
         d += 0.12 * _g(p, (1.0 * s, 0.05, 0.0), (0.05, 0.12, 0.16))  # orelhas
     d -= 0.035 * _g(p, (0, -0.95, -0.48), (0.22, 0.2, 0.05))  # boca
+    # Rugas: tres sulcos na testa, pes de galinha, bolsas sob os olhos e o bigode chines.
+    frente = _suave(-0.55, -0.85, p.y)
+    for zc in (0.5, 0.6, 0.7):
+        d -= 0.012 * frente * math.exp(-((p.z - zc) / 0.028) ** 2) * math.exp(-(p.x / 0.45) ** 2)
+    for s in (1, -1):
+        for k in (-1, 0, 1):
+            d -= 0.008 * _g(p, (0.63 * s, -0.66, 0.14 + 0.06 * k), (0.07, 0.07, 0.013))
+        d += 0.02 * _g(p, (0.36 * s, -0.88, -0.04), (0.1, 0.1, 0.035))
+        d -= 0.012 * _g(p, (0.36 * s, -0.86, -0.1), (0.12, 0.1, 0.02))
+        a_, b_ = Vector((0.17 * s, -0.93, -0.27)), Vector((0.3 * s, -0.86, -0.58))
+        t = max(0.0, min(1.0, (p - a_).dot(b_ - a_) / (b_ - a_).length_squared))
+        dist = (p - (a_ + (b_ - a_) * t)).length
+        d -= 0.025 * math.exp(-(dist / 0.03) ** 2)
+        d += 0.012 * math.exp(-((dist - 0.05) / 0.03) ** 2)
     d += 0.05 * _g(p, (0, -0.85, -0.8), 0.15)                 # queixo
     q = p + n * d
     # Nariz: crista no meio do rosto, mais alta na ponta.
@@ -116,7 +130,27 @@ def _forma_rosto(p):
     return q
 
 
-def _pele_material(nome, com_cor):
+PARTES_ROSTO = {}
+
+
+def _sup(pu):
+    """Ponto da superficie do rosto (unidades da cena) a partir de um ponto da esfera unitaria."""
+    q = _forma_rosto(pu.normalized())
+    return Vector((q.x * ESCALA_CABECA.x, q.y * ESCALA_CABECA.y, q.z * ESCALA_CABECA.z)) + CENTRO_CABECA
+
+
+def _boca_material():
+    m = bpy.data.materials.get("boca")
+    if m is None:
+        m = bpy.data.materials.new("boca")
+        m.use_nodes = True
+        p = m.node_tree.nodes["Principled BSDF"]
+        p.inputs["Base Color"].default_value = (0.05, 0.012, 0.01, 1)
+        p.inputs["Roughness"].default_value = 0.6
+    return m
+
+
+def _pele_material(nome, com_cor, cor=None):
     """Pele: subsurface, poros e rugas finas na testa; cor por vertice (bochechas e nariz mais rosados)."""
     m = bpy.data.materials.get(nome)
     if m:
@@ -125,7 +159,7 @@ def _pele_material(nome, com_cor):
     m.use_nodes = True
     nt = m.node_tree
     p = nt.nodes["Principled BSDF"]
-    p.inputs["Base Color"].default_value = (0.42, 0.25, 0.17, 1)
+    p.inputs["Base Color"].default_value = (*(cor or (0.42, 0.25, 0.17)), 1)
     if com_cor:
         ca = nt.nodes.new("ShaderNodeVertexColor")
         ca.layer_name = "cor_pele"
@@ -262,7 +296,7 @@ def _fios(o, nome, grupo, quantos, comprimento, direcao, normal, filhos=10, aglo
 
 def cabeca_realista(colecao, m):
     """Devolve as pecas da cabeca V2 (todas para serem filhas do vazio da cabeca)."""
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=96, ring_count=48, radius=1, location=(0, 0, 0))
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=192, ring_count=96, radius=1, location=(0, 0, 0))
     rosto = _obj("rosto", None, colecao)
     me = rosto.data
     cores = me.color_attributes.new("cor_pele", "FLOAT_COLOR", "POINT")
@@ -270,6 +304,7 @@ def cabeca_realista(colecao, m):
     bigode_g = rosto.vertex_groups.new(name="bigode")
     sob_g = rosto.vertex_groups.new(name="sobrancelha")
     comp_g = rosto.vertex_groups.new(name="comprimento")
+    cab_g = rosto.vertex_groups.new(name="cabelo")
     for v in me.vertices:
         p = v.co.copy()
         q = _forma_rosto(p)
@@ -286,35 +321,68 @@ def cabeca_realista(colecao, m):
             comp_g.add([v.index], 0.3 + 0.7 * (1 - abs(p.x) / 0.8) ** 1.5, "REPLACE")
         if p.y < -0.7 and -0.46 < p.z < -0.3 and abs(p.x) < 0.42:
             bigode_g.add([v.index], 1.0, "REPLACE")
-        for s in (1, -1):
-            if _g(p, (0.36 * s, -0.86, 0.33), (0.17, 0.3, 0.05)) > 0.5:
-                sob_g.add([v.index], 1.0, "REPLACE")
+        if -0.2 < p.z < 0.45 and abs(p.x) > 0.72 and p.y > -0.35:
+            cab_g.add([v.index], 1.0, "REPLACE")
     rosto.location = CENTRO_CABECA
     me.materials.append(_pele_material("pele_rosto", True))
     me.materials.append(_cabelo_material())
     sub = rosto.modifiers.new("sub", "SUBSURF")
     sub.levels, sub.render_levels = 0, 1
     _fios(rosto, "barba", "barba", 2200, 0.26, (0, -0.15, -1.0), 0.1, 10, 0.6, "comprimento")
-    _fios(rosto, "bigode", "bigode", 500, 0.075, (0, -0.4, -1.0), 0.6, 8, 0.6)
-    _fios(rosto, "sobrancelha", "sobrancelha", 260, 0.022, (0, -0.6, 0.35), 0.4, 6, 0.3)
+    _fios(rosto, "bigode", "bigode", 600, 0.05, (0, -0.3, -1.0), 0.45, 8, 0.25)
+    _fios(rosto, "cabelo", "cabelo", 700, 0.035, (0, 0.4, -1.0), 0.12, 6, 0.3)
     pecas = [rosto]
+    partes = {"sobrancelhas": [], "palpebras": [], "olhos": []}
+    # Sobrancelhas em tiras proprias (invisiveis) para poderem subir e descer.
+    for s in (1, -1):
+        c = _sup(Vector((0.36 * s, -0.86, 0.33)))
+        # Tira no plano xz com a normal para a frente (-y): os fios nascem para fora do rosto.
+        bm = bmesh.new()
+        vs = [bm.verts.new(v) for v in ((-0.025, 0, -0.007), (0.025, 0, -0.007), (0.025, 0, 0.007), (-0.025, 0, 0.007))]
+        bm.faces.new(vs)
+        me_s = bpy.data.meshes.new("sobrancelha")
+        bm.to_mesh(me_s)
+        bm.free()
+        so = bpy.data.objects.new("sobrancelha", me_s)
+        colecao.objects.link(so)
+        me_s.materials.append(_cabelo_material())
+        so.location = (c.x, c.y + 0.002, c.z)
+        so.rotation_euler = (0, math.radians(-8 * s), 0)
+        so.show_instancer_for_render = False
+        so.visible_camera = True
+        _fios(so, "sobrancelha", "", 140, 0.022, (0, -0.6, 0.35), 0.4, 6, 0.3)
+        pecas.append(so)
+        partes["sobrancelhas"].append(so)
+    # Boca: abertura escura e labio inferior, que se movem com a fala.
+    cb = _sup(Vector((0, -0.95, -0.5)))
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=1, location=(cb.x, cb.y + 0.004, cb.z))
+    boca = _obj("boca", _boca_material(), colecao)
+    boca.scale = (0.022, 0.008, 0.004)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=1, location=(cb.x, cb.y + 0.001, cb.z - 0.008))
+    labio = _obj("labio", _pele_material("labio", False, (0.42, 0.17, 0.14)), colecao)
+    labio.scale = (0.024, 0.01, 0.007)
+    pecas += [boca, labio]
+    partes["boca"], partes["labio"] = boca, labio
     # Volume interno da barba (evita ver atraves dos fios).
-    bpy.ops.mesh.primitive_cone_add(vertices=40, radius1=0.025, radius2=0.085, depth=0.3,
-                                    location=(0, -0.12, 1.43), rotation=(0.14, 0, 0))
+    bpy.ops.mesh.primitive_cone_add(vertices=40, radius1=0.025, radius2=0.07, depth=0.28,
+                                    location=(0, -0.11, 1.39), rotation=(0.14, 0, 0))
     miolo = _obj("barba_miolo", m["barba"], colecao)
     miolo.scale = (1.0, 0.7, 1.0)
     pecas.append(miolo)
     # Olhos e palpebras.
     olho_m = _olho_material()
-    pele_l = _pele_material("pele_lisa", False)
+    pele_l = _pele_material("palpebra", False)
+    pele_l.node_tree.nodes["Principled BSDF"].inputs["Subsurface Weight"].default_value = 0.0
     for s in (1, -1):
         alvo = _forma_rosto(Vector((0.36 * s, -0.86, 0.14)).normalized())
         c = Vector((alvo.x * ESCALA_CABECA.x, alvo.y * ESCALA_CABECA.y, alvo.z * ESCALA_CABECA.z)) + CENTRO_CABECA
         c.y += 0.009
         bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=0.016, location=c)
-        pecas.append(_obj("olho", olho_m, colecao))
+        olho = _obj("olho", olho_m, colecao)
+        pecas.append(olho)
+        partes["olhos"].append(olho)
         for nome, corte, inclina in (("palpebra_sup", 0.78, -0.25), ("palpebra_inf", -0.78, 0.2)):
-            bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=0.0172, location=c)
+            bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=0.0176, location=c)
             pal = _obj(nome, pele_l, colecao)
             bm = bmesh.new()
             bm.from_mesh(pal.data)
@@ -326,6 +394,10 @@ def cabeca_realista(colecao, m):
             bm.to_mesh(pal.data)
             bm.free()
             pecas.append(pal)
+            if corte > 0:
+                partes["palpebras"].append(pal)
+    PARTES_ROSTO.clear()
+    PARTES_ROSTO.update(partes)
     return pecas
 
 
@@ -732,7 +804,11 @@ def criar(colecao, mats, local=(0, 0, 0), realista=True):
     _pai(luz, bracos)
 
     raiz.location = local
-    return {"raiz": raiz, "cabeca": cab, "bracos": bracos, "luz": luz, "chama": chama}
+    partes = {"raiz": raiz, "cabeca": cab, "bracos": bracos, "luz": luz, "chama": chama}
+    if realista:
+        partes.update(PARTES_ROSTO)
+        partes["murca"] = bpy.data.objects.get("murca")
+    return partes
 
 
 def tremular(partes, inicio, fim, semente=7):
@@ -745,3 +821,102 @@ def tremular(partes, inicio, fim, semente=7):
         luz.data.keyframe_insert("energy", frame=f)
         chama.scale = (0.011, 0.011, 0.03 * (0.85 + 0.3 * k))
         chama.keyframe_insert("scale", frame=f)
+
+
+# ---------------------------------------------------------------------------
+# Vida (V2): boca sincronizada com a narracao, piscar, sobrancelhas, olhar e respiracao.
+# ---------------------------------------------------------------------------
+def _envelope(wav, fps):
+    """Volume da narracao por quadro, de 0 a 1 (RMS suavizado)."""
+    import subprocess
+    import array
+    bruto = subprocess.run(["ffmpeg", "-v", "error", "-i", str(wav), "-ac", "1", "-ar", "8000", "-f", "s16le", "-"],
+                           capture_output=True, check=True).stdout
+    a = array.array("h", bruto)
+    n = 8000 // fps
+    rms = [(sum(x * x for x in a[i:i + n]) / n) ** 0.5 for i in range(0, len(a) - n, n)]
+    topo = sorted(rms)[int(len(rms) * 0.92)] or 1
+    sua, v = [], 0.0
+    for x in rms:
+        v = 0.5 * v + 0.5 * min(x / topo, 1.0)
+        sua.append(v)
+    return sua
+
+
+def _camera_no_quadro(cena, f):
+    marcas = sorted((m for m in cena.timeline_markers if m.camera), key=lambda m: m.frame)
+    cam = cena.camera
+    for m in marcas:
+        if m.frame <= f:
+            cam = m.camera
+    return cam
+
+
+def vida(partes, cena, wav, tempos, fim, fps=24, semente=3):
+    if "boca" not in partes:
+        return
+    rnd = random.Random(semente)
+    # 1. Fala: a boca abre com o volume da voz (quadros pares, que sao os renderizados).
+    env = _envelope(wav, fps)
+    boca, labio = partes["boca"], partes["labio"]
+    b0, l0 = tuple(boca.location), tuple(labio.location)
+    for f in range(0, min(fim, len(env)) + 1, 2):
+        a = env[f] if env[f] > 0.12 else 0.0
+        boca.scale = (0.022, 0.008, 0.004 + 0.011 * a)
+        boca.location = (b0[0], b0[1], b0[2] - 0.004 * a)
+        labio.location = (l0[0], l0[1], l0[2] - 0.01 * a)
+        boca.keyframe_insert("scale", frame=f)
+        boca.keyframe_insert("location", frame=f)
+        labio.keyframe_insert("location", frame=f)
+    # 1. Piscar a cada 2,5 a 5 s.
+    f = 30
+    while f < fim - 8:
+        f -= f % 2
+        for pal in partes["palpebras"]:
+            for df, ang in ((0, 0), (2, 72), (4, 40), (6, 0)):
+                pal.rotation_euler = (math.radians(ang), 0, 0)
+                pal.keyframe_insert("rotation_euler", frame=f + df)
+        f += int(rnd.uniform(2.5, 5) * fps)
+    # 1. Sobrancelhas sobem no comeco de uma frase sim, outra nao.
+    for so in partes["sobrancelhas"]:
+        z0 = so.location.z
+        so.keyframe_insert("location", frame=0)
+        for i, t in enumerate(tempos):
+            if i % 2:
+                continue
+            q = int(t[0] * fps)
+            for df, dz in ((0, 0), (5, 0.004), (16, 0.004), (24, 0)):
+                so.location.z = z0 + dz
+                so.keyframe_insert("location", frame=q + df)
+    # 2. Olhar: os olhos procuram a camera ativa, com pequenos desvios (sacadas).
+    alvo = bpy.data.objects.new("alvo_olhar", None)
+    cena.collection.objects.link(alvo)
+    for olho in partes["olhos"]:
+        c = olho.constraints.new("DAMPED_TRACK")
+        c.target = alvo
+        c.track_axis = "TRACK_NEGATIVE_Y"
+        c.influence = 0.6
+    desvio = Vector()
+    for f in range(0, fim + 1, 6):
+        if f % 36 == 0:
+            desvio = Vector((rnd.uniform(-0.06, 0.06), 0, rnd.uniform(-0.04, 0.04)))
+        cam = _camera_no_quadro(cena, f)
+        if cam is None:
+            continue
+        cena.frame_set(f)
+        alvo.location = cam.matrix_world.translation + desvio
+        alvo.keyframe_insert("location", frame=f)
+    cena.frame_set(0)
+    # 6. Respiracao: ombros e cabeca sobem e descem (ciclo de 4 s), murca enche um pouco.
+    cab, bracos, murca = partes["cabeca"], partes["bracos"], partes.get("murca")
+    c0, br0 = tuple(cab.location), tuple(bracos.location)
+    for f in range(0, fim + 1, 12):
+        k = math.sin(2 * math.pi * f / (4 * fps))
+        lado = math.sin(2 * math.pi * f / (7 * fps))
+        cab.location = (c0[0] + 0.003 * lado, c0[1], c0[2] + 0.004 * k)
+        bracos.location = (br0[0], br0[1], br0[2] + 0.005 * k)
+        cab.keyframe_insert("location", frame=f)
+        bracos.keyframe_insert("location", frame=f)
+        if murca:
+            murca.scale = (1 + 0.012 * k, 1 + 0.015 * k, 1)
+            murca.keyframe_insert("scale", frame=f)

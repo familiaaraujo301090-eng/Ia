@@ -69,6 +69,7 @@ def construir(tempos, total):
         getattr(processo, HIST["extra"])(col, m, faixas)
     cena.frame_start, cena.frame_end = 0, faixas[-1][1]
     personagem.tremular(p, 0, cena.frame_end)
+    personagem.vida(p, cena, SAIDA / "narracao.wav", tempos, cena.frame_end, historia.FPS)
     bpy.ops.wm.save_as_mainfile(filepath=str(SAIDA / "cena.blend"))
     return cena, p, faixas
 
