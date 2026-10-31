@@ -860,7 +860,7 @@ def vida(partes, cena, wav, tempos, fim, fps=24, semente=3):
     env = _envelope(wav, fps)
     boca, labio = partes["boca"], partes["labio"]
     b0, l0 = tuple(boca.location), tuple(labio.location)
-    for f in range(0, min(fim, len(env)) + 1, 2):
+    for f in range(0, min(fim, len(env) - 1) + 1, 2):
         a = env[f] if env[f] > 0.12 else 0.0
         boca.scale = (0.022, 0.008, 0.004 + 0.011 * a)
         boca.location = (b0[0], b0[1], b0[2] - 0.004 * a)
