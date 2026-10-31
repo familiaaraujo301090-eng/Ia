@@ -36,7 +36,7 @@ sheets e vídeo sozinho.
 - Equipe de corrida de rua de Buri - SP ([Instagram @equipeamigosdoserginho_](https://www.instagram.com/equipeamigosdoserginho_/)).
 - 2026: a equipe representou Buri na Meia Maratona Internacional de Balneário Camboriú (SC), nos 5, 10 e 21 km;
   Aline Cochetti e Silvia Correia foram premiadas nas categorias dos 10 km ([Buri Conectado](https://www.buriconectado.com/2026/05/equipe-de-buri-se-destaca-na-meia.html)).
-- O líder da equipe, Matheus Ferreira, correu a Maratona de Assunção (Paraguai) em ~3h03 e foi premiado na categoria ([Jornal Ita News](https://jornalitanews.com.br/atleta-de-buri/)).
+- O atleta de Buri Matheus Ferreira correu a Maratona de Assunção (Paraguai) em ~3h03 e foi premiado na categoria ([Jornal Ita News](https://jornalitanews.com.br/atleta-de-buri/)).
 - A equipe aparece inscrita em provas locais como a 3ª Corrida da Amizade Shark Run - Buri 2024 ([OnSport](https://www.onsport.com.br/events/179-3-corrida-da-amizade-shark-run-buri-2024)).
 
 ## Roteiro (38,5 s)
@@ -47,7 +47,7 @@ sheets e vídeo sozinho.
 | 2 | Maratona | 4,5–10,5 s | corre | travelling lateral | A maratona tem 42,195 km, usada pela primeira vez nos Jogos de Londres, em 1908 |
 | 3 | Equipe | 10,5–16,5 s | corre | dolly frontal até o logo | Amigos do Serginho é uma equipe de corrida de rua de Buri, interior de SP |
 | 4 | Camboriú | 16,5–22,5 s | corre | órbita de 240° | Em 2026 a equipe levou Buri à Meia Maratona de Balneário Camboriú e voltou com troféus |
-| 5 | Assunção | 22,5–28,5 s | corre mais rápido | drone por trás | O líder Matheus Ferreira completou a Maratona de Assunção em ~3h03 |
+| 5 | Assunção | 22,5–28,5 s | corre mais rápido | drone por trás | O corredor de Buri Matheus Ferreira completou a Maratona de Assunção em ~3h03 |
 | 6 | Chegada | 28,5–34 s | rompe a fita e comemora | câmera baixa | Correr junto motiva: cada quilômetro fica mais leve com os amigos |
 | 7 | Encerramento | 34–38,5 s | acena | aproximação + logo | Siga a equipe: @equipeamigosdoserginho_ |
 
