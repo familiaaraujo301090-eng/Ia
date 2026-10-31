@@ -102,3 +102,17 @@ como sexto video do dia:
 Na primeira hora, fixe um comentario com a pergunta do final do video (ex.: no 63, "Em que dia
 da semente voce esta hoje?") para puxar respostas. Anote o desempenho dos 3D separado em
 `DESEMPENHO.md`: eles sao um teste de formato novo.
+
+## 6. NOVOS: mais 5 videos 3D de jornada (64 a 68), com o Elias novo
+Mesmas regras da secao 5: **nao adicione o Locrian**, poste como estao, marque "conteudo
+alterado ou sintetico" (e animacao). Um por dia as **21h**, depois do 60 (03/11):
+
+| Dia | Arquivo (pasta `postar/`) | Titulo | Descricao | Comentario fixado |
+|---|---|---|---|---|
+| 04/11 | `64-3d-kintsugi.mp4` | O vaso que ficou mais bonito quebrado | No Japao, quando um vaso quebra, eles colam com ouro. Kintsugi. 🕯️ #fe #kintsugi #cicatrizes #superacao #reflexao | Qual rachadura virou ouro na sua vida? |
+| 05/11 | `65-3d-ouro-no-fogo.mp4` | Por que Deus deixa voce passar pelo fogo | 5 etapas do ouro no fogo. 1 Pedro 1:7. 🕯️ #fe #biblia #provacao #proposito #reflexao | Em que fase do fogo voce esta? |
+| 06/11 | `66-3d-diamante.mp4` | Como o carvao vira diamante | Carbono, pressao, calor, tempo... e brilho. 🕯️ #fe #pressao #superacao #naodesista #reflexao | Se voce esta debaixo de pressao, comenta: eu nao desisto. |
+| 07/11 | `67-3d-quatro-mil-semanas.mp4` | Voce tem 4.000 semanas de vida | Uma vida inteira cabe em 4.000 semanas. Seneca. 🕯️ #filosofia #seneca #tempo #estoicismo #reflexao | Em que semana voce esta? |
+| 08/11 | `68-3d-anjo-no-marmore.mp4` | O anjo estava dentro da pedra | Michelangelo via o anjo no marmore e so tirava o excesso. 🕯️ #fe #michelangelo #proposito #reflexao | O que Deus esta tirando de voce agora? |
+
+Anote o desempenho deles tambem em `DESEMPENHO.md`, junto com os 3D da secao 5.
