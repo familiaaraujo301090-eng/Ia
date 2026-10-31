@@ -73,13 +73,14 @@ window.setup = async (roteiro) => {
 // Posiciona tudo no instante t (sem desenhar).
 export function pose(t) {
   const st = E.timeline.at(t);
-  applyPose(E.char, poseFor(st), st.x);
+  applyPose(E.char, poseFor(st), st.x, t);
   E.env.update(t, st.x);
   E.sun.position.set(st.x - 12, 22, 14);
   E.sun.target.position.set(st.x, 0, 0);
   E.sky.position.set(st.x, 0, 0);
   const cam = cameraFor(st.cena, st.u, st.x, t);
-  E.camera.fov = cam.fov;
+  // "punch-in": cada cena começa um pouco mais aberta e fecha rápido
+  E.camera.fov = cam.fov * (1 + 0.18 * Math.exp(-st.local / 0.12));
   E.camera.position.copy(cam.pos);
   E.camera.lookAt(cam.look);
   return st;

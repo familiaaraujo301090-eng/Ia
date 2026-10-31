@@ -15,16 +15,34 @@ assets/logo_amigos_do_serginho.png
 output/                           vídeo final e sheets gerados
 ```
 
+## Versão viral (áudio)
+
+- **Narração ElevenLabs** (`audio/elevenlabs.js`): gera a fala de cada cena com timestamps por palavra.
+  As cenas se ajustam à duração da fala e as legendas acendem palavra por palavra no ritmo da voz.
+- **Trilha e efeitos por código** (`audio/trilha.py`): batida pop (124 BPM, vi-IV-I-V), whoosh nos cortes,
+  "pop" nos selos, fita + torcida na chegada e "ding" no logo final. A música abaixa sozinha sob a voz (sidechain)
+  e o áudio é normalizado em -14 LUFS (padrão de Reels/TikTok/Shorts).
+- **Edição viral**: legendas grandes de até 3 palavras, flash branco + punch-in de zoom em cada corte, gancho "Você sabia?" no 1º segundo.
+
+```bash
+export ELEVENLABS_API_KEY=...        # chave da sua conta ElevenLabs
+export ELEVENLABS_VOICE_ID=...       # opcional; padrão = roteiro.audio.vozId
+npm run audio                        # output/audio/<cena>.mp3 + .json (tempo das palavras)
+npm run render                       # output/amigos_do_serginho_viral.mp4 (com voz, música e efeitos)
+```
+
+Sem a chave, o render usa o tempo estimado das palavras e gera o vídeo só com música e efeitos.
+
 ## Como usar
 
 ```bash
 cd video3d && npm install
-npm run render     # output/amigos_do_serginho.mp4 (720x1280, 30 fps, sem áudio)
+npm run render     # output/amigos_do_serginho_viral.mp4 (720x1280, 30 fps, com áudio)
 npm run sheets     # output/sheets/*.png (personagem, cenário, storyboard)
 npm run preview    # output/preview/*.jpg (2 quadros por cena, para revisar rápido)
 ```
 
-Requer Node 18+, ffmpeg e Playwright com Chromium. O render usa WebGL por software
+Requer Node 18+, Python 3 com numpy, ffmpeg e Playwright com Chromium. O render usa WebGL por software
 (SwiftShader), então roda em servidor sem GPU (~4–5 min para 38 s de vídeo).
 
 Para fazer um vídeo novo, copie o roteiro JSON, troque textos, ações (`alongar`, `correr`,
@@ -39,7 +57,7 @@ sheets e vídeo sozinho.
 - O atleta de Buri Matheus Ferreira correu a Maratona de Assunção (Paraguai) em ~3h03 e foi premiado na categoria ([Jornal Ita News](https://jornalitanews.com.br/atleta-de-buri/)).
 - A equipe aparece inscrita em provas locais como a 3ª Corrida da Amizade Shark Run - Buri 2024 ([OnSport](https://www.onsport.com.br/events/179-3-corrida-da-amizade-shark-run-buri-2024)).
 
-## Roteiro (38,5 s)
+## Roteiro (legendas da 1ª versão; a narração está em `narracao` no JSON)
 
 | # | Cena | Tempo | Ação | Câmera | Legenda |
 |---|------|-------|------|--------|---------|

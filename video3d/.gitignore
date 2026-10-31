@@ -1,3 +1,5 @@
 node_modules/
 output/frames/
 output/preview/
+output/audio/*.wav
+output/audio/timeline.json

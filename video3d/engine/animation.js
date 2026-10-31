@@ -63,7 +63,7 @@ export function sceneAt(cenas, t) {
 const JOINTS = ['pelvis', 'spine', 'chest', 'neck', 'head', 'shoulderL', 'shoulderR', 'elbowL', 'elbowR', 'hipL', 'hipR', 'kneeL', 'kneeR', 'ankleL', 'ankleR'];
 
 function zeroPose() {
-  const p = { y: BASE_Y, heading: Math.PI / 2, smile: 1 };
+  const p = { y: BASE_Y, heading: Math.PI / 2, smile: 1, mouth: 0 };
   for (const j of JOINTS) p[j] = [0, 0, 0];
   p.shoulderL = [0, 0, 0.12];
   p.shoulderR = [0, 0, -0.12];
@@ -122,6 +122,7 @@ function celebratePose(t) {
   p.kneeR = [0.9 * tuck, 0, 0];
   p.head = [-0.25, 0, 0];
   p.spine = [-0.1, 0, 0];
+  p.mouth = 1;
   return p;
 }
 
@@ -135,11 +136,12 @@ function wavePose(t) {
   p.elbowL = [-0.4, 0, -1.6];
   p.head = [0.05, 0, Math.sin(t * 1.5) * 0.08];
   p.spine = [0, 0, Math.sin(t * 1.2) * 0.03];
+  p.mouth = 0.6;
   return p;
 }
 
 function mixPose(a, b, k) {
-  const out = { y: lerp(a.y, b.y, k), heading: lerp(a.heading, b.heading, k), smile: lerp(a.smile, b.smile, k) };
+  const out = { y: lerp(a.y, b.y, k), heading: lerp(a.heading, b.heading, k), smile: lerp(a.smile, b.smile, k), mouth: lerp(a.mouth, b.mouth, k) };
   for (const j of JOINTS) out[j] = a[j].map((v, i) => lerp(v, b[j][i], k));
   return out;
 }
@@ -169,10 +171,17 @@ export function poseFor(state) {
   }
 }
 
-export function applyPose(char, pose, x) {
+export function applyPose(char, pose, x, t = null) {
   const J = char.joints;
   char.root.position.set(x, 0, 0);
   char.root.rotation.y = pose.heading;
   for (const j of JOINTS) J[j].rotation.set(...pose[j]);
   J.pelvis.position.y = pose.y;
+  // piscada a cada ~3,2 s e boca aberta conforme a pose
+  const bt = t === null ? 1 : (t % 3.2) / 0.14;
+  const blink = bt < 1 ? Math.max(0.08, Math.abs(1 - 2 * bt)) : 1;
+  for (const e of J.eyes) e.scale.y = blink;
+  J.mouthOpen.visible = pose.mouth > 0.05;
+  J.mouthOpen.scale.set(1, pose.mouth, 1);
+  J.smile.visible = pose.mouth <= 0.05;
 }

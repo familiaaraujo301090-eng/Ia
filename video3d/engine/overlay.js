@@ -3,6 +3,27 @@
 import { FONT, logoCircleCanvas } from './textures.js';
 
 const { min, max } = Math;
+export const NARRACAO_DELAY = 0.25;
+
+// agrupa as palavras em blocos curtos (até 3 palavras / 18 letras)
+function chunk(palavras) {
+  const out = [];
+  let cur = [];
+  for (const p of palavras) {
+    const len = cur.reduce((a, q) => a + q.w.length + 1, 0) + p.w.length;
+    if (cur.length && (cur.length >= 3 || len > 18)) {
+      out.push(cur);
+      cur = [];
+    }
+    cur.push(p);
+    if (/[.,!?:]$/.test(p.w)) {
+      out.push(cur);
+      cur = [];
+    }
+  }
+  if (cur.length) out.push(cur);
+  return out;
+}
 const clamp01 = (v) => min(1, max(0, v));
 const easeOutBack = (x) => {
   const c1 = 1.70158, c3 = c1 + 1;
@@ -19,28 +40,12 @@ function roundRect(g, x, y, w, h, r) {
   g.closePath();
 }
 
-function wrap(g, text, maxW) {
-  const words = text.split(' ');
-  const lines = [];
-  let line = '';
-  for (const w of words) {
-    const test = line ? line + ' ' + w : w;
-    if (g.measureText(test).width > maxW && line) {
-      lines.push(line);
-      line = w;
-    } else line = test;
-  }
-  if (line) lines.push(line);
-  return lines;
-}
-
 export function makeOverlay(logoImg) {
   const logo = logoCircleCanvas(logoImg, 512);
 
   return function draw(g, W, H, state, total, t) {
     const { cena, local } = state;
     const S = W / 720;
-    const fadeIn = clamp01(local / 0.35);
 
     // marca d'água
     g.save();
@@ -88,35 +93,45 @@ export function makeOverlay(logoImg) {
       }
     }
 
-    // legenda com texto revelado progressivamente
-    if (cena.texto) {
-      g.save();
-      g.font = `bold ${38 * S}px ${FONT}`;
-      const maxW = W - 140 * S;
-      const lines = wrap(g, cena.texto, maxW);
-      const lh = 50 * S;
-      const boxH = lines.length * lh + 56 * S;
-      const y0 = H - 140 * S - boxH;
-      const slide = (1 - fadeIn) * 60 * S;
-      g.globalAlpha = fadeIn;
-      g.shadowColor = 'rgba(0,0,0,0.35)';
-      g.shadowBlur = 24 * S;
-      g.fillStyle = 'rgba(255,255,255,0.94)';
-      roundRect(g, 40 * S, y0 + slide, W - 80 * S, boxH, 28 * S);
-      g.fill();
-      g.shadowBlur = 0;
-      g.fillStyle = '#2246a8';
-      g.fillRect(40 * S, y0 + slide + 22 * S, 10 * S, boxH - 44 * S);
-      const chars = Math.floor(clamp01((local - 0.2) / 1.6) * cena.texto.length);
-      let used = 0;
-      g.fillStyle = '#13296b';
-      g.textBaseline = 'top';
-      lines.forEach((l, i) => {
-        const vis = l.slice(0, max(0, chars - used));
-        used += l.length + 1;
-        g.fillText(vis, 72 * S, y0 + slide + 30 * S + i * lh);
-      });
-      g.restore();
+    // legendas estilo "viral": blocos de até 3 palavras, palavra falada em verde
+    if (cena.palavras && cena.palavras.length) {
+      const tt = local - NARRACAO_DELAY;
+      const chunks = chunk(cena.palavras);
+      let ci = -1;
+      for (let i = 0; i < chunks.length; i++) if (tt >= chunks[i][0].t0 - 0.05) ci = i;
+      const last = chunks[chunks.length - 1];
+      if (ci >= 0 && tt < last[last.length - 1].t1 + 0.6) {
+        const ch = chunks[ci];
+        const k = easeOutBack(clamp01((tt - ch[0].t0 + 0.05) / 0.14));
+        g.save();
+        g.translate(W / 2, H * 0.7);
+        g.scale(k, k);
+        g.font = `900 ${60 * S}px ${FONT}`;
+        g.textAlign = 'left';
+        g.textBaseline = 'middle';
+        g.lineJoin = 'round';
+        const words = ch.map((p) => p.w.toUpperCase());
+        const sp = 24 * S;
+        const widths = words.map((w) => g.measureText(w).width * 1.12);
+        const full = widths.reduce((a, b) => a + b, 0) + sp * (words.length - 1);
+        const fit = Math.min(1, (W - 60 * S) / full);
+        g.scale(fit, fit);
+        let x = -full / 2;
+        words.forEach((w, i) => {
+          const on = tt >= ch[i].t0 - 0.03 && (i === ch.length - 1 || tt < ch[i + 1].t0);
+          g.save();
+          g.translate(x + widths[i] / 2, 0);
+          if (on) g.scale(1.12, 1.12);
+          g.lineWidth = 12 * S;
+          g.strokeStyle = '#0b1640';
+          g.strokeText(w, -widths[i] / 2 / 1.12, 0);
+          g.fillStyle = on ? '#4dd75d' : '#ffffff';
+          g.fillText(w, -widths[i] / 2 / 1.12, 0);
+          g.restore();
+          x += widths[i] + sp;
+        });
+        g.restore();
+      }
     }
 
     // barra de progresso
@@ -125,16 +140,17 @@ export function makeOverlay(logoImg) {
     g.fillStyle = '#4dd75d';
     g.fillRect(0, H - 10 * S, (W * t) / total, 10 * S);
 
-    // fade preto entre cenas
-    const edge = min(local, cena.duracao - local);
+    // flash branco nos cortes; fade preto só no início e no fim do vídeo
     const isFirst = cena.inicio === 0, isLast = Math.abs(cena.fim - total) < 1e-6;
+    if (!isFirst && local < 0.12) {
+      g.fillStyle = `rgba(255,255,255,${0.85 * (1 - local / 0.12)})`;
+      g.fillRect(0, 0, W, H);
+    }
     let fade = 0;
-    if (local < 0.18 && !isFirst) fade = 1 - local / 0.18;
-    else if (cena.duracao - local < 0.18 && !isLast) fade = 1 - (cena.duracao - local) / 0.18;
-    if (isFirst && local < 0.5) fade = 1 - local / 0.5;
+    if (isFirst && local < 0.4) fade = 1 - local / 0.4;
     if (isLast && cena.duracao - local < 0.6) fade = 1 - (cena.duracao - local) / 0.6;
-    if (fade > 0 && edge >= 0) {
-      g.fillStyle = `rgba(0,0,0,${clamp01(fade) * 0.9})`;
+    if (fade > 0) {
+      g.fillStyle = `rgba(0,0,0,${clamp01(fade)})`;
       g.fillRect(0, 0, W, H);
     }
   };

@@ -4,6 +4,7 @@
   "private": true,
   "description": "Gerador automatizado de vídeos curtos de curiosidades em 3D (tudo por código).",
   "scripts": {
+    "audio": "node audio/elevenlabs.js roteiro/amigos_do_serginho.json",
     "render": "node render.js roteiro/amigos_do_serginho.json",
     "sheets": "node render.js roteiro/amigos_do_serginho.json --sheets",
     "preview": "node render.js roteiro/amigos_do_serginho.json --preview"

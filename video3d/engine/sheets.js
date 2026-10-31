@@ -145,8 +145,8 @@ export function buildSheets(E) {
     });
     // detalhes
     text(g, 'DETALHES', 1380, 140, { size: 26, color: BLUE });
-    const capImg = studioShot(neutral(), -0.35, [0.35, 2.05, 1.6], [0, 1.98, 0], 380, 240, 30);
-    panel(g, capImg, 1380, 180, 380, 240, 'Boné azul com o logo');
+    const capImg = studioShot(neutral(), -0.3, [0.4, 1.98, 1.5], [0, 1.96, 0], 380, 240, 30);
+    panel(g, capImg, 1380, 180, 380, 240, 'Rosto e boné com o logo');
     const chestImg = studioShot(neutral(), 0, [0, 1.45, 1.5], [0, 1.42, 0], 380, 240, 30);
     panel(g, chestImg, 1380, 470, 380, 240, 'Camisa: logo Amigos do Serginho');
     // poses-chave
