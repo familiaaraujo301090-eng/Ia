@@ -24,7 +24,7 @@ for a, _, _, par in tempos:
 marcas = sorted((int(p), r) for p, r in cfg["idades"].items())
 dourado = modelos.ass_cor("#F0C860")
 leg = modelos.cabecalho([
-    f"Style: Idade,Inter ExtraBold,120,{dourado},{dourado},&H00101010,&H96000000,0,0,0,0,100,100,4,0,1,6,4,8,60,60,290,1",
+    f"Style: Idade,Inter ExtraBold,120,{dourado},{dourado},&H00101010,&H96000000,0,0,0,0,100,100,4,0,1,6,4,8,60,60,335,1",
 ])
 for k, (par, rotulo) in enumerate(marcas):
     a = 0.0 if k == 0 else max(0.0, comeco[par] - base.TRANSICAO)
