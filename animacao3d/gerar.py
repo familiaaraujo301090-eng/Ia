@@ -9,6 +9,7 @@
 Tudo e gerado por codigo: personagem (personagem.py), cenario (cenario.py), animacao e cameras
 (historia.py), render com Cycles na CPU e montagem com ffmpeg.
 """
+import importlib
 import json
 import math
 import subprocess
@@ -60,9 +61,12 @@ def construir(tempos, total):
     cena.render.use_persistent_data = True
     col = cena.collection
     m = materiais.paleta()
-    cenario.criar(col, m)
+    cen = importlib.import_module(HIST["cenario"]) if HIST.get("cenario") else None
+    (cen or cenario).criar(col, m)
     p = personagem.criar(col, m)
     faixas = historia.tempos_dos_planos(tempos, total)
+    if cen:
+        cen.animar(col, m, p, faixas, HIST)
     historia.aplicar_acoes(p, HIST["planos"], faixas, HIST.get("inicio"))
     historia.criar_cameras(HIST["planos"], faixas, col, cena)
     if HIST.get("extra"):
@@ -77,7 +81,8 @@ def construir(tempos, total):
 def folha_cenario(cena, p):
     for o in p["raiz"].children_recursive + [p["raiz"]]:
         o.hide_render = True
-    vistas = [("VISAO GERAL", (0, -6.5, 2.4), (0, 1.5, 1.6), 24, False),
+    cen = importlib.import_module(HIST["cenario"]) if HIST.get("cenario") else None
+    vistas = cen.VISTAS if cen else [("VISAO GERAL", (0, -6.5, 2.4), (0, 1.5, 1.6), 24, False),
               ("PLANTA (DE CIMA)", (0, 0.4, 16), (0, 0.4, 0), 9, True),
               ("LATERAL", (-3.4, -3.4, 1.9), (1.0, 1.5, 1.4), 22, False),
               ("DETALHE: MESA", (0.9, -1.6, 1.25), (1.9, -0.35, 0.85), 30, False)]
@@ -99,7 +104,7 @@ def folha_cenario(cena, p):
     for o in p["raiz"].children_recursive + [p["raiz"]]:
         o.hide_render = False
     return folhas.montar_grade(imgs, [v[0] for v in vistas], SAIDA / "folha-cenario.jpg", 4,
-                               "CENARIO: BIBLIOTECA DA LAMPARINA")
+                               cen.TITULO if cen else "CENARIO: BIBLIOTECA DA LAMPARINA")
 
 
 def folha_storyboard(cena, faixas):
@@ -183,6 +188,25 @@ def contador_de_passos(tempos):
     return ["#ESTILOS#" + "|".join(linhas)] + eventos
 
 
+def _trilha_mar(trilha, tempos, segundos):
+    """Tempestade: tambores epicos + chuva, vento e trovoes; na calma, so piano e o mar."""
+    import numpy as np
+    import mar
+    tot = float(subprocess.check_output(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of",
+                                         "csv=p=0", str(SAIDA / "narracao.wav")])) + 1.0
+    faixas = historia.tempos_dos_planos(tempos, tot)
+    efeitos, calma = mar.som(faixas, HIST, segundos, historia.FPS, trilha.TAXA)
+    n = len(efeitos)
+    musica = np.zeros(n)
+    epica, _ = trilha.compor("epica", calma + 0.2)
+    musica[: len(epica)] += epica[:n] * 0.8
+    piano, info = trilha.compor("piano", segundos - calma - 0.4)
+    i = int((calma + 0.4) * trilha.TAXA)
+    musica[i: i + len(piano)] += piano[: n - i] * 1.1
+    mix = musica * 0.4 + efeitos * 0.9
+    return mix / (np.max(np.abs(mix)) + 1e-9) * 0.95, info
+
+
 def finalizar():
     import modelos
     tempos = json.loads((SAIDA / "tempos.json").read_text(encoding="utf-8"))
@@ -207,7 +231,10 @@ def finalizar():
     total = len(feitos) * PASSO / historia.FPS
     (SAIDA / "quadros.txt").write_text("".join(f"file 'quadros/{q.name}'\nduration {PASSO / historia.FPS:.5f}\n"
                                                 for q in feitos), encoding="utf-8")
-    audio, info = trilha.compor("piano", total + 0.5)
+    if HIST.get("cenario") == "mar":
+        audio, info = _trilha_mar(trilha, tempos, total + 0.5)
+    else:
+        audio, info = trilha.compor("piano", total + 0.5)
     trilha.salvar(SAIDA / "trilha.wav", audio, info)
     fontes = SHORTS / "fontes"
     subprocess.run([
@@ -216,7 +243,8 @@ def finalizar():
         f"[0:v]fps={historia.FPS / PASSO},minterpolate=fps={historia.FPS}:mi_mode=mci:mc_mode=aobmc:vsbmc=1,"
         f"scale=1080:1920:flags=lanczos,subtitles=legendas.ass:fontsdir='{fontes}',"
         f"fade=t=in:st=0:d=0.3,fade=t=out:st={total - 0.5:.2f}:d=0.5[v];"
-        "[2:a]volume=0.09[m];[1:a]apad[voz];[voz][m]amix=inputs=2:duration=shortest:normalize=0,"
+        f"[2:a]volume={HIST.get('vol_trilha', 0.09)}[m];"
+        "[1:a]apad[voz];[voz][m]amix=inputs=2:duration=shortest:normalize=0,"
         "loudnorm=I=-14:TP=-1.5[a]",
         "-map", "[v]", "-map", "[a]", "-t", f"{total:.2f}", "-c:v", "libx264", "-crf", "20", "-preset", "medium",
         "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", "video.mp4",

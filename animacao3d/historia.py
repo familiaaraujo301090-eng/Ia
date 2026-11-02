@@ -126,12 +126,37 @@ def _camera(nome, lente, col):
     return c, alvo
 
 
+def _camera_tremida(cam, alvo, cfg, q0, q1, semente):
+    """Camera na mao: o movimento normal do plano mais um tremor de somas de senos (amplitude em metros)."""
+    amp = cfg["tremor"]
+    fases = [semente * 1.7 + k * 2.3 for k in range(6)]
+    for f in list(range(q0, q1 + 1, 2)) + [q1]:
+        u = _suave((f - q0) / max(1, q1 - q0))
+        t = f / FPS
+        if cfg.get("orbita"):
+            cx, cy, cz = cfg["centro"]
+            a = math.radians(cfg["a0"] + (cfg["a1"] - cfg["a0"]) * u)
+            pos = Vector((cx + cfg["raio"] * math.sin(a), cy - cfg["raio"] * math.cos(a), cfg["h"]))
+            mira = Vector((cx, cy, cz))
+        else:
+            pos = Vector(cfg["de"]).lerp(Vector(cfg["ate"]), u)
+            mira = Vector(cfg["alvo"]) if "alvo" in cfg else Vector(cfg["alvo_de"]).lerp(Vector(cfg["alvo_ate"]), u)
+        tre = Vector([math.sin(t * (5.1 + k) + fases[k]) + 0.5 * math.sin(t * (11.3 + 2 * k) + fases[k + 3])
+                      for k in range(3)])
+        _chave(cam, "location", pos + tre * amp, f)
+        _chave(alvo, "location", mira + Vector((tre.y, tre.z, tre.x)) * amp * 1.5, f)
+
+
 def criar_cameras(planos, faixas, col, cena):
     cams = []
     for i, (plano, (q0, q1)) in enumerate(zip(planos, faixas), 1):
         cfg = plano["cam"]
         cam, alvo = _camera(f"cam{i}", cfg.get("lente", 35), col)
-        if cfg.get("orbita"):
+        if cfg.get("no_barco") and "barco" in bpy.data.objects:
+            cam.parent = alvo.parent = bpy.data.objects["barco"]  # camera presa ao barco: o horizonte balanca
+        if cfg.get("tremor"):
+            _camera_tremida(cam, alvo, cfg, q0, q1, i)
+        elif cfg.get("orbita"):
             cx, cy, cz = cfg["centro"]
             alvo.location = (cx, cy, cz)
             for f in range(q0, q1 + 1, 3):
@@ -386,5 +411,65 @@ ESCULTURA = _jornada(
      "Etapa 2: os primeiros pedacos caem; a camera gira.", "Etapa 3: dezenas de pedacos caem.",
      "Etapa 4: a silhueta do anjo aparece.", "Etapa 5: os ultimos pedacos caem e o anjo se ilumina."] + _FECHO)
 
-HISTORIAS = {"kintsugi": KINTSUGI, "ouro-no-fogo": OURO_FOGO, "diamante": DIAMANTE,
+TEMPESTADE = {
+    "titulo": "A tempestade",
+    "cenario": "mar",  # modulo do cenario (mar.py): barco na tempestade que se acalma
+    "calma": 7,  # plano em que o vento para
+    "vol_trilha": 0.22,  # a trilha leva a chuva e os trovoes, entao vai mais alta
+    "raios_no_corte": [1, 4, 5],  # planos (a partir de 0) que comecam com relampago
+    "inicio": {"pos": (0, 0.1), "rot": 0},
+    "roteiro": [
+        "Se você está no meio de uma tempestade agora, não pula esse vídeo.",
+        "Era noite no mar da Galileia. E o vento virou de repente.",
+        "As ondas cobriam o barco. Pescadores experientes achavam que iam morrer.",
+        "E Jesus? Estava dormindo. Na popa. Com a cabeça num travesseiro.",
+        "Eles gritaram: Mestre, não te importa que a gente morra?",
+        "Ele se levantou e disse ao mar: *Silêncio. Aquieta-te.*",
+        "E o vento parou. E veio uma grande calma.",
+        "Repara: ele não tirou ninguém da tempestade. *Ele estava no barco com eles.*",
+        "*A tempestade não decide como a sua história termina.*",
+        "Qual tempestade você está enfrentando hoje? Comenta. Segue a Lamparina.",
+    ],
+    "planos": [
+        {"desc": "Gancho: relampago; camera na mao avanca ate Elias de pe no barco que joga.",
+         "cam": {"de": (0.7, -3.4, 1.3), "ate": (0.15, -1.7, 1.6), "alvo": (0, 0.1, 1.55), "lente": 35,
+                 "tremor": 0.035},
+         "acoes": []},
+        {"desc": "Plano aereo: o barco pequeno no meio das ondas; a camera desce; raio no ceu.",
+         "cam": {"de": (7, -10.5, 7), "ate": (4.2, -6.2, 2.6), "alvo_de": (0, 2, 0), "alvo_ate": (0, 0, 0.6),
+                 "lente": 24, "tremor": 0.03},
+         "acoes": []},
+        {"desc": "Rente a agua: as ondas passam na frente da camera; o barco arfa.",
+         "cam": {"de": (-4.6, -3.0, 0.2), "ate": (-3.6, 1.6, 0.45), "alvo_de": (0, -0.6, 0.7),
+                 "alvo_ate": (0, 1.0, 0.9), "lente": 28, "tremor": 0.06},
+         "acoes": [("olhar", 0, 1, (0, 0), (-10, -30))]},
+        {"desc": "Na popa, o travesseiro; camera presa ao barco, o horizonte balanca.",
+         "cam": {"de": (0.75, -2.8, 0.95), "ate": (0.45, -2.45, 0.72), "alvo": (0, -1.75, 0.34), "lente": 40,
+                 "dof": True, "no_barco": True},
+         "acoes": [("olhar", 0, 0.3, (-10, -30), (0, 0))]},
+        {"desc": "Grito: camera gira rapida em volta de Elias, tremendo; ele olha para o ceu.",
+         "cam": {"orbita": True, "centro": (0, 0.1, 1.45), "raio": 2.5, "a0": 45, "a1": -25, "h": 1.15,
+                 "lente": 30, "tremor": 0.05},
+         "acoes": [("olhar", 0, 0.5, (0, 0), (-18, 0))]},
+        {"desc": "Contra-plongee: Elias ergue a lamparina contra o mar; ultimo relampago.",
+         "cam": {"orbita": True, "centro": (0, 0.1, 1.7), "raio": 2.2, "a0": -25, "a1": -70, "h": 0.4,
+                 "lente": 24, "tremor": 0.03},
+         "acoes": [("olhar", 0, 0.3, (-18, 0), (-8, 0)), ("erguer", 0.05, 0.4, 0, -80)]},
+        {"desc": "A calma: as ondas baixam, a chuva para e o ceu comeca a clarear; grua subindo.",
+         "cam": {"de": (-4.5, -7.5, 1.2), "ate": (-5.5, -9.5, 3.6), "alvo": (0, 0, 0.9), "lente": 28},
+         "acoes": [("olhar", 0, 0.4, (-8, 0), (0, 0)), ("erguer", 0.1, 0.5, -80, 0)]},
+        {"desc": "Close no rosto de Elias com o amanhecer dourado atras.",
+         "cam": {"de": (0.3, -2.4, 1.72), "ate": (0.08, -1.3, 1.68), "alvo": (0, 0.05, 1.66), "lente": 50,
+                 "dof": True},
+         "acoes": []},
+        {"desc": "Silhueta do barco no mar liso, contra o sol nascendo; a camera gira devagar.",
+         "cam": {"orbita": True, "centro": (0, 0, 0.9), "raio": 7.5, "a0": -35, "a1": 12, "h": 1.3, "lente": 26},
+         "acoes": []},
+        {"desc": "Final: Elias olha para quem assiste e acena com a cabeca.",
+         "cam": {"de": (0.2, -3.4, 1.5), "ate": (0.2, -2.6, 1.55), "alvo": (0, 0.1, 1.45), "lente": 40},
+         "acoes": [("acenar", 0.35, 0.7)]},
+    ],
+}
+
+HISTORIAS = {"a-tempestade": TEMPESTADE, "kintsugi": KINTSUGI, "ouro-no-fogo": OURO_FOGO, "diamante": DIAMANTE,
              "quatro-mil-semanas": AMPULHETA, "anjo-no-marmore": ESCULTURA, "vida-nao-esta-parada": VIDA_PARADA, "lamparina-mais-antiga": LAMPARINA, "codex-leicester": CODEX, "livro-medieval": LIVRO_MEDIEVAL}
