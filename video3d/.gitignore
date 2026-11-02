@@ -3,3 +3,4 @@ output/frames/
 output/preview/
 output/audio/
 models/
+__pycache__/
