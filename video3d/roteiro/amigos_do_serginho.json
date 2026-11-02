@@ -170,7 +170,9 @@
     }
   ],
   "audio": {
-    "provedor": "elevenlabs",
+    "provedor": "piper",
+    "vozLocal": "pt_BR-faber-medium",
+    "velocidadeLocal": 0.9,
     "vozId": "pNInz6obpgDQGcFmaJgB",
     "modelo": "eleven_multilingual_v2",
     "estabilidade": 0.35,

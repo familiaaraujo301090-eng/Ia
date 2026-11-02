@@ -26,17 +26,26 @@ function serve() {
   return new Promise((r) => server.listen(0, '127.0.0.1', () => r(server)));
 }
 
-// Narração: usa o áudio do ElevenLabs (output/audio/<cena>.mp3 + .json) quando
-// existe; senão estima o tempo de cada palavra. A cena cresce para caber a fala.
+// Narração: usa output/audio/<cena>.wav (gerar_voz.py, Piper local) ou <cena>.mp3
+// (audio/elevenlabs.js) com o .json de tempos quando existem; senão estima o tempo de cada palavra. A cena cresce para caber a fala.
+function arquivoDeVoz(audioDir, id) {
+  for (const ext of ['wav', 'mp3']) {
+    const f = path.join(audioDir, `${id}.${ext}`);
+    if (fs.existsSync(f)) return f;
+  }
+  return null;
+}
+
 function prepararNarracao(roteiro, audioDir) {
   let narrada = false;
   for (const c of roteiro.cenas) {
     if (!c.narracao) continue;
     const meta = path.join(audioDir, `${c.id}.json`);
+    const voz = arquivoDeVoz(audioDir, c.id);
     let dur, palavras;
-    if (fs.existsSync(meta) && fs.existsSync(path.join(audioDir, `${c.id}.mp3`))) {
+    if (fs.existsSync(meta) && voz) {
       ({ duracao: dur, palavras } = JSON.parse(fs.readFileSync(meta, 'utf8')));
-      c.audio = true;
+      c.audio = voz;
       narrada = true;
     } else {
       const ws = c.narracao.split(/\s+/);
@@ -78,7 +87,7 @@ function mixarAudio(roteiro, info, audioDir, narrada, video, final) {
   const vozes = [];
   if (narrada) {
     roteiro.cenas.filter((c) => c.audio).forEach((c) => {
-      inputs.push('-i', path.join(audioDir, `${c.id}.mp3`));
+      inputs.push('-i', c.audio);
       vozes.push(Math.round((byId[c.id].inicio + 0.25) * 1000));
     });
   }

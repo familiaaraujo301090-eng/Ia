@@ -15,9 +15,28 @@ assets/logo_amigos_do_serginho.png
 output/                           vídeo final e sheets gerados
 ```
 
+## Narração local (gerar_voz.py)
+
+Os arquivos de voz (`output/audio/`) e o modelo (`models/`) ficam fora do GitHub pelo `.gitignore`.
+Quem clonar o repositório gera a narração na própria máquina, sem API paga, com o Piper TTS:
+
+```bash
+cd video3d
+pip install -r requirements.txt                          # Piper TTS + numpy
+npm install                                              # three.js
+python3 gerar_voz.py roteiro/amigos_do_serginho.json     # 1ª vez baixa o modelo pt_BR-faber-medium em models/
+npm run render                                           # vídeo final com voz, música, efeitos e legendas
+```
+
+`gerar_voz.py` cria `output/audio/<cena>.wav` e `<cena>.json` com o tempo de cada palavra
+(alinhamento do modelo quando disponível; senão estimado pelos fonemas). Opções: `--voz` (qualquer voz
+pt_BR do Piper, padrão `roteiro.audio.vozLocal`) e `--velocidade` (padrão 0.9; menor = mais rápido).
+O download do modelo precisa de acesso a huggingface.co; sem ele, baixe `<voz>.onnx` e `<voz>.onnx.json`
+de https://huggingface.co/rhasspy/piper-voices para `models/`.
+
 ## Versão viral (áudio)
 
-- **Narração ElevenLabs** (`audio/elevenlabs.js`): gera a fala de cada cena com timestamps por palavra.
+- **Narração**: local com `gerar_voz.py` (Piper) ou, opcionalmente, ElevenLabs (`audio/elevenlabs.js`, precisa de plano pago).
   As cenas se ajustam à duração da fala e as legendas acendem palavra por palavra no ritmo da voz.
 - **Trilha e efeitos por código** (`audio/trilha.py`): batida pop (124 BPM, vi-IV-I-V), whoosh nos cortes,
   "pop" nos selos, fita + torcida na chegada e "ding" no logo final. A música abaixa sozinha sob a voz (sidechain)
