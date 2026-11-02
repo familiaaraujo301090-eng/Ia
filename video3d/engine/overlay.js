@@ -47,6 +47,15 @@ export function makeOverlay(logoImg) {
     const { cena, local } = state;
     const S = W / 720;
 
+    // vinheta suave e leve aquecimento de cor
+    const vg = g.createRadialGradient(W / 2, H * 0.45, H * 0.3, W / 2, H * 0.45, H * 0.75);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(1, 'rgba(10,15,40,0.35)');
+    g.fillStyle = vg;
+    g.fillRect(0, 0, W, H);
+    g.fillStyle = 'rgba(255,170,90,0.05)';
+    g.fillRect(0, 0, W, H);
+
     // marca d'água
     g.save();
     g.globalAlpha = 0.9;

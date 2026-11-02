@@ -13,9 +13,11 @@ Depois de clonar o repositório:
   python3 gerar_voz.py roteiro/amigos_do_serginho.json      # baixa o modelo na 1ª vez
   npm run render
 
-Motores: Piper (voz neural, padrão) ou, se o modelo não puder ser baixado, espeak-ng com
-voz MBROLA brasileira (apt install espeak-ng mbrola mbrola-br3), mais robótica.
-Opções: --motor auto|piper|espeak, --voz, --velocidade, --modelos models/
+Motores (o primeiro disponível, ou escolha com --motor):
+  microsoft  voz neural da Microsoft via edge-tts (padrão pt-BR-AntonioNeural; precisa de internet)
+  piper      voz neural local (baixa o modelo pt_BR-faber-medium em models/ na 1ª vez)
+  espeak     espeak-ng + MBROLA brasileira (apt install espeak-ng mbrola mbrola-br3), mais robótica
+Opções: --motor, --voz, --velocidade, --modelos models/
 """
 import argparse
 import json
@@ -189,6 +191,57 @@ def gerar_cena_espeak(texto, destino, voz, wpm, tmp):
     return len(x) / sr, out
 
 
+def gerar_cena_microsoft(texto, destino, voz, taxa):
+    """Voz neural da Microsoft (edge-tts). O serviço devolve o tempo exato de cada palavra."""
+    import asyncio
+    import os
+
+    import edge_tts
+
+    async def run():
+        com = edge_tts.Communicate(texto, voz, rate=taxa, boundary="WordBoundary",
+                                   proxy=os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy"))
+        audio, marcas = bytearray(), []
+        async for ch in com.stream():
+            if ch["type"] == "audio":
+                audio += ch["data"]
+            elif ch["type"] == "WordBoundary":
+                t0 = ch["offset"] / 1e7
+                marcas.append((ch["text"], t0, t0 + ch["duration"] / 1e7))
+        return bytes(audio), marcas
+
+    mp3, marcas = asyncio.run(run())
+    if not mp3:
+        raise RuntimeError("o serviço da Microsoft não devolveu áudio")
+    tmp = destino.with_suffix(".mp3")
+    tmp.write_bytes(mp3)
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(tmp), "-ar", "44100", "-ac", "1", str(destino)], check=True)
+    tmp.unlink()
+    x, sr = ler_wav(destino)
+    palavras = texto.split()
+    marcas = [m for m in marcas if any(c.isalnum() for c in m[0])]
+    if len(marcas) == len(palavras):
+        out = [{"w": w, "t0": round(a, 3), "t1": round(b, 3)} for w, (_, a, b) in zip(palavras, marcas)]
+    else:
+        # o serviço juntou/separou palavras (ex.: números): distribui pelo tamanho no trecho falado
+        ini, fim = (marcas[0][1], marcas[-1][2]) if marcas else (0.0, len(x) / sr)
+        total = sum(len(w) + 1 for w in palavras)
+        t, out = ini, []
+        for w in palavras:
+            d = (fim - ini) * (len(w) + 1) / total
+            out.append({"w": w, "t0": round(t, 3), "t1": round(t + d, 3)})
+            t += d
+    return len(x) / sr, out
+
+
+def microsoft_disponivel():
+    try:
+        import edge_tts  # noqa: F401
+    except ImportError:
+        return False
+    return shutil.which("ffmpeg") is not None
+
+
 def carregar_piper(a, cfg):
     try:
         from piper import PiperVoice, SynthesisConfig
@@ -199,7 +252,7 @@ def carregar_piper(a, cfg):
     if not onnx:
         return None
     voice = PiperVoice.load(onnx)
-    return voz, voice, SynthesisConfig(length_scale=a.velocidade or cfg.get("velocidadeLocal", 0.9))
+    return voz, voice, SynthesisConfig(length_scale=float(a.velocidade) if a.velocidade else float(cfg.get("velocidadeLocal", 0.9)))
 
 
 def gerar_cena_piper(texto, destino, voice, syn):
@@ -222,22 +275,32 @@ def gerar_cena_piper(texto, destino, voice, syn):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("roteiro")
-    ap.add_argument("--motor", choices=["auto", "piper", "espeak"], default="auto",
-                    help="auto = Piper (neural) se o modelo estiver disponível, senão espeak-ng/MBROLA")
-    ap.add_argument("--voz", help="Piper: ex. pt_BR-faber-medium; espeak: ex. mb-br3")
-    ap.add_argument("--velocidade", type=float, help="Piper: length_scale (menor = mais rápido); espeak: palavras/min")
+    ap.add_argument("--motor", choices=["auto", "microsoft", "piper", "espeak"], default="auto",
+                    help="auto = Microsoft (edge-tts) > Piper > espeak-ng/MBROLA, o primeiro que funcionar")
+    ap.add_argument("--voz", help="Microsoft: ex. pt-BR-AntonioNeural; Piper: ex. pt_BR-faber-medium; espeak: ex. mb-br3")
+    ap.add_argument("--velocidade", help="Microsoft: ex. +8%%; Piper: length_scale (menor = mais rápido); espeak: palavras/min")
     ap.add_argument("--modelos", default=str(RAIZ / "models"))
     a = ap.parse_args()
 
     roteiro = json.loads(Path(a.roteiro).read_text(encoding="utf-8"))
     cfg = roteiro.get("audio", {})
-    piper = carregar_piper(a, cfg) if a.motor in ("auto", "piper") else None
-    if piper:
-        voz = piper[0]
+    motor = None
+    if a.motor in ("auto", "microsoft") and microsoft_disponivel():
+        motor = "microsoft"
+        voz = a.voz or cfg.get("vozMicrosoft", "pt-BR-AntonioNeural")
+        taxa = a.velocidade or cfg.get("velocidadeMicrosoft", "+8%")
+    elif a.motor == "microsoft":
+        sys.exit("edge-tts não instalado. Rode: pip install -r requirements.txt")
+    piper = carregar_piper(a, cfg) if motor is None and a.motor in ("auto", "piper") else None
+    if motor:
+        pass
+    elif piper:
+        motor, voz = "piper", piper[0]
     elif shutil.which("espeak-ng"):
         voz = a.voz if a.motor == "espeak" and a.voz else cfg.get("vozEspeak", "mb-br3")
-        wpm = int(a.velocidade) if a.motor == "espeak" and a.velocidade else cfg.get("velocidadeEspeak", 165)
-        print(f"usando espeak-ng com a voz {voz} (instale o modelo do Piper para uma voz mais natural)")
+        wpm = int(float(a.velocidade)) if a.motor == "espeak" and a.velocidade else cfg.get("velocidadeEspeak", 165)
+        motor = "espeak"
+        print(f"usando espeak-ng com a voz {voz} (instale edge-tts ou o modelo do Piper para uma voz mais natural)")
     else:
         sys.exit("Nenhum motor de voz disponível: rode pip install -r requirements.txt "
                  "(Piper) ou instale espeak-ng + mbrola-br3.")
@@ -250,7 +313,9 @@ def main():
         if not texto:
             continue
         destino = pasta / f"{cena['id']}.wav"
-        if piper:
+        if motor == "microsoft":
+            dur, palavras = gerar_cena_microsoft(texto, destino, voz, taxa)
+        elif motor == "piper":
             dur, palavras = gerar_cena_piper(texto, destino, piper[1], piper[2])
         else:
             dur, palavras = gerar_cena_espeak(texto, destino, voz, wpm, tmp)

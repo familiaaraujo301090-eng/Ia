@@ -82,3 +82,81 @@ export function roadCanvas() {
   }
   return c;
 }
+
+function seeded(seed) {
+  let s = seed;
+  return () => ((s = (s * 16807) % 2147483647) / 2147483647);
+}
+
+// Calçada portuguesa em ondas pretas e brancas, típica de cidades brasileiras.
+export function sidewalkCanvas() {
+  const W = 512, H = 512;
+  const c = canvas(W, H);
+  const g = c.getContext('2d');
+  const rnd = seeded(11);
+  for (let y = 0; y < H; y += 8) {
+    for (let x = 0; x < W; x += 8) {
+      const wave = Math.sin((x / W) * Math.PI * 4) * 70 + H / 2;
+      const band = Math.abs(y - wave) < 46 || Math.abs(y - wave + H) < 46 || Math.abs(y - wave - H) < 46;
+      const v = band ? 40 + rnd() * 25 : 215 + rnd() * 30;
+      g.fillStyle = `rgb(${v},${v - 4},${v - 10})`;
+      g.fillRect(x + 1, y + 1, 6 + rnd() * 2, 6 + rnd() * 2);
+    }
+  }
+  g.globalCompositeOperation = 'destination-over';
+  g.fillStyle = '#8a857c';
+  g.fillRect(0, 0, W, H);
+  return c;
+}
+
+export function grassCanvas() {
+  const W = 512;
+  const c = canvas(W, W);
+  const g = c.getContext('2d');
+  g.fillStyle = '#6aa845';
+  g.fillRect(0, 0, W, W);
+  const rnd = seeded(5);
+  for (let i = 0; i < 2600; i++) {
+    const r = 4 + rnd() * 26;
+    g.fillStyle = `rgba(${60 + rnd() * 70},${120 + rnd() * 70},${30 + rnd() * 40},0.18)`;
+    g.beginPath();
+    g.arc(rnd() * W, rnd() * W, r, 0, Math.PI * 2);
+    g.fill();
+  }
+  for (let i = 0; i < 6000; i++) {
+    g.fillStyle = `rgba(${40 + rnd() * 40},${90 + rnd() * 60},${20 + rnd() * 30},0.5)`;
+    g.fillRect(rnd() * W, rnd() * W, 1, 3);
+  }
+  return c;
+}
+
+export function roofCanvas() {
+  const W = 256;
+  const c = canvas(W, W);
+  const g = c.getContext('2d');
+  g.fillStyle = '#b5532f';
+  g.fillRect(0, 0, W, W);
+  for (let y = 0; y < W; y += 16) {
+    for (let x = (y / 16) % 2 ? 8 : 0; x < W; x += 16) {
+      const grd = g.createLinearGradient(x, 0, x + 16, 0);
+      grd.addColorStop(0, 'rgba(255,190,150,0.35)');
+      grd.addColorStop(0.5, 'rgba(0,0,0,0)');
+      grd.addColorStop(1, 'rgba(60,15,5,0.45)');
+      g.fillStyle = grd;
+      g.fillRect(x, y, 16, 16);
+    }
+    g.fillStyle = 'rgba(60,15,5,0.5)';
+    g.fillRect(0, y + 14, W, 2);
+  }
+  return c;
+}
+
+export function awningCanvas(cor) {
+  const c = canvas(256, 64);
+  const g = c.getContext('2d');
+  for (let i = 0; i < 8; i++) {
+    g.fillStyle = i % 2 ? '#ffffff' : cor;
+    g.fillRect(i * 32, 0, 32, 64);
+  }
+  return c;
+}

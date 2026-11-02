@@ -79,6 +79,26 @@ function shirtCanvas(logoImg, c, { y0, y1, logoY, logoD, perim }) {
   return cv;
 }
 
+// Contorno "toon": casca de cada malha, empurrada pelas normais e vista por dentro.
+function addOutline(root, espessura = 0.0065) {
+  const m = new THREE.MeshBasicMaterial({ color: '#0e1430', side: THREE.BackSide });
+  m.onBeforeCompile = (sh) => {
+    sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', `vec3 transformed = position + normal * ${espessura.toFixed(4)};`);
+  };
+  const alvos = [];
+  root.traverse((o) => {
+    if (o.isMesh && !o.material.transparent && o.geometry.attributes.normal && o.geometry.boundingSphere?.radius !== 0) alvos.push(o);
+  });
+  for (const o of alvos) {
+    o.geometry.computeBoundingSphere();
+    if (o.geometry.boundingSphere.radius < 0.035) continue;
+    const casca = new THREE.Mesh(o.geometry, m);
+    casca.castShadow = false;
+    casca.userData.contorno = true;
+    o.add(casca);
+  }
+}
+
 export function buildCharacter(cfg, logoImg) {
   const c = cfg.cores;
   const M = {
@@ -159,7 +179,12 @@ export function buildCharacter(cfg, logoImg) {
     eye.add(mesh(new THREE.SphereGeometry(0.008, 8, 8), M.white, [0.01, 0.012, 0.037]));
     J.eyes.push(eye);
     // sobrancelha arqueada
-    head.add(mesh(new THREE.TorusGeometry(0.05, 0.009, 6, 16, Math.PI * 0.7), M.brow, [0.078 * s, 0.062, 0.2], [0.1, 0, Math.PI * 0.15 + (s < 0 ? 0 : 0)], [1, 0.6, 1]));
+    const brow = mesh(new THREE.TorusGeometry(0.05, 0.009, 6, 16, Math.PI * 0.7), M.brow, [0.078 * s, 0.062, 0.2], [0.1, 0, Math.PI * 0.15], [1, 0.6, 1]);
+    head.add(brow);
+    (J.brows ||= []).push(brow);
+    // pálpebra superior (dá expressão e um olhar mais vivo)
+    eye.add(mesh(new THREE.SphereGeometry(0.049, 20, 10, 0, Math.PI * 2, 0, Math.PI * 0.42), M.skin, [0, 0.004, 0.002], [0.35, 0, 0], [1.02, 1.2, 0.6]));
+    for (let k = 0; k < 3; k++) eye.add(mesh(new THREE.BoxGeometry(0.004, 0.018, 0.004), M.pupil, [(k - 1) * 0.018 + 0.012 * s, 0.056, 0.016], [0.3, 0, -0.35 * s * (k + 0.5) * 0.6]));
     // bochechas e orelhas
     head.add(mesh(new THREE.CircleGeometry(0.03, 16), M.blush, [0.12 * s, -0.045, 0.178], [0, 0.55 * s, 0]));
     const ear = mesh(new THREE.SphereGeometry(0.05, 14, 12), M.skin, [0.214 * s, -0.005, 0.0], [0, 0, 0], [0.45, 0.95, 0.75]);
@@ -211,7 +236,12 @@ export function buildCharacter(cfg, logoImg) {
     const el = joint(sh, 'elbow' + side, [0, -0.28, 0], J);
     el.add(mesh(new THREE.SphereGeometry(0.057, 14, 10), M.skin));
     el.add(mesh(new THREE.CylinderGeometry(0.055, 0.045, 0.2, 14), M.skin, [0, -0.1, 0]));
-    el.add(mesh(new THREE.CylinderGeometry(0.052, 0.052, 0.05, 14), M.green, [0, -0.19, 0]));
+    if (s > 0) {
+      // relógio esportivo no pulso esquerdo
+      el.add(mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.04, 14), mat('#111111', { roughness: 0.4 }), [0, -0.19, 0]));
+      el.add(mesh(new THREE.BoxGeometry(0.05, 0.045, 0.02), mat('#1e2a3a', { roughness: 0.1, metalness: 0.6 }), [0, -0.19, 0.05]));
+      el.add(mesh(new THREE.BoxGeometry(0.036, 0.03, 0.005), mat('#4dd75d', { emissive: '#4dd75d', emissiveIntensity: 0.6 }), [0, -0.19, 0.061]));
+    } else el.add(mesh(new THREE.CylinderGeometry(0.052, 0.052, 0.05, 14), M.green, [0, -0.19, 0]));
     // mão fechada com polegar
     const hand = new THREE.Group();
     hand.position.set(0, -0.26, 0);
@@ -243,5 +273,9 @@ export function buildCharacter(cfg, logoImg) {
     for (const q of [-1, 1]) ankle.add(mesh(new THREE.BoxGeometry(0.004, 0.022, 0.14), M.green, [0.071 * q, -0.06, 0.06], [-0.25, 0, 0]));
   }
 
+  // franja aparecendo sob a aba do boné
+  for (let k = -2; k <= 2; k++) head.add(mesh(new THREE.SphereGeometry(0.035, 10, 8), M.hair, [k * 0.045, 0.1 - Math.abs(k) * 0.008, 0.185 - Math.abs(k) * 0.012], [0, 0, 0], [1, 0.7, 0.6]));
+
+  addOutline(root);
   return { root, joints: J };
 }

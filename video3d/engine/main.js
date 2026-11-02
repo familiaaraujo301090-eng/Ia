@@ -54,7 +54,11 @@ window.setup = async (roteiro) => {
   scene.add(sun, sun.target);
 
   const timeline = buildTimeline(roteiro);
-  const env = buildEnvironment(roteiro.cenario, logo, timeline.finishX);
+  // trechos onde a câmera gira em volta do corredor: sem carros/árvores na frente da lente
+  const livres = timeline.cenas
+    .filter((c) => ['orbita', 'baixa', 'drone', 'grua', 'aproximar'].includes(c.camera.tipo))
+    .map((c) => [timeline.at(c.inicio).x - 9, timeline.at(c.fim - 0.001).x + 9]);
+  const env = buildEnvironment(roteiro.cenario, logo, timeline.finishX, livres);
   scene.add(env.group);
   const char = buildCharacter(roteiro.personagem, logo);
   scene.add(char.root);

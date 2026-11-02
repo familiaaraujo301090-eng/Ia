@@ -184,4 +184,5 @@ export function applyPose(char, pose, x, t = null) {
   J.mouthOpen.visible = pose.mouth > 0.05;
   J.mouthOpen.scale.set(1, pose.mouth, 1);
   J.smile.visible = pose.mouth <= 0.05;
+  for (const b of J.brows) b.position.y = 0.062 + pose.mouth * 0.012;
 }

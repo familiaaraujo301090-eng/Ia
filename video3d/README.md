@@ -15,30 +15,33 @@ assets/logo_amigos_do_serginho.png
 output/                           vídeo final e sheets gerados
 ```
 
-## Narração local (gerar_voz.py)
+## Narração (gerar_voz.py)
 
-Os arquivos de voz (`output/audio/`) e o modelo (`models/`) ficam fora do GitHub pelo `.gitignore`.
-Quem clonar o repositório gera a narração na própria máquina, sem API paga, com o Piper TTS:
+Os arquivos de voz (`output/audio/`) e modelos (`models/`) ficam fora do GitHub pelo `.gitignore`.
+Quem clonar o repositório gera a narração e renderiza:
 
 ```bash
 cd video3d
-pip install -r requirements.txt                          # Piper TTS + numpy
+pip install -r requirements.txt                          # edge-tts, Piper TTS, numpy
 npm install                                              # three.js
-python3 gerar_voz.py roteiro/amigos_do_serginho.json     # 1ª vez baixa o modelo pt_BR-faber-medium em models/
+python3 gerar_voz.py roteiro/amigos_do_serginho.json     # gera output/audio/<cena>.wav + .json
 npm run render                                           # vídeo final com voz, música, efeitos e legendas
 ```
 
-`gerar_voz.py` cria `output/audio/<cena>.wav` e `<cena>.json` com o tempo de cada palavra
-(alinhamento do modelo quando disponível; senão estimado pelos fonemas). Opções: `--voz` (qualquer voz
-pt_BR do Piper, padrão `roteiro.audio.vozLocal`) e `--velocidade` (padrão 0.9; menor = mais rápido).
-O download do modelo precisa de acesso a huggingface.co; sem ele, baixe `<voz>.onnx` e `<voz>.onnx.json`
-de https://huggingface.co/rhasspy/piper-voices para `models/`.
-Se o modelo não puder ser baixado, o script usa automaticamente o espeak-ng com a voz brasileira
-MBROLA `mb-br3` (mais robótica): `sudo apt install espeak-ng mbrola mbrola-br3`. Force com `--motor espeak` ou `--motor piper`.
+`gerar_voz.py` usa o primeiro motor disponível (ou o escolhido com `--motor`):
+
+| motor | voz | observação |
+|---|---|---|
+| `microsoft` (padrão) | `pt-BR-AntonioNeural` (neural, limpa) | via edge-tts, precisa de internet; tempos exatos de cada palavra |
+| `piper` | `pt_BR-faber-medium` | neural local; baixa o modelo de huggingface.co para `models/` na 1ª vez |
+| `espeak` | `mb-br3` | `sudo apt install espeak-ng mbrola mbrola-br3`; mais robótica |
+
+Ex.: `python3 gerar_voz.py roteiro/amigos_do_serginho.json --voz pt-BR-FranciscaNeural --velocidade +10%`.
+Atrás de um proxy corporativo, o edge-tts usa `HTTPS_PROXY` automaticamente.
 
 ## Versão viral (áudio)
 
-- **Narração**: local com `gerar_voz.py` (Piper) ou, opcionalmente, ElevenLabs (`audio/elevenlabs.js`, precisa de plano pago).
+- **Narração**: `gerar_voz.py` (voz neural da Microsoft por padrão) ou, opcionalmente, ElevenLabs (`audio/elevenlabs.js`, precisa de plano pago).
   As cenas se ajustam à duração da fala e as legendas acendem palavra por palavra no ritmo da voz.
 - **Trilha e efeitos por código** (`audio/trilha.py`): batida pop (124 BPM, vi-IV-I-V), whoosh nos cortes,
   "pop" nos selos, fita + torcida na chegada e "ding" no logo final. A música abaixa sozinha sob a voz (sidechain)
@@ -95,3 +98,12 @@ sheets e vídeo sozinho.
 Corredor estilizado montado com primitivas: boné azul com o logo, camisa azul com o logo no
 peito e "AMIGOS DO SERGINHO" nas costas, short azul com faixa verde, munhequeiras verdes, meias
 brancas e tênis azuis com solado branco. Veja `output/sheets/amigos_do_serginho_personagem.png`.
+Tem contorno estilo desenho animado, olhos com pálpebras e cílios que piscam, sobrancelhas e boca
+que reagem na comemoração, franja sob o boné e relógio esportivo no pulso.
+
+## Cenário
+
+Rua de cidade do interior: calçada portuguesa em ondas, casas térreas e sobrados com telhado de
+barro, janelas com venezianas, muros com portão, comércios com toldo e placa, ipês amarelos e roxos,
+postes com fiação, carros estacionados, bandeirinhas perto da chegada, grama com flores, morros e
+nuvens. Os trechos onde a câmera gira em volta do corredor ficam livres de carros e árvores.

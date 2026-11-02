@@ -170,7 +170,9 @@
     }
   ],
   "audio": {
-    "provedor": "piper",
+    "provedor": "microsoft",
+    "vozMicrosoft": "pt-BR-AntonioNeural",
+    "velocidadeMicrosoft": "+8%",
     "vozLocal": "pt_BR-faber-medium",
     "velocidadeLocal": 0.9,
     "vozEspeak": "mb-br3",
