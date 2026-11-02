@@ -2,6 +2,7 @@
 // roteiro e expõe window.setup / window.frame / window.sheet para o render.js.
 import * as THREE from 'three';
 import { buildCharacter } from './character.js';
+import { buildModelCharacter } from './modelCharacter.js';
 import { buildEnvironment, buildSky } from './environment.js';
 import { buildTimeline, poseFor, applyPose } from './animation.js';
 import { cameraFor } from './camera.js';
@@ -60,7 +61,7 @@ window.setup = async (roteiro) => {
     .map((c) => [timeline.at(c.inicio).x - 9, timeline.at(c.fim - 0.001).x + 9]);
   const env = buildEnvironment(roteiro.cenario, logo, timeline.finishX, livres);
   scene.add(env.group);
-  const char = buildCharacter(roteiro.personagem, logo);
+  const char = roteiro.personagem.modelo ? await buildModelCharacter(roteiro.personagem, logo) : buildCharacter(roteiro.personagem, logo);
   scene.add(char.root);
 
   const camera = new THREE.PerspectiveCamera(50, W / H, 0.1, 2000);

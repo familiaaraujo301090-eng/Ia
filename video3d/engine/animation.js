@@ -146,7 +146,7 @@ function mixPose(a, b, k) {
   return out;
 }
 
-export function poseFor(state) {
+function poseBase(state) {
   const { cena, u, local, phase } = state;
   switch (cena.acao) {
     case 'alongar': {
@@ -171,7 +171,44 @@ export function poseFor(state) {
   }
 }
 
+// Pose + pesos das animações de um modelo 3D pronto (modelCharacter.js).
+export function poseFor(state) {
+  const p = poseBase(state);
+  const { cena, u, local, phase } = state;
+  let pesos;
+  switch (cena.acao) {
+    case 'alongar':
+      pesos = { alongar: 1 - ss(0.5, 0.62, u), correr: ss(0.5, 0.62, u) };
+      break;
+    case 'correr':
+      pesos = { correr: 1 };
+      break;
+    case 'chegada': {
+      const k = ss(0.42, 0.56, u);
+      pesos = { correr: 1 - k, comemorar: k };
+      break;
+    }
+    case 'acenar': {
+      const k = ss(0, 0.12, u);
+      pesos = { parado: 1 - k, acenar: k };
+      break;
+    }
+    default:
+      pesos = { parado: 1 };
+  }
+  p.pesos = pesos;
+  p.local = local || 0;
+  p.phase = phase || 0;
+  return p;
+}
+
 export function applyPose(char, pose, x, t = null) {
+  if (char.modelo) {
+    char.root.position.set(x, 0, 0);
+    char.root.rotation.y = pose.heading;
+    char.anim(pose.pesos, pose.local, pose.phase);
+    return;
+  }
   const J = char.joints;
   char.root.position.set(x, 0, 0);
   char.root.rotation.y = pose.heading;

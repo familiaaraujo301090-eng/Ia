@@ -93,6 +93,39 @@ sheets e vídeo sozinho.
 | 6 | Chegada | 28,5–34 s | rompe a fita e comemora | câmera baixa | Correr junto motiva: cada quilômetro fica mais leve com os amigos |
 | 7 | Encerramento | 34–38,5 s | acena | aproximação + logo | Siga a equipe: @equipeamigosdoserginho_ |
 
+## Usar um personagem 3D pronto (.glb / .fbx)
+
+O boneco feito por código é só um ponto de partida. Para um visual de animação 3D de verdade,
+use um modelo esculpido e animado:
+
+1. **Gerar o modelo**: num site de imagem→3D (ex.: Meshy ou Tripo), envie uma imagem do personagem
+   (de preferência de frente, corpo inteiro, braços levemente abertos) e exporte em `.fbx` ou `.glb`.
+   Use imagens próprias ou licenciadas.
+2. **Animar**: envie o modelo ao Mixamo, faça o auto-rig e baixe as animações *Running*, *Waving*,
+   *Victory* (ou *Jumping*) e *Idle* — cada uma em `.fbx`, a primeira **com skin**, as outras **without skin**.
+3. Coloque os arquivos em `video3d/assets/` e aponte no roteiro, dentro de `personagem`:
+
+```json
+"modelo": {
+  "arquivo": "assets/corredor_run.fbx",
+  "altura": 2.0,
+  "rotacaoY": 0,
+  "animacoes": {
+    "correr": "assets/corredor_run.fbx",
+    "acenar": "assets/corredor_wave.fbx",
+    "comemorar": "assets/corredor_victory.fbx",
+    "parado": "assets/corredor_idle.fbx"
+  },
+  "cores": { "NomeDoMaterialDaCamisa": "#2246a8" },
+  "logo": { "osso": "Spine2", "posicao": [0, 0.1, 0.15], "tamanho": 0.22 }
+}
+```
+
+- `animacoes` aceita o nome de um clipe dentro do próprio modelo (ex.: `"Running"`) ou um arquivo separado.
+- `rotacaoY` corrige a frente do modelo (use `3.1416` se ele aparecer de costas).
+- `cores` recolore materiais pelo nome (uniforme azul); `logo` prende o logo da equipe a um osso (peito).
+- Sem `modelo`, o motor usa o boneco procedural.
+
 ## Personagem
 
 Corredor estilizado montado com primitivas: boné azul com o logo, camisa azul com o logo no
