@@ -10,6 +10,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import editar_short as base
 import modelos
 
 pasta = Path(sys.argv[1])
@@ -26,8 +27,8 @@ leg = modelos.cabecalho([
     f"Style: Idade,Inter ExtraBold,120,{dourado},{dourado},&H00101010,&H96000000,0,0,0,0,100,100,4,0,1,6,4,8,60,60,290,1",
 ])
 for k, (par, rotulo) in enumerate(marcas):
-    a = 0.0 if k == 0 else max(0.0, comeco[par] - 0.05)
-    b = comeco[marcas[k + 1][0]] - 0.05 if k + 1 < len(marcas) else total
+    a = 0.0 if k == 0 else max(0.0, comeco[par] - base.TRANSICAO)
+    b = comeco[marcas[k + 1][0]] - base.TRANSICAO if k + 1 < len(marcas) else total
     pop = "\\fscx140\\fscy140\\t(0,160,\\fscx100\\fscy100)"
     leg.append(modelos.dialogo(0, a, b, "Idade", f"{{{pop}}}{rotulo}"))
 (pasta / "idades.ass").write_text("\n".join(leg) + "\n", encoding="utf-8")

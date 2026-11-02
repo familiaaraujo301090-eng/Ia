@@ -1,0 +1,11 @@
+{
+  "titulo": "E se o Rengoku te criasse?",
+  "narracao": "narracao.wav",
+  "tempos": "tempos.json",
+  "imagens": ["1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg", "6.jpg", "7.jpg", "8.jpg", "9.jpg"],
+  "cenas": [1, 2, 3, 4, 5, 6, 7, 8, 9],
+  "focos": [0.4, 0.4, 0.4, 0.3, 0.35, 0.3, 0.35, 0.35, 0.3],
+  "musica": "musica.wav",
+  "volume_musica": 0.14,
+  "idades": {"1": "5 ANOS", "3": "10 ANOS", "5": "16 ANOS", "6": "22 ANOS", "7": "35 ANOS", "8": "40 ANOS", "9": "50 ANOS"}
+}

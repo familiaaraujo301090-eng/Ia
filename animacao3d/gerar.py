@@ -35,7 +35,7 @@ HIST = historia.HISTORIAS[NOME]
 SAIDA = AQUI / "saida" / NOME
 LARG, ALT, AMOSTRAS = 540, 960, 8
 PASSO = 2  # renderiza 1 quadro a cada 2; o ffmpeg interpola os do meio (metade do tempo)
-VOZ = ("pm_alex", "1.0", "0.95")  # voz nova, a pedido do usuario (a pm_santa cansou)
+VOZ = ("pt-BR-AntonioNeural", "1.05", "0.96")  # voz neural da Microsoft (02/11: a do Kokoro soava arrastada)
 
 
 def narracao():

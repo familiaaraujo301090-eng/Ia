@@ -444,7 +444,7 @@ TEMPESTADE = {
                  "alvo_ate": (0, 1.0, 0.9), "lente": 28, "tremor": 0.06},
          "acoes": [("olhar", 0, 1, (0, 0), (-10, -30))]},
         {"desc": "Na popa, o travesseiro; camera presa ao barco, o horizonte balanca.",
-         "cam": {"de": (0.75, -2.8, 0.95), "ate": (0.45, -2.45, 0.72), "alvo": (0, -1.75, 0.34), "lente": 40,
+         "cam": {"de": (0.25, -0.85, 1.35), "ate": (0.15, -1.05, 1.15), "alvo": (0, -1.75, 0.34), "lente": 40,
                  "dof": True, "no_barco": True},
          "acoes": [("olhar", 0, 0.3, (-10, -30), (0, 0))]},
         {"desc": "Grito: camera gira rapida em volta de Elias, tremendo; ele olha para o ceu.",

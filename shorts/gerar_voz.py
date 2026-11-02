@@ -4,6 +4,8 @@
 Uso:
     python gerar_voz.py pasta_do_video/ [voz] [velocidade] [tom] [--rapido]
 
+Vozes: pm_santa / pm_alex (Kokoro, local) ou pt-BR-AntonioNeural (Microsoft, precisa de rede;
+a melhor em entonacao). Ex.: python gerar_voz.py pasta/ pt-BR-AntonioNeural 1.08 0.96 --rapido
 --limpa: voz limpa, sem baixar o tom e sem eco (mais clara; padrao desde 02/11).
 --rapido: ritmo novo (PUBLICO-E-PROGRESSAO.md), com pausas curtas e a primeira palavra ja no
 primeiro quadro; use com velocidade ~1.05.
@@ -33,9 +35,42 @@ RAPIDO = {"PAUSA_PARAGRAFO": 0.3, "PAUSA_FRASE": 0.12, "SILENCIO_INICIAL": 0.05}
 LIMPA = False  # --limpa: sem baixar o tom e sem eco (voz mais clara)
 
 
+def falar_neural(texto, voz, velocidade, tom, taxa=24000):
+    """Uma frase com as vozes neurais da Microsoft (edge-tts): bem mais entonacao que o Kokoro.
+
+    Precisa de `pip install edge-tts` e de speech.platform.bing.com liberado na rede.
+    velocidade 1.1 = 10% mais rapido; tom 0.95 = um pouco mais grave.
+    """
+    import asyncio
+    import os
+    import edge_tts
+    if not os.environ.get("SSL_CERT_FILE") and os.path.exists("/root/.ccr/ca-bundle.crt"):
+        os.environ["SSL_CERT_FILE"] = "/root/.ccr/ca-bundle.crt"  # proxy do ambiente na nuvem
+
+    async def baixar():
+        com = edge_tts.Communicate(texto, voz, rate=f"{round((velocidade - 1) * 100):+d}%",
+                                   pitch=f"{round((tom - 1) * 200):+d}Hz",
+                                   proxy=os.environ.get("HTTPS_PROXY") or None)
+        dados = b""
+        async for parte in com.stream():
+            if parte["type"] == "audio":
+                dados += parte["data"]
+        return dados
+    mp3 = asyncio.run(baixar())
+    pcm = subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-i", "pipe:0", "-f", "f32le",
+                          "-ac", "1", "-ar", str(taxa), "pipe:1"], input=mp3, capture_output=True, check=True).stdout
+    audio = np.frombuffer(pcm, dtype=np.float32)
+    # tira o silencio que a Microsoft poe no comeco e no fim de cada frase
+    voz_ativa = np.nonzero(np.abs(audio) > 0.01)[0]
+    if len(voz_ativa):
+        audio = audio[max(0, voz_ativa[0] - int(0.03 * taxa)): voz_ativa[-1] + int(0.06 * taxa)]
+    return audio, taxa
+
+
 def gerar(pasta, voz="pm_santa", velocidade=0.87, tom=0.96):
     pasta = Path(pasta)
-    kokoro = Kokoro(str(MODELO / "kokoro-v1.0.onnx"), str(MODELO / "voices-v1.0.bin"))
+    neural = "Neural" in voz  # voz da Microsoft (edge-tts), ex.: pt-BR-AntonioNeural
+    kokoro = None if neural else Kokoro(str(MODELO / "kokoro-v1.0.onnx"), str(MODELO / "voices-v1.0.bin"))
     paragrafos = [p.strip() for p in (pasta / "roteiro.txt").read_text(encoding="utf-8").splitlines()
                   if p.strip()]
     taxa = 24000
@@ -45,7 +80,10 @@ def gerar(pasta, voz="pm_santa", velocidade=0.87, tom=0.96):
         frases = re.split(r"(?<=[.!?])\s+", paragrafo)
         for i, frase in enumerate(frases):
             fala = frase.replace("*", "")  # *destaque* e so visual
-            audio, taxa = kokoro.create(fala, voice=voz, speed=velocidade, lang="pt-br")
+            if neural:
+                audio, taxa = falar_neural(fala, voz, velocidade, tom)
+            else:
+                audio, taxa = kokoro.create(fala, voice=voz, speed=velocidade, lang="pt-br")
             tempos.append([round(t, 3), round(t + len(audio) / taxa, 3), frase, n])
             pausa = PAUSA_FRASE if i < len(frases) - 1 else PAUSA_PARAGRAFO
             t += len(audio) / taxa + pausa
@@ -53,7 +91,7 @@ def gerar(pasta, voz="pm_santa", velocidade=0.87, tom=0.96):
     crua = pasta / "voz_crua.wav"
     sf.write(crua, np.concatenate(partes), taxa)
     # Deixa a voz levemente mais grave e suave (sem mudar a duracao), com um pouco de ambiencia.
-    if LIMPA:
+    if LIMPA or neural:
         # Voz limpa (pedido de 02/11: a antiga soava abafada e arrastada): sem mudar o tom,
         # sem eco; so um corpo leve no grave e mais presenca nas consoantes.
         filtro = "highpass=f=70,bass=g=1.5:f=120,equalizer=f=3200:t=q:w=1.2:g=3,loudnorm=I=-16:TP=-1.5"

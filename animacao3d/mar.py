@@ -467,7 +467,7 @@ def criar(col, m):
     mat.use_nodes = True
     nt = mat.node_tree
     nt.nodes.remove(nt.nodes["Principled BSDF"])
-    e = _no(nt, "ShaderNodeEmission", Color=(1.0, 0.6, 0.25, 1), Strength=0.0)
+    e = _no(nt, "ShaderNodeEmission", Color=(1.0, 0.42, 0.1, 1), Strength=0.0)
     e.name = "brilho"
     nt.links.new(e.outputs[0], nt.nodes["Material Output"].inputs["Surface"])
     sol.data.materials.append(mat)
@@ -584,7 +584,7 @@ def animar(col, m, p, faixas, h):
         dia.keyframe_insert("default_value", frame=f)
         sol.energy = 3.2 * d
         sol.keyframe_insert("energy", frame=f)
-        disco.default_value = 9 * d
+        disco.default_value = 3 * d
         disco.keyframe_insert("default_value", frame=f)
         lua.energy = 0.8 * (1 - d) + 0.05 * d
         lua.keyframe_insert("energy", frame=f)
