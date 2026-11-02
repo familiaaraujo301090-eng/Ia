@@ -114,12 +114,12 @@ export function buildCharacter(cfg, logoImg) {
     sole: mat(c.solado, { roughness: 0.6 }),
     sock: fabric(c.meia),
     white: mat('#ffffff', { roughness: 0.15 }),
-    iris: mat('#5a3418', { roughness: 0.2 }),
+    iris: mat('#4a2814', { roughness: 0.15 }),
     pupil: mat('#0b0b0b', { roughness: 0.1 }),
     green: fabric('#4dd75d'),
-    mouth: mat('#5e1d1a', { roughness: 0.6 }),
+    mouth: mat('#8a2a2a', { roughness: 0.6 }),
     tongue: mat('#d0605a'),
-    blush: new THREE.MeshStandardMaterial({ color: '#ff8a7a', transparent: true, opacity: 0.35, roughness: 0.8 }),
+    blush: new THREE.MeshStandardMaterial({ color: '#ff7f78', transparent: true, opacity: 0.2, roughness: 0.8, depthWrite: false }),
     brow: mat('#2b1a10', { roughness: 0.9 }),
   };
   const logoTex = new THREE.CanvasTexture(logoCircleCanvas(logoImg, 512));
@@ -163,71 +163,82 @@ export function buildCharacter(cfg, logoImg) {
   // ---- pescoço e cabeça
   const neck = joint(chest, 'neck', [0, 0.29, 0], J);
   neck.add(mesh(new THREE.CylinderGeometry(0.065, 0.075, 0.16, 16), M.skin, [0, 0.04, 0]));
-  const head = joint(neck, 'head', [0, 0.22, 0], J);
-  head.scale.set(1.12, 1.26, 1.12);
-  // rosto num grupo próprio, sem contorno, para um acabamento limpo
+  const head = joint(neck, 'head', [0, 0.24, 0], J);
+  head.scale.setScalar(1.3);
+  // Rosto no estilo animação 3D: cabeça redonda com bochechas fofas, olhos grandes,
+  // sobrancelhas grossas, nariz de botão e sorriso aberto. Sem contorno toon.
   const face = new THREE.Group();
   face.userData.semContorno = true;
   head.add(face);
-  face.add(mesh(new THREE.SphereGeometry(0.22, 48, 36), M.skin, [0, 0.01, 0], [0, 0, 0], [1, 1.02, 0.97]));
-  // cabelo: nuca e costeletas aparecendo por baixo do boné
-  face.add(mesh(new THREE.SphereGeometry(0.226, 32, 20, 0, Math.PI * 2, 0, Math.PI * 0.62), M.hair, [0, 0.03, -0.035], [-0.5, 0, 0]));
+  const pinkSkin = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(c.pele).lerp(new THREE.Color('#ff9a8a'), 0.18), roughness: 0.55, sheen: 0.4, sheenColor: new THREE.Color('#ffd6c8'), emissive: new THREE.Color(c.pele), emissiveIntensity: 0.12 });
+  face.add(mesh(new THREE.SphereGeometry(0.22, 56, 40), M.skin, [0, 0.01, 0], [0, 0, 0], [1.04, 1, 0.96]));
+  face.add(mesh(new THREE.SphereGeometry(0.165, 40, 28), M.skin, [0, -0.06, 0.035], [0, 0, 0], [1.18, 0.85, 1]));
 
-  // olhos grandes, olhando para frente, com dois brilhos e linha de cílios
+  // cabelo preto brilhante: nuca, laterais e franja saindo por baixo do boné
+  const hair = new THREE.MeshPhysicalMaterial({ color: '#17171c', roughness: 0.5, clearcoat: 0.25, clearcoatRoughness: 0.6 });
+  // capacete de cabelo inclinado: cobre o alto e a nuca, deixando a testa à mostra
+  face.add(mesh(new THREE.SphereGeometry(0.233, 48, 24, 0, Math.PI * 2, 0, Math.PI * 0.5), hair, [0, 0.045, -0.01], [-0.47, 0, 0], [1.05, 1, 1]));
+  for (const s of [-1, 1]) face.add(mesh(new THREE.SphereGeometry(0.075, 20, 14), hair, [0.2 * s, 0.07, 0.03], [0, 0, -0.3 * s], [0.42, 1, 1.1]));
+  // mechas pontudas da franja, penteadas para o lado
+  const mecha = new THREE.ConeGeometry(0.042, 0.1, 16);
+  for (const [x, y, k] of [[-0.12, 0.145, 0.8], [-0.06, 0.158, 0.95], [0.005, 0.162, 1.0], [0.07, 0.155, 0.9], [0.125, 0.138, 0.75]]) {
+    const z = Math.sqrt(Math.max(0, 0.0484 - x * x - (y - 0.01) ** 2)) * 0.96 + 0.01;
+    face.add(mesh(mecha, hair, [x + 0.012, y - 0.03 * k, z], [-0.4, 0, Math.PI + 0.5], [1.1 * k, k, 0.45]));
+  }
+
+  // olhos grandes castanhos com dois brilhos e linha de cílios
   J.eyes = [];
   J.brows = [];
+  const surf = (x, y) => Math.sqrt(Math.max(0, 0.0484 - x * x - (y - 0.01) ** 2)) * 0.96;
   for (const s of [-1, 1]) {
     const eye = new THREE.Group();
-    eye.position.set(0.074 * s, 0.026, 0);
+    eye.position.set(0.088 * s, -0.01, 0);
     face.add(eye);
-    eye.add(mesh(new THREE.SphereGeometry(0.05, 28, 20), M.white, [0, 0, 0.186], [0, 0, 0], [0.9, 1.15, 0.5]));
-    eye.add(mesh(new THREE.SphereGeometry(0.034, 24, 16), M.iris, [0, -0.004, 0.2012], [0, 0, 0], [1, 1.08, 0.35]));
-    eye.add(mesh(new THREE.SphereGeometry(0.018, 16, 12), M.pupil, [0, -0.004, 0.2075], [0, 0, 0], [1, 1.08, 0.35]));
-    eye.add(mesh(new THREE.SphereGeometry(0.0075, 10, 8), M.white, [0.011, 0.01, 0.2135]));
-    eye.add(mesh(new THREE.SphereGeometry(0.004, 8, 6), M.white, [-0.009, -0.016, 0.2128]));
-    // linha superior de cílios (arco grosso sobre o olho)
-    eye.add(mesh(new THREE.TorusGeometry(0.046, 0.0055, 6, 24, Math.PI * 0.92), M.pupil, [0, 0.002, 0.2], [-0.12, 0, Math.PI * 0.04], [0.98, 1.2, 1]));
+    const z0 = surf(0.088, -0.01);
+    eye.add(mesh(new THREE.SphereGeometry(0.062, 32, 24), M.white, [0, 0, z0 - 0.012], [0, 0, 0], [0.95, 1.1, 0.5]));
+    eye.add(mesh(new THREE.SphereGeometry(0.042, 28, 20), M.iris, [0, -0.004, z0 + 0.007], [0, 0, 0], [1, 1.06, 0.35]));
+    eye.add(mesh(new THREE.SphereGeometry(0.022, 20, 14), M.pupil, [0, -0.004, z0 + 0.0165], [0, 0, 0], [1, 1.06, 0.35]));
+    eye.add(mesh(new THREE.SphereGeometry(0.012, 12, 10), M.white, [0.015, 0.014, z0 + 0.0235], [0, 0, 0], [1, 1, 0.5]));
+    eye.add(mesh(new THREE.SphereGeometry(0.005, 8, 6), M.white, [-0.013, -0.02, z0 + 0.0225], [0, 0, 0], [1, 1, 0.5]));
+    eye.add(mesh(new THREE.TorusGeometry(0.058, 0.0065, 8, 28, Math.PI * 0.9), M.pupil, [0, 0.002, z0 + 0.006], [-0.18, 0, Math.PI * 0.05], [0.97, 1.12, 1]));
     J.eyes.push(eye);
-    // sobrancelha grossa e arqueada (sobe na comemoração)
-    const brow = mesh(new THREE.TorusGeometry(0.05, 0.011, 8, 18, Math.PI * 0.55), M.brow, [0.076 * s, 0.1, 0.188], [-0.15, 0, Math.PI * 0.225], [1, 0.7, 1]);
-    brow.userData.y0 = 0.1;
+    // sobrancelha grossa arqueada
+    const brow = mesh(new THREE.TorusGeometry(0.06, 0.013, 10, 20, Math.PI * 0.6), M.brow, [0.09 * s, 0.078, surf(0.09, 0.078) + 0.007], [-0.35, 0, Math.PI * 0.2], [1, 0.5, 1]);
+    brow.userData.y0 = 0.078;
     face.add(brow);
     J.brows.push(brow);
     // bochechas rosadas e orelhas
-    face.add(mesh(new THREE.CircleGeometry(0.03, 20), M.blush, [0.125 * s, -0.045, 0.176], [0.15, 0.6 * s, 0]));
-    face.add(mesh(new THREE.SphereGeometry(0.05, 14, 12), M.skin, [0.214 * s, -0.005, 0.0], [0, 0, 0], [0.45, 0.95, 0.75]));
-    face.add(mesh(new THREE.TorusGeometry(0.024, 0.008, 6, 12), M.skin, [0.232 * s, -0.005, 0.005], [0, Math.PI / 2, 0]));
+    face.add(mesh(new THREE.CircleGeometry(0.046, 24), M.blush, [0.13 * s, -0.058, surf(0.13, -0.058) + 0.022], [0.2, 0.62 * s, 0]));
+    face.add(mesh(new THREE.SphereGeometry(0.062, 18, 14), M.skin, [0.226 * s, -0.01, -0.005], [0, 0, 0], [0.45, 1, 0.8]));
+    face.add(mesh(new THREE.TorusGeometry(0.03, 0.01, 8, 14), pinkSkin, [0.245 * s, -0.01, 0.0], [0, Math.PI / 2, 0], [1, 1.2, 1]));
   }
-  // nariz pequeno
-  face.add(mesh(new THREE.SphereGeometry(0.024, 16, 12), M.skin, [0, -0.028, 0.212], [0, 0, 0], [1.15, 0.85, 0.9]));
-  // boca sorridente: formato "D" com dentes e língua; abre mais na comemoração
+  // nariz de botão
+  face.add(mesh(new THREE.SphereGeometry(0.024, 18, 14), pinkSkin, [0, -0.038, surf(0, -0.038) + 0.012], [0, 0, 0], [1.2, 0.9, 0.9]));
+  // sorriso aberto em "D" com dentes de cima e língua
   const bocaShape = new THREE.Shape();
-  bocaShape.moveTo(-0.046, 0);
-  bocaShape.quadraticCurveTo(0, 0.01, 0.046, 0);
-  bocaShape.bezierCurveTo(0.044, -0.05, -0.044, -0.05, -0.046, 0);
+  bocaShape.moveTo(-0.06, 0.004);
+  bocaShape.quadraticCurveTo(0, 0.012, 0.06, 0.004);
+  bocaShape.bezierCurveTo(0.055, -0.058, -0.055, -0.058, -0.06, 0.004);
   const dentes = new THREE.Shape();
-  dentes.moveTo(-0.04, -0.001);
-  dentes.quadraticCurveTo(0, 0.0085, 0.04, -0.001);
-  dentes.quadraticCurveTo(0.036, -0.013, 0.03, -0.014);
-  dentes.quadraticCurveTo(0, -0.008, -0.03, -0.014);
-  dentes.quadraticCurveTo(-0.036, -0.013, -0.04, -0.001);
+  dentes.moveTo(-0.052, 0.0);
+  dentes.quadraticCurveTo(0, 0.009, 0.052, 0.0);
+  dentes.quadraticCurveTo(0.046, -0.016, 0.036, -0.017);
+  dentes.quadraticCurveTo(0, -0.011, -0.036, -0.017);
+  dentes.quadraticCurveTo(-0.046, -0.016, -0.052, 0.0);
   const open = new THREE.Group();
-  open.position.set(0, -0.084, 0.1995);
-  open.rotation.x = 0.42;
+  open.position.set(0, -0.092, 0.2);
+  open.rotation.x = 0.45;
   face.add(open);
-  open.add(mesh(new THREE.ShapeGeometry(bocaShape, 16), M.mouth));
-  open.add(mesh(new THREE.ShapeGeometry(dentes, 12), M.white, [0, 0, 0.0008]));
-  open.add(mesh(new THREE.CircleGeometry(0.02, 16), M.tongue, [0, -0.028, 0.0006], [0, 0, 0], [1.2, 0.55, 1]));
-  // cantinhos da boca (covinhas)
-  for (const s of [-1, 1]) face.add(mesh(new THREE.TorusGeometry(0.008, 0.0028, 6, 10, Math.PI), M.mouth, [0.05 * s, -0.082, 0.195], [0.4, 0.25 * s, s > 0 ? -1.2 : Math.PI + 1.2]));
-  const smile = new THREE.Group();
-  J.smile = smile;
+  open.add(mesh(new THREE.ShapeGeometry(bocaShape, 20), M.mouth));
+  open.add(mesh(new THREE.ShapeGeometry(dentes, 14), M.white, [0, 0, 0.0008]));
+  open.add(mesh(new THREE.CircleGeometry(0.026, 18), M.tongue, [0, -0.032, 0.0006], [0, 0, 0], [1.3, 0.5, 1]));
+  J.smile = new THREE.Group();
   J.mouthOpen = open;
 
   // boné
   const cap = new THREE.Group();
-  cap.position.set(0, 0.118, -0.02);
-  cap.rotation.x = -0.42;
+  cap.position.set(0, 0.13, -0.035);
+  cap.rotation.x = -0.55;
   cap.scale.setScalar(0.97);
   head.add(cap);
   cap.add(mesh(new THREE.SphereGeometry(0.236, 40, 20, 0, Math.PI * 2, 0, Math.PI / 2), M.uni, [0, 0, 0], [0, 0, 0], [1, 1.05, 1.03]));
