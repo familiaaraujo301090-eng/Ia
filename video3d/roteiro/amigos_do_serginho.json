@@ -173,6 +173,8 @@
     "provedor": "piper",
     "vozLocal": "pt_BR-faber-medium",
     "velocidadeLocal": 0.9,
+    "vozEspeak": "mb-br3",
+    "velocidadeEspeak": 165,
     "vozId": "pNInz6obpgDQGcFmaJgB",
     "modelo": "eleven_multilingual_v2",
     "estabilidade": 0.35,

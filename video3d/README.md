@@ -33,6 +33,8 @@ npm run render                                           # vídeo final com voz,
 pt_BR do Piper, padrão `roteiro.audio.vozLocal`) e `--velocidade` (padrão 0.9; menor = mais rápido).
 O download do modelo precisa de acesso a huggingface.co; sem ele, baixe `<voz>.onnx` e `<voz>.onnx.json`
 de https://huggingface.co/rhasspy/piper-voices para `models/`.
+Se o modelo não puder ser baixado, o script usa automaticamente o espeak-ng com a voz brasileira
+MBROLA `mb-br3` (mais robótica): `sudo apt install espeak-ng mbrola mbrola-br3`. Force com `--motor espeak` ou `--motor piper`.
 
 ## Versão viral (áudio)
 
