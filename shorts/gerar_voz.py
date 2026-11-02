@@ -4,6 +4,7 @@
 Uso:
     python gerar_voz.py pasta_do_video/ [voz] [velocidade] [tom] [--rapido]
 
+--limpa: voz limpa, sem baixar o tom e sem eco (mais clara; padrao desde 02/11).
 --rapido: ritmo novo (PUBLICO-E-PROGRESSAO.md), com pausas curtas e a primeira palavra ja no
 primeiro quadro; use com velocidade ~1.05.
 
@@ -29,6 +30,7 @@ PAUSA_PARAGRAFO = 0.6  # silencio entre paragrafos: deixa a fala serena sem arra
 PAUSA_FRASE = 0.25
 SILENCIO_INICIAL = 0.3
 RAPIDO = {"PAUSA_PARAGRAFO": 0.3, "PAUSA_FRASE": 0.12, "SILENCIO_INICIAL": 0.05}
+LIMPA = False  # --limpa: sem baixar o tom e sem eco (voz mais clara)
 
 
 def gerar(pasta, voz="pm_santa", velocidade=0.87, tom=0.96):
@@ -51,10 +53,15 @@ def gerar(pasta, voz="pm_santa", velocidade=0.87, tom=0.96):
     crua = pasta / "voz_crua.wav"
     sf.write(crua, np.concatenate(partes), taxa)
     # Deixa a voz levemente mais grave e suave (sem mudar a duracao), com um pouco de ambiencia.
+    if LIMPA:
+        # Voz limpa (pedido de 02/11: a antiga soava abafada e arrastada): sem mudar o tom,
+        # sem eco; so um corpo leve no grave e mais presenca nas consoantes.
+        filtro = "highpass=f=70,bass=g=1.5:f=120,equalizer=f=3200:t=q:w=1.2:g=3,loudnorm=I=-16:TP=-1.5"
+    else:
+        filtro = (f"asetrate={taxa}*{tom},aresample={taxa},atempo=1/{tom},bass=g=2:f=110,"
+                  "treble=g=-3:f=6000,aecho=0.8:0.6:60:0.15,loudnorm=I=-16:TP=-1.5")
     subprocess.run([
-        "ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-i", str(crua), "-af",
-        f"asetrate={taxa}*{tom},aresample={taxa},atempo=1/{tom},bass=g=2:f=110,"
-        "treble=g=-3:f=6000,aecho=0.8:0.6:60:0.15,loudnorm=I=-16:TP=-1.5",
+        "ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-i", str(crua), "-af", filtro,
         "-ar", "44100", str(pasta / "narracao.wav"),
     ], check=True)
     crua.unlink()
@@ -68,6 +75,9 @@ if __name__ == "__main__":
     if "--rapido" in args:
         args.remove("--rapido")
         globals().update(RAPIDO)
+    if "--limpa" in args:
+        args.remove("--limpa")
+        LIMPA = True
     if not args:
         sys.exit(__doc__)
     gerar(args[0], *args[1:2], *[float(v) for v in args[2:4]])
