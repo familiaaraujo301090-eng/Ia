@@ -124,7 +124,7 @@ async function main() {
   const info = await page.evaluate((r) => window.setup(r), roteiro);
   console.log(`roteiro "${roteiro.titulo}": ${info.total.toFixed(1)} s, chegada em x=${info.finishX.toFixed(1)}`);
 
-  const outDir = path.join(ROOT, 'output');
+  const outDir = process.env.VIDEO3D_OUT || path.join(ROOT, 'output');
   if (mode === '--sheets') {
     fs.mkdirSync(path.join(outDir, 'sheets'), { recursive: true });
     for (const s of ['personagem', 'cenario', 'storyboard']) {
