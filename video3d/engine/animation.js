@@ -182,6 +182,6 @@ export function applyPose(char, pose, x, t = null) {
   const blink = bt < 1 ? Math.max(0.08, Math.abs(1 - 2 * bt)) : 1;
   for (const e of J.eyes) e.scale.y = blink;
   // sorriso sempre visível; abre mais conforme pose.mouth (comemoração/aceno)
-  J.mouthOpen.scale.set(1.05 + pose.mouth * 0.15, 0.55 + pose.mouth * 0.65, 1);
+  J.mouthOpen.scale.set(1.2 + pose.mouth * 0.15, 0.6 + pose.mouth * 0.6, 1);
   for (const b of J.brows) b.position.y = b.userData.y0 + pose.mouth * 0.012;
 }
