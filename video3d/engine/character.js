@@ -87,7 +87,12 @@ function addOutline(root, espessura = 0.0065) {
   };
   const alvos = [];
   root.traverse((o) => {
-    if (o.isMesh && !o.material.transparent && o.geometry.attributes.normal && o.geometry.boundingSphere?.radius !== 0) alvos.push(o);
+    let p = o, livre = false;
+    while (p) {
+      if (p.userData.semContorno) livre = true;
+      p = p.parent;
+    }
+    if (o.isMesh && !livre && !o.material.transparent && o.geometry.attributes.normal) alvos.push(o);
   });
   for (const o of alvos) {
     o.geometry.computeBoundingSphere();
@@ -104,7 +109,7 @@ export function buildCharacter(cfg, logoImg) {
   const M = {
     uni: fabric(c.uniforme),
     uniDark: fabric(c.uniformeEscuro),
-    skin: new THREE.MeshPhysicalMaterial({ color: c.pele, roughness: 0.6, sheen: 0.3, sheenColor: new THREE.Color('#ffd0b0') }),
+    skin: new THREE.MeshPhysicalMaterial({ color: c.pele, roughness: 0.6, sheen: 0.3, sheenColor: new THREE.Color('#ffd0b0'), emissive: new THREE.Color(c.pele), emissiveIntensity: 0.14 }),
     hair: mat(c.cabelo, { roughness: 0.85 }),
     sole: mat(c.solado, { roughness: 0.6 }),
     sock: fabric(c.meia),
@@ -160,48 +165,62 @@ export function buildCharacter(cfg, logoImg) {
   neck.add(mesh(new THREE.CylinderGeometry(0.065, 0.075, 0.16, 16), M.skin, [0, 0.04, 0]));
   const head = joint(neck, 'head', [0, 0.22, 0], J);
   head.scale.setScalar(1.2);
-  // crânio levemente oval e queixo
-  head.add(mesh(new THREE.SphereGeometry(0.22, 40, 30), M.skin, [0, 0.01, 0], [0, 0, 0], [0.98, 1.0, 0.98]));
-  head.add(mesh(new THREE.SphereGeometry(0.15, 24, 16), M.skin, [0, -0.08, 0.06], [0, 0, 0], [1.05, 0.8, 0.95]));
+  // rosto num grupo próprio, sem contorno, para um acabamento limpo
+  const face = new THREE.Group();
+  face.userData.semContorno = true;
+  head.add(face);
+  face.add(mesh(new THREE.SphereGeometry(0.22, 48, 36), M.skin, [0, 0.01, 0], [0, 0, 0], [1, 1.02, 0.97]));
   // cabelo: nuca e costeletas aparecendo por baixo do boné
-  head.add(mesh(new THREE.SphereGeometry(0.226, 32, 20, 0, Math.PI * 2, 0, Math.PI * 0.62), M.hair, [0, 0.03, -0.035], [-0.5, 0, 0]));
-  for (const s of [-1, 1]) head.add(mesh(new THREE.BoxGeometry(0.03, 0.08, 0.05), M.hair, [0.205 * s, 0.02, 0.06], [0, 0, 0.1 * s]));
+  face.add(mesh(new THREE.SphereGeometry(0.226, 32, 20, 0, Math.PI * 2, 0, Math.PI * 0.62), M.hair, [0, 0.03, -0.035], [-0.5, 0, 0]));
 
-  // olhos grandes com piscada
+  // olhos grandes, olhando para frente, com dois brilhos e linha de cílios
   J.eyes = [];
+  J.brows = [];
   for (const s of [-1, 1]) {
     const eye = new THREE.Group();
-    eye.position.set(0.078 * s, 0.025, 0.19);
-    head.add(eye);
-    eye.add(mesh(new THREE.SphereGeometry(0.046, 24, 16), M.white, [0, 0, 0], [0, 0, 0], [1, 1.18, 0.55]));
-    eye.add(mesh(new THREE.SphereGeometry(0.03, 20, 14), M.iris, [0.004 * -s, -0.004, 0.02], [0, 0, 0], [1, 1.12, 0.45]));
-    eye.add(mesh(new THREE.SphereGeometry(0.016, 14, 10), M.pupil, [0.004 * -s, -0.004, 0.031], [0, 0, 0], [1, 1.1, 0.4]));
-    eye.add(mesh(new THREE.SphereGeometry(0.008, 8, 8), M.white, [0.01, 0.012, 0.037]));
+    eye.position.set(0.074 * s, 0.012, 0);
+    face.add(eye);
+    eye.add(mesh(new THREE.SphereGeometry(0.05, 28, 20), M.white, [0, 0, 0.186], [0, 0, 0], [0.9, 1.15, 0.5]));
+    eye.add(mesh(new THREE.SphereGeometry(0.034, 24, 16), M.iris, [0, -0.004, 0.2012], [0, 0, 0], [1, 1.08, 0.35]));
+    eye.add(mesh(new THREE.SphereGeometry(0.018, 16, 12), M.pupil, [0, -0.004, 0.2075], [0, 0, 0], [1, 1.08, 0.35]));
+    eye.add(mesh(new THREE.SphereGeometry(0.0075, 10, 8), M.white, [0.011, 0.01, 0.2135]));
+    eye.add(mesh(new THREE.SphereGeometry(0.004, 8, 6), M.white, [-0.009, -0.016, 0.2128]));
+    // linha superior de cílios (arco grosso sobre o olho)
+    eye.add(mesh(new THREE.TorusGeometry(0.046, 0.0055, 6, 24, Math.PI * 0.92), M.pupil, [0, 0.002, 0.2], [-0.12, 0, Math.PI * 0.04], [0.98, 1.2, 1]));
     J.eyes.push(eye);
-    // sobrancelha arqueada
-    const brow = mesh(new THREE.TorusGeometry(0.05, 0.009, 6, 16, Math.PI * 0.7), M.brow, [0.078 * s, 0.062, 0.2], [0.1, 0, Math.PI * 0.15], [1, 0.6, 1]);
-    head.add(brow);
-    (J.brows ||= []).push(brow);
-    // pálpebra superior (dá expressão e um olhar mais vivo)
-    eye.add(mesh(new THREE.SphereGeometry(0.049, 20, 10, 0, Math.PI * 2, 0, Math.PI * 0.42), M.skin, [0, 0.004, 0.002], [0.35, 0, 0], [1.02, 1.2, 0.6]));
-    for (let k = 0; k < 3; k++) eye.add(mesh(new THREE.BoxGeometry(0.004, 0.018, 0.004), M.pupil, [(k - 1) * 0.018 + 0.012 * s, 0.056, 0.016], [0.3, 0, -0.35 * s * (k + 0.5) * 0.6]));
-    // bochechas e orelhas
-    head.add(mesh(new THREE.CircleGeometry(0.03, 16), M.blush, [0.12 * s, -0.045, 0.178], [0, 0.55 * s, 0]));
-    const ear = mesh(new THREE.SphereGeometry(0.05, 14, 12), M.skin, [0.214 * s, -0.005, 0.0], [0, 0, 0], [0.45, 0.95, 0.75]);
-    head.add(ear);
-    head.add(mesh(new THREE.TorusGeometry(0.024, 0.008, 6, 12), M.skin, [0.232 * s, -0.005, 0.005], [0, Math.PI / 2, 0]));
+    // sobrancelha grossa e arqueada (sobe na comemoração)
+    const brow = mesh(new THREE.TorusGeometry(0.05, 0.011, 8, 18, Math.PI * 0.55), M.brow, [0.076 * s, 0.083, 0.198], [-0.15, 0, Math.PI * 0.225 + 0.08 * s], [1, 0.75, 1]);
+    brow.userData.y0 = 0.083;
+    face.add(brow);
+    J.brows.push(brow);
+    // bochechas rosadas e orelhas
+    face.add(mesh(new THREE.CircleGeometry(0.03, 20), M.blush, [0.125 * s, -0.045, 0.176], [0.15, 0.6 * s, 0]));
+    face.add(mesh(new THREE.SphereGeometry(0.05, 14, 12), M.skin, [0.214 * s, -0.005, 0.0], [0, 0, 0], [0.45, 0.95, 0.75]));
+    face.add(mesh(new THREE.TorusGeometry(0.024, 0.008, 6, 12), M.skin, [0.232 * s, -0.005, 0.005], [0, Math.PI / 2, 0]));
   }
-  head.add(mesh(new THREE.SphereGeometry(0.028, 14, 12), M.skin, [0, -0.025, 0.222], [0.3, 0, 0], [1, 0.9, 1.1]));
-  // boca: sorriso fechado + boca aberta (comemoração)
-  const smile = mesh(new THREE.TorusGeometry(0.052, 0.011, 8, 20, Math.PI), M.mouth, [0, -0.082, 0.2], [0.25, 0, Math.PI]);
-  head.add(smile);
+  // nariz pequeno
+  face.add(mesh(new THREE.SphereGeometry(0.024, 16, 12), M.skin, [0, -0.028, 0.212], [0, 0, 0], [1.15, 0.85, 0.9]));
+  // boca sorridente: formato "D" com dentes e língua; abre mais na comemoração
+  const bocaShape = new THREE.Shape();
+  bocaShape.moveTo(-0.046, 0);
+  bocaShape.quadraticCurveTo(0, 0.01, 0.046, 0);
+  bocaShape.bezierCurveTo(0.044, -0.05, -0.044, -0.05, -0.046, 0);
+  const dentes = new THREE.Shape();
+  dentes.moveTo(-0.04, -0.001);
+  dentes.quadraticCurveTo(0, 0.0085, 0.04, -0.001);
+  dentes.quadraticCurveTo(0.036, -0.013, 0.03, -0.014);
+  dentes.quadraticCurveTo(0, -0.008, -0.03, -0.014);
+  dentes.quadraticCurveTo(-0.036, -0.013, -0.04, -0.001);
   const open = new THREE.Group();
-  open.position.set(0, -0.09, 0.198);
-  open.rotation.x = 0.25;
-  head.add(open);
-  open.add(mesh(new THREE.SphereGeometry(0.05, 20, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), M.mouth, [0, 0.012, 0], [0, 0, 0], [1, 1, 0.35]));
-  open.add(mesh(new THREE.BoxGeometry(0.07, 0.014, 0.01), M.white, [0, 0.004, 0.012]));
-  open.add(mesh(new THREE.SphereGeometry(0.022, 10, 8), M.tongue, [0, -0.028, 0.008], [0, 0, 0], [1.3, 0.6, 0.5]));
+  open.position.set(0, -0.072, 0.2045);
+  open.rotation.x = 0.36;
+  face.add(open);
+  open.add(mesh(new THREE.ShapeGeometry(bocaShape, 16), M.mouth));
+  open.add(mesh(new THREE.ShapeGeometry(dentes, 12), M.white, [0, 0, 0.0008]));
+  open.add(mesh(new THREE.CircleGeometry(0.02, 16), M.tongue, [0, -0.028, 0.0006], [0, 0, 0], [1.2, 0.55, 1]));
+  // cantinhos da boca (covinhas)
+  for (const s of [-1, 1]) face.add(mesh(new THREE.TorusGeometry(0.008, 0.0028, 6, 10, Math.PI), M.mouth, [0.05 * s, -0.07, 0.2], [0.3, 0.25 * s, s > 0 ? -1.2 : Math.PI + 1.2]));
+  const smile = new THREE.Group();
   J.smile = smile;
   J.mouthOpen = open;
 
@@ -272,9 +291,6 @@ export function buildCharacter(cfg, logoImg) {
     for (let k = 0; k < 3; k++) ankle.add(mesh(new THREE.BoxGeometry(0.075, 0.01, 0.014), M.white, [0, 0.012 - k * 0.022, 0.09 + k * 0.03], [-0.6, 0, 0]));
     for (const q of [-1, 1]) ankle.add(mesh(new THREE.BoxGeometry(0.004, 0.022, 0.14), M.green, [0.071 * q, -0.06, 0.06], [-0.25, 0, 0]));
   }
-
-  // franja aparecendo sob a aba do boné
-  for (let k = -2; k <= 2; k++) head.add(mesh(new THREE.SphereGeometry(0.035, 10, 8), M.hair, [k * 0.045, 0.1 - Math.abs(k) * 0.008, 0.185 - Math.abs(k) * 0.012], [0, 0, 0], [1, 0.7, 0.6]));
 
   addOutline(root);
   return { root, joints: J };
