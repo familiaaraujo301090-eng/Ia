@@ -162,17 +162,17 @@ export function buildCharacter(cfg, logoImg) {
 
   // ---- pescoço e cabeça
   const neck = joint(chest, 'neck', [0, 0.29, 0], J);
-  neck.add(mesh(new THREE.CylinderGeometry(0.065, 0.075, 0.16, 16), M.skin, [0, 0.04, 0]));
-  const head = joint(neck, 'head', [0, 0.24, 0], J);
-  head.scale.setScalar(1.3);
+  neck.add(mesh(new THREE.CylinderGeometry(0.062, 0.072, 0.22, 16), M.skin, [0, 0.07, 0]));
+  const head = joint(neck, 'head', [0, 0.29, 0], J);
+  head.scale.set(1.2, 1.36, 1.2);
   // Rosto no estilo animação 3D: cabeça redonda com bochechas fofas, olhos grandes,
   // sobrancelhas grossas, nariz de botão e sorriso aberto. Sem contorno toon.
   const face = new THREE.Group();
   face.userData.semContorno = true;
   head.add(face);
   const pinkSkin = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(c.pele).lerp(new THREE.Color('#ff9a8a'), 0.18), roughness: 0.55, sheen: 0.4, sheenColor: new THREE.Color('#ffd6c8'), emissive: new THREE.Color(c.pele), emissiveIntensity: 0.12 });
-  face.add(mesh(new THREE.SphereGeometry(0.22, 56, 40), M.skin, [0, 0.01, 0], [0, 0, 0], [1.04, 1, 0.96]));
-  face.add(mesh(new THREE.SphereGeometry(0.165, 40, 28), M.skin, [0, -0.06, 0.035], [0, 0, 0], [1.18, 0.85, 1]));
+  face.add(mesh(new THREE.SphereGeometry(0.22, 56, 40), M.skin, [0, 0.01, 0], [0, 0, 0], [1.0, 1.04, 0.96]));
+  face.add(mesh(new THREE.SphereGeometry(0.16, 40, 28), M.skin, [0, -0.07, 0.04], [0, 0, 0], [0.98, 0.9, 1]));
 
   // cabelo preto brilhante: nuca, laterais e franja saindo por baixo do boné
   const hair = new THREE.MeshPhysicalMaterial({ color: '#17171c', roughness: 0.5, clearcoat: 0.25, clearcoatRoughness: 0.6 });
@@ -226,7 +226,7 @@ export function buildCharacter(cfg, logoImg) {
   dentes.quadraticCurveTo(0, -0.011, -0.036, -0.017);
   dentes.quadraticCurveTo(-0.046, -0.016, -0.052, 0.0);
   const open = new THREE.Group();
-  open.position.set(0, -0.092, 0.2);
+  open.position.set(0, -0.095, 0.2085);
   open.rotation.x = 0.45;
   face.add(open);
   open.add(mesh(new THREE.ShapeGeometry(bocaShape, 20), M.mouth));
