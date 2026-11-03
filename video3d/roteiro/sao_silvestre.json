@@ -227,6 +227,7 @@
     "estilo": 0.55,
     "musica": true,
     "efeitos": true,
-    "bpm": 124
+    "bpm": 126,
+    "estiloMusica": "energia"
   }
 }

@@ -1,7 +1,8 @@
 """Trilha e efeitos sonoros sintetizados por código (numpy), sem samples externos.
 
 Gera dois WAV estéreo:
-  musica.wav  batida pop/eletrônica animada (kick, clap, chimbal, baixo, acordes e arpejo)
+  musica.wav  batida pop/eletrônica animada; com "estilo": "energia", pop/house com sidechain,
+              supersaw, melodia com eco, subida de tensão e pratos
   efeitos.wav whoosh nos cortes, "pop" nos selos, fita + torcida na chegada e "ding" no final
 
 uso: python3 audio/trilha.py --info output/audio/timeline.json --out output/audio
@@ -123,6 +124,100 @@ def musica(total, bpm):
     return buf[:end]
 
 
+def supersaw(f, n, vozes=5, harmonics=10):
+    out = np.zeros(n)
+    for v in range(vozes):
+        d = (v - (vozes - 1) / 2) * 0.006
+        out += saw(f, n, harmonics, d)
+    return out / vozes
+
+
+def crash():
+    n = int(1.8 * SR)
+    x = np.diff(rng.standard_normal(n + 1))
+    return lowpass(x, 2) * env(n, 0.001, 0.6) * 0.35
+
+
+def riser(dur):
+    n = int(dur * SR)
+    t = np.linspace(0, 1, n)
+    x = rng.standard_normal(n)
+    out = np.zeros(n)
+    for i, k in enumerate((40, 24, 14, 8, 4, 2)):  # filtro abrindo
+        a, b = i * n // 6, (i + 1) * n // 6
+        out[a:b] = lowpass(x, k)[a:b]
+    return out * t ** 2 * 0.6
+
+
+def musica_energia(total, bpm):
+    """Pop/house animado: bumbo 4x4 com pad "respirando" (sidechain), baixo no
+    contratempo, acordes supersaw, melodia em pluck com eco, palmas, chimbais,
+    subida de tensão antes da entrada e prato a cada 8 compassos."""
+    beat = 60 / bpm
+    bar = beat * 4
+    N = int((total + 2) * SR)
+    drums = np.zeros((N, 2))
+    musica_ = np.zeros((N, 2))
+    # Fá - Sol - Lá menor - Dó (IV-V-vi-I em Dó maior): progressão alegre e "pra cima"
+    prog = [(53, [57, 60, 65]), (55, [59, 62, 67]), (57, [60, 64, 69]), (48, [60, 64, 67])]
+    intro = 2  # compassos sem bumbo
+    bars = int(total / bar) + 1
+    k, c, h, ho = kick(), clap(), hat(), hat(True)
+    # envelope de sidechain: abaixa depois de cada bumbo
+    duck = np.ones(N)
+    for b in range(intro, bars):
+        for q in range(4):
+            i = int((b * bar + q * beat) * SR)
+            n = int(beat * SR)
+            seg = 1 - 0.65 * np.exp(-np.arange(n) / (0.09 * SR))
+            duck[i : i + n] = seg[: max(0, min(n, N - i))]
+    melodia = [0, 2, 1, 2, 0, 2, 1, 3, 0, 2, 1, 2, 2, 1, 0, 1]
+    for b in range(bars):
+        root, chord = prog[b % 4]
+        t0 = b * bar
+        cheio = b >= intro
+        # pad supersaw sustentado o compasso inteiro
+        n = int(bar * SR)
+        pad = sum(supersaw(note_hz(m), n) for m in chord)
+        pad = lowpass(pad, 3 if cheio else 7) * np.minimum(1, np.arange(n) / (0.05 * SR)) * env(n, 0.01, 3.0)
+        place(musica_, pad, t0, 0.11 if cheio else 0.07, 0.0)
+        for s in range(16):
+            t = t0 + s * beat / 4
+            if t > total:
+                break
+            if cheio:
+                if s % 4 == 0:
+                    place(drums, k, t, 1.0)
+                if s in (4, 12):
+                    place(drums, c, t, 0.6, 0.1)
+                if s % 4 == 2:
+                    place(drums, ho, t, 0.13, -0.3)
+                elif s % 2 == 1:
+                    place(drums, h, t, 0.07, 0.3)
+                # baixo no contratempo
+                if s % 4 == 2:
+                    nb = int(beat / 2 * SR)
+                    place(musica_, lowpass(saw(note_hz(root - 12), nb, 6), 5) * env(nb, 0.004, 0.16), t, 0.42)
+            # melodia em pluck (entra no 3º compasso) com eco de 3/16
+            if b >= intro and s % 2 == 0:
+                m = chord[melodia[(s + b * 3) % 16] % 3] + 12 + (12 if melodia[s] == 3 else 0)
+                npl = int(0.25 * SR)
+                tt = np.arange(npl) / SR
+                pl = (np.sin(2 * np.pi * note_hz(m) * tt) + 0.4 * np.sin(4 * np.pi * note_hz(m) * tt)) * env(npl, 0.002, 0.08)
+                for e, g in ((0, 0.16), (3 * beat / 4, 0.07), (6 * beat / 4, 0.03)):
+                    place(musica_, pl, t + e, g, (-0.4, 0.4, -0.2)[int(e / (3 * beat / 4)) % 3])
+        if b == intro or (b > intro and (b - intro) % 8 == 0):
+            place(drums, crash(), t0, 0.5, 0.2)
+    # subida de tensão antes da batida entrar
+    place(drums, riser(bar * intro * 0.9), bar * intro * 0.1, 0.5)
+    mix = musica_ * duck[:, None] + drums
+    mix = np.tanh(mix * 1.3) / 1.3  # saturação suave
+    fade = int(1.5 * SR)
+    end = int(total * SR)
+    mix[end - fade : end] *= np.linspace(1, 0, fade)[:, None]
+    return mix[:end]
+
+
 def whoosh():
     n = int(0.45 * SR)
     x = rng.standard_normal(n)
@@ -193,6 +288,7 @@ if __name__ == "__main__":
     a = ap.parse_args()
     info = json.load(open(a.info))
     os.makedirs(a.out, exist_ok=True)
-    salvar(os.path.join(a.out, "musica.wav"), musica(info["total"], info["bpm"]))
+    gerar = musica_energia if info.get("estilo") == "energia" else musica
+    salvar(os.path.join(a.out, "musica.wav"), gerar(info["total"], info["bpm"]))
     salvar(os.path.join(a.out, "efeitos.wav"), efeitos(info))
     print("trilha ->", a.out)

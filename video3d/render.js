@@ -74,6 +74,7 @@ function mixarAudio(roteiro, info, audioDir, narrada, video, final) {
   const timeline = {
     total: info.total,
     bpm: a.bpm || 124,
+    estilo: a.estiloMusica || 'padrao',
     cenas: info.cenas.map(([id, inicio, f]) => ({ id, inicio, fim: f })),
     fitaT: chegada ? byId[chegada.id].inicio + 0.28 * chegada.duracao : info.total - 5,
     logoT: fim ? byId[fim.id].inicio + 0.75 : info.total - 3,
