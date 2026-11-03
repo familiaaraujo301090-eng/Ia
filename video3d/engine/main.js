@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { buildCharacter } from './character.js';
 import { buildModelCharacter } from './modelCharacter.js';
 import { buildEnvironment, buildSky } from './environment.js';
+import { buildPraca } from './praca.js';
 import { buildTimeline, poseFor, applyPose } from './animation.js';
 import { cameraFor } from './camera.js';
 import { makeOverlay } from './overlay.js';
@@ -59,7 +60,7 @@ window.setup = async (roteiro) => {
   const livres = timeline.cenas
     .filter((c) => ['orbita', 'baixa', 'drone', 'grua', 'aproximar'].includes(c.camera.tipo))
     .map((c) => [timeline.at(c.inicio).x - 9, timeline.at(c.fim - 0.001).x + 9]);
-  const env = buildEnvironment(roteiro.cenario, logo, timeline.finishX, livres);
+  const env = (roteiro.cenario.tipo === 'praca_matriz' ? buildPraca : buildEnvironment)(roteiro.cenario, logo, timeline.finishX, livres);
   scene.add(env.group);
   const char = roteiro.personagem.modelo ? await buildModelCharacter(roteiro.personagem, logo) : buildCharacter(roteiro.personagem, logo);
   scene.add(char.root);
@@ -112,7 +113,8 @@ export function pose(t) {
   applyPose(E.char, p, st.x, t);
   posarAmigos(st, p, t);
   E.env.update(t, st.x);
-  E.sun.position.set(st.x - 12, 22, 14);
+  const [sx, sy, sz] = E.roteiro.cenario.sol || [-12, 22, 14];
+  E.sun.position.set(st.x + sx, sy, sz);
   E.sun.target.position.set(st.x, 0, 0);
   E.sky.position.set(st.x, 0, 0);
   const cam = cameraFor(st.cena, st.u, st.x, t);

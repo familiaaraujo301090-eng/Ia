@@ -1,0 +1,231 @@
+{
+  "titulo": "Você sabia? A São Silvestre e o privilégio de correr",
+  "formato": {
+    "largura": 720,
+    "altura": 1280,
+    "fps": 30
+  },
+  "personagem": {
+    "nome": "Robozinho Amigos do Serginho",
+    "cores": {
+      "uniforme": "#2246a8",
+      "uniformeEscuro": "#16307a",
+      "pele": "#f2c4a2",
+      "cabelo": "#17171c",
+      "solado": "#f2f2f2",
+      "meia": "#ffffff"
+    },
+    "logo": "assets/logo_amigos_do_serginho.png",
+    "modelo": {
+      "arquivo": "assets/robo.glb",
+      "altura": 1.9,
+      "rotacaoY": 0,
+      "animacoes": {
+        "correr": "Running",
+        "acenar": "Wave",
+        "comemorar": "Jump",
+        "parado": "Idle",
+        "alongar": "Idle"
+      },
+      "cores": {
+        "Main": "#2246a8",
+        "Grey": "#e9edf3",
+        "Black": "#0f1418"
+      },
+      "logo": {
+        "malha": "Torso",
+        "altura": 0.55,
+        "tamanho": 0.62
+      },
+      "plastico": true
+    },
+    "coresAmigos": [
+      {
+        "Main": "#1e5fd0",
+        "Grey": "#e9edf3"
+      },
+      {
+        "Main": "#4dd75d",
+        "Grey": "#e9edf3"
+      },
+      {
+        "Main": "#16307a",
+        "Grey": "#e9edf3"
+      },
+      {
+        "Main": "#2b8ce0",
+        "Grey": "#e9edf3"
+      },
+      {
+        "Main": "#3fbf55",
+        "Grey": "#e9edf3"
+      },
+      {
+        "Main": "#2246a8",
+        "Grey": "#e9edf3"
+      }
+    ]
+  },
+  "cenario": {
+    "tipo": "praca_matriz",
+    "cidade": "Buri - SP",
+    "ceu": {
+      "topo": "#3f86e0",
+      "horizonte": "#ffe2bd"
+    },
+    "faixas": [
+      "AMIGOS DO SERGINHO"
+    ],
+    "textoChegada": "BORA CORRER!",
+    "sol": [
+      14,
+      24,
+      10
+    ]
+  },
+  "cenas": [
+    {
+      "id": "gancho",
+      "duracao": 4,
+      "acao": "alongar",
+      "selo": "VOCÊ SABIA?",
+      "camera": {
+        "tipo": "grua",
+        "de": [
+          18,
+          11,
+          1.5
+        ],
+        "para": [
+          11.5,
+          2.6,
+          2.8
+        ],
+        "alvo": [
+          -5,
+          4.6,
+          0
+        ]
+      },
+      "texto": "A corrida mais famosa do Brasil acontece no último dia do ano.",
+      "nota": "Praça Matriz de Buri: grua desce na frente do robozinho, com a igreja matriz e o chafariz ao fundo.",
+      "narracao": "Você sabia que a corrida mais famosa do Brasil acontece no último dia do ano?"
+    },
+    {
+      "id": "sao_silvestre",
+      "duracao": 4,
+      "acao": "correr",
+      "velocidade": 4.5,
+      "km": 15,
+      "selo": "SÃO SILVESTRE",
+      "camera": {
+        "tipo": "lateral",
+        "distancia": 6,
+        "altura": 1.5,
+        "avanco": 0.6
+      },
+      "texto": "A São Silvestre tem 15 km pelas ruas de São Paulo, todo 31 de dezembro.",
+      "nota": "Travelling lateral sob as figueiras e postes em Y; contador sobe até 15 km.",
+      "narracao": "É a São Silvestre: quinze quilômetros pelas ruas de São Paulo, todo trinta e um de dezembro."
+    },
+    {
+      "id": "historia",
+      "duracao": 4,
+      "acao": "correr",
+      "velocidade": 4.5,
+      "selo": "DESDE 1925",
+      "camera": {
+        "tipo": "orbita",
+        "raio": 6.5,
+        "altura": 2.6,
+        "anguloDe": -40,
+        "anguloPara": 160
+      },
+      "texto": "A primeira foi em 1925, à noite, com só 48 corredores na largada.",
+      "nota": "Órbita em volta do robozinho na calçada em ondas.",
+      "narracao": "A primeira foi em 1925, à noite, com só quarenta e oito corredores na largada."
+    },
+    {
+      "id": "hoje",
+      "duracao": 4,
+      "acao": "correr",
+      "velocidade": 5,
+      "amigos": 8,
+      "selo": "HOJE",
+      "camera": {
+        "tipo": "drone",
+        "altura": 11,
+        "atras": 9,
+        "alturaPara": 4.5,
+        "atrasPara": 7
+      },
+      "texto": "Hoje, mais de 50 mil pessoas correm juntas no último dia do ano.",
+      "nota": "Drone atrás do pelotão; a igreja matriz aparece à frente.",
+      "narracao": "Hoje, mais de cinquenta mil pessoas correm juntas no último dia do ano."
+    },
+    {
+      "id": "privilegio",
+      "duracao": 5,
+      "acao": "chegada",
+      "velocidade": 5,
+      "amigos": 8,
+      "selo": "CURIOSIDADE",
+      "camera": {
+        "tipo": "baixa",
+        "raio": 9,
+        "altura": 1.3,
+        "anguloDe": 60,
+        "anguloPara": 25
+      },
+      "texto": "Estima-se que menos de 1% das pessoas no mundo já completou uma maratona. Poder correr é um privilégio.",
+      "nota": "Câmera baixa na chegada; robozinho e a turma comemoram sob as figueiras.",
+      "narracao": "E uma curiosidade: estima-se que menos de um por cento das pessoas no mundo já completou uma maratona. Poder correr é um privilégio!"
+    },
+    {
+      "id": "final",
+      "duracao": 4,
+      "acao": "acenar",
+      "amigos": 8,
+      "selo": "BORA?",
+      "logoFinal": true,
+      "camera": {
+        "tipo": "aproximar",
+        "de": [
+          10,
+          2.4,
+          7.5
+        ],
+        "para": [
+          7,
+          1.9,
+          5.2
+        ],
+        "alvo": [
+          -1.5,
+          1.6,
+          0
+        ]
+      },
+      "texto": "Bora treinar pros 15 km com os Amigos do Serginho, aqui de Buri? @equipeamigosdoserginho_",
+      "nota": "Robozinho e a turma acenam em frente à matriz.",
+      "narracao": "Bora treinar pros quinze quilômetros com os Amigos do Serginho, aqui de Buri?"
+    }
+  ],
+  "audio": {
+    "provedor": "microsoft",
+    "vozMicrosoft": "pt-BR-AntonioNeural",
+    "velocidadeMicrosoft": "+8%",
+    "vozLocal": "pt_BR-faber-medium",
+    "velocidadeLocal": 0.9,
+    "vozEspeak": "mb-br3",
+    "velocidadeEspeak": 165,
+    "vozId": "pNInz6obpgDQGcFmaJgB",
+    "modelo": "eleven_multilingual_v2",
+    "estabilidade": 0.35,
+    "similaridade": 0.8,
+    "estilo": 0.55,
+    "musica": true,
+    "efeitos": true,
+    "bpm": 124
+  }
+}

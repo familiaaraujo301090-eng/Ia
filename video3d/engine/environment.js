@@ -4,14 +4,14 @@
 import * as THREE from 'three';
 import { awningCanvas, bannerCanvas, grassCanvas, roadCanvas, roofCanvas, sidewalkCanvas, textCanvas } from './textures.js';
 
-function rng(seed) {
+export function rng(seed) {
   let s = seed % 2147483647;
   return () => ((s = (s * 16807) % 2147483647) - 1) / 2147483646;
 }
 
-const std = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.85, ...extra });
+export const std = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.85, ...extra });
 
-function add(parent, geo, material, pos, rot = [0, 0, 0], shadow = true) {
+export function add(parent, geo, material, pos, rot = [0, 0, 0], shadow = true) {
   const m = new THREE.Mesh(geo, material);
   m.position.set(...pos);
   m.rotation.set(...rot);
@@ -27,7 +27,7 @@ function mesh2(geo, material) {
   return m;
 }
 
-function canvasTex(c) {
+export function canvasTex(c) {
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 4;
@@ -294,6 +294,20 @@ export function buildEnvironment(cfg, logoImg, finishX, livres = []) {
     add(env, new THREE.CylinderGeometry(0.15, 0.17, 0.08, 12), white, [x, 0.38, 2.6], [0, 0, 0], false);
   }
 
+  const fundo = paisagemDistante(env, R, X0, L);
+  const chegada = porticoDeChegada(env, R, finishX, logoImg, livre);
+
+  function update(t, charX) {
+    fundo.update(t);
+    chegada.update(t, charX);
+  }
+
+  return { group: env, update, arch: chegada.arch };
+}
+
+
+// Morros e nuvens ao fundo (compartilhado pelos cenários).
+export function paisagemDistante(env, R, X0, L) {
   // morros ao fundo
   const hillM = [std('#4d8a3c'), std('#5f9c48'), std('#3f7a35')];
   for (let i = 0; i < 26; i++) {
@@ -314,13 +328,18 @@ export function buildEnvironment(cfg, logoImg, finishX, livres = []) {
     clouds.add(g);
   }
 
+  return { update: (t) => (clouds.position.x = t * 1.2) };
+}
+
+// Pórtico de CHEGADA com fita que se rompe e torcida pulando.
+export function porticoDeChegada(env, R, finishX, logoImg, livre = () => false, texto = 'CHEGADA') {
   // pórtico de chegada + torcida
   const arch = new THREE.Group();
   arch.position.set(finishX, 0, 0);
   env.add(arch);
   const archM = std('#2246a8', { roughness: 0.5 });
   for (const s of [-1, 1]) add(arch, new THREE.BoxGeometry(0.6, 5, 0.6), archM, [0, 2.5, s * 4.6]);
-  const topTex = canvasTex(bannerCanvas('CHEGADA', logoImg, { w: 1024, h: 160 }));
+  const topTex = canvasTex(bannerCanvas(texto, logoImg, { w: 1024, h: 160 }));
   add(arch, new THREE.BoxGeometry(0.5, 1.3, 9.8), [std('#fff', { map: topTex }), std('#fff', { map: topTex }), archM, archM, archM, archM], [0, 5, 0]);
   const clockTex = canvasTex(textCanvas(['BURI - SP'], { w: 512, h: 128, color: '#4dd75d', bg: '#111', size: 70 }));
   add(arch, new THREE.BoxGeometry(2.4, 0.6, 0.15), std('#fff', { map: clockTex, emissive: '#ffffff', emissiveMap: clockTex, emissiveIntensity: 0.4 }), [-0.4, 3.95, 0], [0, -Math.PI / 2, 0]);
@@ -349,7 +368,6 @@ export function buildEnvironment(cfg, logoImg, finishX, livres = []) {
   }
 
   function update(t, charX) {
-    clouds.position.x = t * 1.2;
     const k = THREE.MathUtils.clamp((charX - finishX + 0.3) / 0.6, 0, 1);
     for (const { pivot, s } of tapes) {
       pivot.rotation.y = s * k * 1.3;
@@ -358,6 +376,5 @@ export function buildEnvironment(cfg, logoImg, finishX, livres = []) {
     const near = Math.abs(charX - finishX) < 40;
     for (const c of crowd) c.g.position.y = 0.16 + (near ? Math.max(0, Math.sin(t * c.sp + c.ph)) * 0.25 : 0);
   }
-
-  return { group: env, update, arch };
+  return { arch, update };
 }
