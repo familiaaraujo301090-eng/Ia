@@ -1,0 +1,243 @@
+{
+  "titulo": "E se você entrasse para os Amigos do Serginho?",
+  "formato": {
+    "largura": 720,
+    "altura": 1280,
+    "fps": 30
+  },
+  "personagem": {
+    "nome": "Robozinho Amigos do Serginho",
+    "cores": {
+      "uniforme": "#2246a8",
+      "uniformeEscuro": "#16307a",
+      "pele": "#f2c4a2",
+      "cabelo": "#17171c",
+      "solado": "#f2f2f2",
+      "meia": "#ffffff"
+    },
+    "logo": "assets/logo_amigos_do_serginho.png",
+    "modelo": {
+      "arquivo": "assets/robo.glb",
+      "altura": 1.9,
+      "rotacaoY": 3.1416,
+      "animacoes": {
+        "correr": "Running",
+        "acenar": "Wave",
+        "comemorar": "Jump",
+        "parado": "Idle",
+        "alongar": "Idle"
+      },
+      "cores": {
+        "Main": "#2246a8"
+      },
+      "logo": {
+        "osso": "Torso",
+        "posicao": [
+          0,
+          0.1,
+          0.35
+        ],
+        "tamanho": 0.36
+      }
+    },
+    "coresAmigos": [
+      {
+        "Main": "#1e5fd0"
+      },
+      {
+        "Main": "#4dd75d"
+      },
+      {
+        "Main": "#16307a"
+      },
+      {
+        "Main": "#2b8ce0"
+      },
+      {
+        "Main": "#3fbf55"
+      },
+      {
+        "Main": "#2246a8"
+      }
+    ]
+  },
+  "cenario": {
+    "cidade": "Buri - SP",
+    "ceu": {
+      "topo": "#4a8fe0",
+      "horizonte": "#ffd9a8"
+    },
+    "faixas": [
+      "AMIGOS DO SERGINHO",
+      "BURI - SP",
+      "BORA CORRER!"
+    ]
+  },
+  "cenas": [
+    {
+      "id": "gancho",
+      "duracao": 3.5,
+      "acao": "alongar",
+      "selo": "E SE...",
+      "camera": {
+        "tipo": "grua",
+        "de": [
+          4,
+          7,
+          9
+        ],
+        "para": [
+          3.2,
+          1.6,
+          5.2
+        ],
+        "alvo": [
+          0,
+          1.0,
+          0
+        ]
+      },
+      "texto": "E se você entrasse para os Amigos do Serginho?",
+      "nota": "Gancho: grua desce até o robozinho sozinho na rua.",
+      "narracao": "E se você entrasse para os Amigos do Serginho?"
+    },
+    {
+      "id": "dia1",
+      "duracao": 4,
+      "acao": "correr",
+      "velocidade": 3,
+      "km": 1,
+      "selo": "DIA 1",
+      "camera": {
+        "tipo": "lateral",
+        "distancia": 6,
+        "altura": 1.4,
+        "avanco": 0.6
+      },
+      "texto": "No primeiro dia, só um quilômetro, devagar.",
+      "nota": "Corrida lenta, sozinho. Contador: 1 km.",
+      "narracao": "No primeiro dia, você correria só um quilômetro. Devagar... mas correria."
+    },
+    {
+      "id": "semana1",
+      "duracao": 4,
+      "acao": "correr",
+      "velocidade": 4.5,
+      "km": 2,
+      "amigos": 2,
+      "selo": "SEMANA 1",
+      "camera": {
+        "tipo": "frontal",
+        "distanciaDe": 9,
+        "distanciaPara": 5,
+        "altura": 1.6
+      },
+      "texto": "Na primeira semana, já teria amigos para treinar junto.",
+      "nota": "Dois amigos chegam correndo de trás.",
+      "narracao": "Na primeira semana, já teria amigos pra treinar junto."
+    },
+    {
+      "id": "mes1",
+      "duracao": 4,
+      "acao": "correr",
+      "velocidade": 5.5,
+      "km": 5,
+      "amigos": 5,
+      "selo": "MÊS 1",
+      "camera": {
+        "tipo": "orbita",
+        "raio": 8,
+        "altura": 3.2,
+        "anguloDe": -30,
+        "anguloPara": 150
+      },
+      "texto": "Em um mês, os 5 km virariam rotina.",
+      "nota": "Órbita em volta do grupo de 6.",
+      "narracao": "Em um mês, os cinco quilômetros virariam rotina."
+    },
+    {
+      "id": "mes6",
+      "duracao": 4,
+      "acao": "correr",
+      "velocidade": 6.5,
+      "km": 10,
+      "amigos": 9,
+      "selo": "MÊS 6",
+      "camera": {
+        "tipo": "drone",
+        "altura": 12,
+        "atras": 9,
+        "alturaPara": 5,
+        "atrasPara": 7
+      },
+      "texto": "Em seis meses, a largada de uma prova de 10 km.",
+      "nota": "Drone mostra o pelotão de 10 corredores.",
+      "narracao": "Em seis meses, você estaria na largada de uma prova de dez quilômetros."
+    },
+    {
+      "id": "umdia",
+      "duracao": 5,
+      "acao": "chegada",
+      "velocidade": 6.5,
+      "km": 21.1,
+      "amigos": 12,
+      "selo": "UM DIA...",
+      "camera": {
+        "tipo": "baixa",
+        "raio": 7,
+        "altura": 0.8,
+        "anguloDe": 60,
+        "anguloPara": 15
+      },
+      "texto": "E um dia, a chegada de uma meia maratona, como a equipe fez em Balneário Camboriú.",
+      "nota": "Pelotão cruza a chegada; robozinho pula comemorando.",
+      "narracao": "E um dia, cruzaria a chegada de uma meia maratona, como a equipe fez em Balneário Camboriú!"
+    },
+    {
+      "id": "final",
+      "duracao": 4,
+      "acao": "acenar",
+      "amigos": 12,
+      "selo": "BORA?",
+      "logoFinal": true,
+      "camera": {
+        "tipo": "aproximar",
+        "de": [
+          0,
+          1.6,
+          8
+        ],
+        "para": [
+          0,
+          1.4,
+          5.5
+        ],
+        "alvo": [
+          0,
+          1.6,
+          0
+        ]
+      },
+      "texto": "Tudo começa com o primeiro passo. Vem para os Amigos do Serginho! @equipeamigosdoserginho_",
+      "nota": "Robozinho e a turma acenam. Logo na tela.",
+      "narracao": "Tudo começa com o primeiro passo. Vem pros Amigos do Serginho!"
+    }
+  ],
+  "audio": {
+    "provedor": "microsoft",
+    "vozMicrosoft": "pt-BR-AntonioNeural",
+    "velocidadeMicrosoft": "+8%",
+    "vozLocal": "pt_BR-faber-medium",
+    "velocidadeLocal": 0.9,
+    "vozEspeak": "mb-br3",
+    "velocidadeEspeak": 165,
+    "vozId": "pNInz6obpgDQGcFmaJgB",
+    "modelo": "eleven_multilingual_v2",
+    "estabilidade": 0.35,
+    "similaridade": 0.8,
+    "estilo": 0.55,
+    "musica": true,
+    "efeitos": true,
+    "bpm": 124
+  }
+}

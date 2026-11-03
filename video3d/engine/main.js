@@ -63,6 +63,18 @@ window.setup = async (roteiro) => {
   scene.add(env.group);
   const char = roteiro.personagem.modelo ? await buildModelCharacter(roteiro.personagem, logo) : buildCharacter(roteiro.personagem, logo);
   scene.add(char.root);
+  // amigos que entram no grupo ao longo da história (clones do modelo, cena.amigos = quantos)
+  const amigos = [];
+  const maxAmigos = Math.max(0, ...timeline.cenas.map((c) => c.amigos || 0));
+  if (char.clonar && maxAmigos) {
+    const paleta = roteiro.personagem.coresAmigos || [roteiro.personagem.modelo.cores || {}];
+    for (let i = 0; i < maxAmigos; i++) {
+      const a = char.clonar(paleta[i % paleta.length]);
+      a.root.visible = false;
+      scene.add(a.root);
+      amigos.push(a);
+    }
+  }
 
   const camera = new THREE.PerspectiveCamera(50, W / H, 0.1, 2000);
   const out = document.createElement('canvas');
@@ -70,15 +82,35 @@ window.setup = async (roteiro) => {
   out.height = H;
   const overlay = makeOverlay(logo);
 
-  Object.assign(E, { THREE, renderer, scene, sky, sun, hemi, timeline, env, char, camera, out, overlay, logo, roteiro, W, H });
+  Object.assign(E, { THREE, renderer, scene, sky, sun, hemi, timeline, env, char, amigos, camera, out, overlay, logo, roteiro, W, H });
   E.sheets = buildSheets(E);
   return { total: timeline.total, finishX: timeline.finishX, cenas: timeline.cenas.map((c) => [c.id, c.inicio, c.fim]) };
 };
 
+// formação do grupo atrás/ao lado do corredor principal (x = atrás, z = lado)
+const FORMACAO = [[-1.4, 1.5], [-1.4, -1.5], [-2.9, 0], [-2.9, 2.6], [-2.9, -2.6], [-4.4, 1.3], [-4.4, -1.3], [-5.9, 2.4], [-5.9, -2.4], [-5.9, 0], [-7.4, 1.3], [-7.4, -1.3]];
+
+function posarAmigos(st, p, t) {
+  const n = st.cena.amigos || 0;
+  const antes = st.index > 0 ? E.timeline.cenas[st.index - 1].amigos || 0 : 0;
+  E.amigos.forEach((a, i) => {
+    a.root.visible = i < n;
+    if (i >= n) return;
+    const [fx, fz] = FORMACAO[i % FORMACAO.length];
+    // quem acabou de entrar chega correndo de trás no primeiro segundo da cena
+    const chegando = i >= antes ? 1 - THREE.MathUtils.smoothstep(st.local, 0, 1.2) : 0;
+    const q = { ...p, phase: p.phase + i * 0.7, local: p.local + i * 0.3 };
+    applyPose(a, q, st.x + fx - chegando * 10, t);
+    a.root.position.z = fz;
+  });
+}
+
 // Posiciona tudo no instante t (sem desenhar).
 export function pose(t) {
   const st = E.timeline.at(t);
-  applyPose(E.char, poseFor(st), st.x, t);
+  const p = poseFor(st);
+  applyPose(E.char, p, st.x, t);
+  posarAmigos(st, p, t);
   E.env.update(t, st.x);
   E.sun.position.set(st.x - 12, 22, 14);
   E.sun.target.position.set(st.x, 0, 0);

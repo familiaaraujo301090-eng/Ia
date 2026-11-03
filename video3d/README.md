@@ -93,6 +93,18 @@ sheets e vídeo sozinho.
 | 6 | Chegada | 28,5–34 s | rompe a fita e comemora | câmera baixa | Correr junto motiva: cada quilômetro fica mais leve com os amigos |
 | 7 | Encerramento | 34–38,5 s | acena | aproximação + logo | Siga a equipe: @equipeamigosdoserginho_ |
 
+## Vídeo "E se..." (robozinho)
+
+`roteiro/e_se_amigos_do_serginho.json` usa o robozinho `assets/robo.glb` (CC0) e conta uma história de
+crescimento: dia 1 (1 km, sozinho) → semana 1 (amigos chegam) → mês 1 (5 km) → mês 6 (10 km) → meia
+maratona. Cada cena pode ter `km` (contador animado na tela) e `amigos` (quantos clones correm junto;
+cores em `personagem.coresAmigos`).
+
+```bash
+python3 gerar_voz.py roteiro/e_se_amigos_do_serginho.json
+node render.js roteiro/e_se_amigos_do_serginho.json      # output/e_se_amigos_do_serginho_viral.mp4
+```
+
 ## Usar um personagem 3D pronto (.glb / .fbx)
 
 O boneco feito por código é só um ponto de partida. Para um visual de animação 3D de verdade,

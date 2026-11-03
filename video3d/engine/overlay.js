@@ -62,6 +62,35 @@ export function makeOverlay(logoImg) {
     g.drawImage(logo, 24 * S, 24 * S, 92 * S, 92 * S);
     g.restore();
 
+    // contador de km crescendo de uma cena para a outra
+    if (cena.km != null) {
+      const antes = cena.kmAntes ?? 0;
+      const k = clamp01((local - 0.15) / 0.9);
+      const v = antes + (cena.km - antes) * (1 - Math.pow(1 - k, 3));
+      const txt = v.toFixed(cena.km % 1 ? 1 : 0).replace('.', ',');
+      g.save();
+      g.textAlign = 'center';
+      g.textBaseline = 'alphabetic';
+      g.lineJoin = 'round';
+      const pop = 1 + 0.15 * Math.exp(-Math.max(0, local - 1.05) / 0.12) * (local > 1.05 ? 1 : 0);
+      g.translate(W / 2, 330 * S);
+      g.scale(pop, pop);
+      g.font = `900 ${120 * S}px ${FONT}`;
+      g.lineWidth = 16 * S;
+      g.strokeStyle = '#0b1640';
+      g.strokeText(txt, -40 * S, 0);
+      g.fillStyle = '#ffffff';
+      g.fillText(txt, -40 * S, 0);
+      g.textAlign = 'left';
+      const tw2 = g.measureText(txt).width;
+      g.font = `900 ${56 * S}px ${FONT}`;
+      g.lineWidth = 10 * S;
+      g.strokeText('KM', -40 * S + tw2 / 2 + 12 * S, 0);
+      g.fillStyle = '#4dd75d';
+      g.fillText('KM', -40 * S + tw2 / 2 + 12 * S, 0);
+      g.restore();
+    }
+
     // selo (pílula verde)
     if (cena.selo) {
       const k = easeOutBack(clamp01(local / 0.45));

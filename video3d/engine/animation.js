@@ -16,8 +16,10 @@ export function speedFor(cena, u) {
 export function buildTimeline(roteiro) {
   const cenas = [];
   let t0 = 0;
+  let kmAntes = 0;
   for (const c of roteiro.cenas) {
-    cenas.push({ ...c, inicio: t0, fim: t0 + c.duracao });
+    cenas.push({ ...c, inicio: t0, fim: t0 + c.duracao, kmAntes });
+    if (c.km != null) kmAntes = c.km;
     t0 += c.duracao;
   }
   const total = t0;

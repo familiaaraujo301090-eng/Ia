@@ -1,8 +1,8 @@
 """Gera a narração do vídeo localmente, sem API paga, com o Piper TTS.
 
 Para cada cena do roteiro que tem "narracao", cria:
-  output/audio/<cena>.wav   a fala
-  output/audio/<cena>.json  {"duracao": s, "palavras": [{"w", "t0", "t1"}]}
+  output/audio/<roteiro>/<cena>.wav   a fala
+  output/audio/<roteiro>/<cena>.json  {"duracao": s, "palavras": [{"w", "t0", "t1"}]}
 O render.js lê esses arquivos para ajustar a duração das cenas e sincronizar
 as legendas palavra por palavra.
 
@@ -305,7 +305,7 @@ def main():
         sys.exit("Nenhum motor de voz disponível: rode pip install -r requirements.txt "
                  "(Piper) ou instale espeak-ng + mbrola-br3.")
 
-    pasta = RAIZ / "output" / "audio"
+    pasta = RAIZ / "output" / "audio" / Path(a.roteiro).stem
     pasta.mkdir(parents=True, exist_ok=True)
     tmp = pasta / "_palavra.wav"
     for cena in roteiro["cenas"]:

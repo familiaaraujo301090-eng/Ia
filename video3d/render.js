@@ -11,7 +11,7 @@ const { spawn, execFileSync } = require('child_process');
 const { chromium } = require('playwright');
 
 const ROOT = __dirname;
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.png': 'image/png', '.json': 'application/json' };
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.png': 'image/png', '.json': 'application/json', '.glb': 'model/gltf-binary' };
 
 function serve() {
   const server = http.createServer((req, res) => {
@@ -112,7 +112,7 @@ async function main() {
   if (!roteiroPath) throw new Error('uso: node render.js <roteiro.json> [--sheets|--preview]');
   const roteiro = JSON.parse(fs.readFileSync(path.resolve(roteiroPath), 'utf8'));
   const name = path.basename(roteiroPath, '.json');
-  const audioDir = path.join(ROOT, 'output', 'audio');
+  const audioDir = path.join(ROOT, 'output', 'audio', name);
   const narrada = prepararNarracao(roteiro, audioDir);
   const server = await serve();
   const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });

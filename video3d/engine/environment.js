@@ -340,6 +340,7 @@ export function buildEnvironment(cfg, logoImg, finishX, livres = []) {
     const s = i % 2 ? 1 : -1;
     const g = new THREE.Group();
     g.position.set(finishX - 14 + R() * 22, 0.16, s * (5 + R() * 1.4));
+    if (s > 0 && livre(g.position.x) && g.position.x > finishX) g.visible = false;
     g.rotation.y = s > 0 ? Math.PI : 0;
     env.add(g);
     add(g, new THREE.CapsuleGeometry(0.22, 0.6, 4, 10), std(shirts[i % shirts.length]), [0, 0.75, 0]);
