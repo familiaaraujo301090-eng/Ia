@@ -4,7 +4,7 @@
 // "EU ♥ BURI". O corredor atravessa a praça em direção à igreja (eixo +X).
 import * as THREE from 'three';
 import { add, canvasTex, paisagemDistante, porticoDeChegada, rng, std } from './environment.js';
-import { roofCanvas, sidewalkCanvas, textCanvas, FONT } from './textures.js';
+import { calcadaMaps, cascaMaps, folhagemCanvas, frondeCanvas, rebocoMaps, roofCanvas, textCanvas, FONT } from './textures.js';
 
 function lajotasCanvas() {
   const c = document.createElement('canvas');
@@ -76,7 +76,12 @@ function igreja(env, x0, olhaPara = 1) {
   g.position.set(x0, 0, 0);
   g.rotation.y = olhaPara > 0 ? 0 : Math.PI; // fachada voltada para +X (início da corrida) ou -X
   env.add(g);
-  const parede = std('#f0d9bf', { roughness: 0.8 });
+  const reb = rebocoMaps('#f0d9bf');
+  const parede = std('#ffffff', { map: canvasTex(reb.cor), normalMap: canvasTex(reb.normal), roughness: 0.9 });
+  for (const t of [parede.map, parede.normalMap]) {
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(4, 2);
+  }
   const friso = std('#fbf6ee', { roughness: 0.7 });
   const madeira = std('#5a3a22');
   const vidro = std('#3c4a5a', { roughness: 0.3 });
@@ -162,21 +167,70 @@ function igreja(env, x0, olhaPara = 1) {
   return g;
 }
 
+// Coletor de folhagem instanciada: cada árvore registra seus "cartões" de folhas e,
+// no fim, tudo vira poucas InstancedMesh (rápido mesmo com milhares de folhas).
+function novaFolhagem() {
+  const itens = [];
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), sc = new THREE.Vector3();
+  return {
+    add(px, py, pz, tam, R, tom = 1) {
+      e.set(R() * 6.28, R() * 6.28, R() * 6.28);
+      q.setFromEuler(e);
+      m4.compose(v.set(px, py, pz), q, sc.set(tam, tam, tam));
+      itens.push({ m: m4.clone(), c: new THREE.Color().setHSL(0.27 + (R() - 0.5) * 0.04, 0.45, (0.26 + R() * 0.1) * tom) });
+    },
+    criar(env, mats) {
+      const porMat = mats.map(() => []);
+      itens.forEach((it, i) => porMat[i % mats.length].push(it));
+      porMat.forEach((lista, k) => {
+        const im = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), mats[k], lista.length);
+        lista.forEach((it, i) => {
+          im.setMatrixAt(i, it.m);
+          im.setColorAt(i, it.c);
+        });
+        im.castShadow = im.receiveShadow = true;
+        env.add(im);
+      });
+    },
+  };
+}
+
+let FOL = null;
+let CASCA = null;
+
 function figueira(env, R, x, z, sc) {
   const g = new THREE.Group();
   g.position.set(x, 0, z);
   g.scale.setScalar(sc);
   g.rotation.y = R() * 6.28;
   env.add(g);
-  const tronco = std('#6d5a48');
-  add(g, new THREE.CylinderGeometry(0.35, 0.55, 3.6, 10), tronco, [0, 1.8, 0]);
-  add(g, new THREE.CylinderGeometry(0.565, 0.565, 1.0, 10), std('#f4f1ea'), [0, 0.5, 0]); // tronco caiado
-  for (const [bx, rz] of [[0.9, -0.7], [-0.8, 0.8], [0.2, 0.2]]) add(g, new THREE.CylinderGeometry(0.15, 0.25, 2.6, 8), tronco, [bx, 4.0, 0], [0, 0, rz]);
-  const folhas = [std('#2f6b2a'), std('#3a7d31'), std('#285c25')];
-  for (let i = 0; i < 9; i++) {
-    const a = (i / 9) * Math.PI * 2;
-    const r = i === 0 ? 0 : 2.2 + R() * 0.8;
-    add(g, new THREE.IcosahedronGeometry(1.9 + R() * 0.7, 1), folhas[i % 3], [Math.cos(a) * r, 5.4 + R() * 1.2, Math.sin(a) * r]);
+  add(g, new THREE.CylinderGeometry(0.38, 0.62, 3.4, 14), CASCA, [0, 1.7, 0]);
+  add(g, new THREE.CylinderGeometry(0.63, 0.65, 1.1, 14), std('#f1eee6', { roughness: 0.9 }), [0, 0.55, 0]); // tronco caiado
+  // galhos curvos saindo do tronco
+  const pontas = [];
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2 + R() * 0.5, r = 2.4 + R() * 1.6;
+    const fim = new THREE.Vector3(Math.cos(a) * r, 5.2 + R() * 1.5, Math.sin(a) * r);
+    const meio = new THREE.Vector3(Math.cos(a) * r * 0.35, 4.2 + R() * 0.6, Math.sin(a) * r * 0.35);
+    const curva = new THREE.QuadraticBezierCurve3(new THREE.Vector3(0, 3.1, 0), meio, fim);
+    const galho = new THREE.Mesh(new THREE.TubeGeometry(curva, 8, 0.16 + R() * 0.08, 6), CASCA);
+    galho.castShadow = true;
+    g.add(galho);
+    pontas.push(fim);
+  }
+  // miolo escuro para a copa não ficar vazada
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2;
+    add(g, new THREE.IcosahedronGeometry(1.8, 1), std('#1f4a1b', { roughness: 1 }), [Math.cos(a) * 1.8, 5.9, Math.sin(a) * 1.8]);
+  }
+  // cartões de folhas espalhados numa copa achatada (como as figueiras da praça)
+  g.updateMatrixWorld(true);
+  const p = new THREE.Vector3();
+  for (let i = 0; i < 520; i++) {
+    const u = R() * Math.PI * 2, w = Math.acos(1 - R() * 1.15), r = 0.72 + R() * 0.32;
+    p.set(Math.sin(w) * Math.cos(u) * 4.6 * r, 5.6 + Math.cos(w) * 2.6 * r, Math.sin(w) * Math.sin(u) * 4.6 * r);
+    p.applyMatrix4(g.matrixWorld);
+    FOL.add(p.x, p.y, p.z, (1.5 + R() * 0.8) * sc, R, w > 1.2 ? 0.75 : 1);
   }
 }
 
@@ -184,22 +238,31 @@ function palmeira(env, R, x, z, h) {
   const g = new THREE.Group();
   g.position.set(x, 0, z);
   env.add(g);
-  add(g, new THREE.CylinderGeometry(0.22, 0.3, h, 10), std('#9a948a', { roughness: 0.9 }), [0, h / 2, 0]);
-  add(g, new THREE.CylinderGeometry(0.31, 0.31, 1.3, 10), std('#f6f3ec'), [0, 0.65, 0]);
-  add(g, new THREE.CylinderGeometry(0.26, 0.24, 1.2, 10), std('#6f9a3a'), [0, h + 0.4, 0]);
-  const folha = std('#3f8a2f', { side: THREE.DoubleSide });
-  const geo = new THREE.ConeGeometry(0.35, 4.2, 4, 1, true);
-  geo.translate(0, 2.1, 0);
-  for (let i = 0; i < 10; i++) {
-    const f = new THREE.Mesh(geo, folha);
-    f.position.set(0, h + 0.8, 0);
-    f.rotation.set(0, (i / 10) * Math.PI * 2 + R() * 0.3, 0);
-    f.rotateX(1.15 + R() * 0.4);
-    f.scale.set(1, 1, 0.25);
+  const tronco = add(g, new THREE.CylinderGeometry(0.24, 0.32, h, 14, 8), CASCA, [0, h / 2, 0]);
+  tronco.material = CASCA.clone();
+  tronco.material.color = new THREE.Color('#b8b2a6');
+  add(g, new THREE.CylinderGeometry(0.33, 0.33, 1.3, 14), std('#f6f3ec', { roughness: 0.9 }), [0, 0.65, 0]);
+  add(g, new THREE.CylinderGeometry(0.27, 0.25, 1.6, 12), std('#6f9a3a', { roughness: 0.7 }), [0, h + 0.6, 0]);
+  // frondes recortadas e arqueadas
+  const geo = new THREE.PlaneGeometry(1.1, 4.8, 1, 12);
+  const pos = geo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const y = pos.getY(i) + 2.4; // 0 na base, 4.8 na ponta
+    pos.setY(i, y);
+    pos.setZ(i, -0.06 * y * y);
+  }
+  geo.computeVertexNormals();
+  for (let i = 0; i < 16; i++) {
+    const f = new THREE.Mesh(geo, PALMA);
+    f.position.set(0, h + 1.3, 0);
+    f.rotation.set(0, (i / 16) * Math.PI * 2 + R() * 0.2, 0);
+    f.rotateX(-(0.35 + (i % 3) * 0.3 + R() * 0.2));
     f.castShadow = true;
     g.add(f);
   }
 }
+
+let PALMA = null;
 
 function posteY(env, x, z) {
   const branco = std('#f2f2f2', { roughness: 0.4, metalness: 0.2 });
@@ -260,6 +323,14 @@ function chafariz(env, x, z) {
 
 export function buildPraca(cfg, logoImg, finishX, livres = []) {
   const R = rng(19550101);
+  FOL = novaFolhagem();
+  const casca = cascaMaps();
+  CASCA = std('#ffffff', { map: canvasTex(casca.cor), normalMap: canvasTex(casca.normal), roughness: 0.95 });
+  CASCA.map.wrapS = CASCA.map.wrapT = CASCA.normalMap.wrapS = CASCA.normalMap.wrapT = THREE.RepeatWrapping;
+  CASCA.map.repeat.set(2, 3);
+  CASCA.normalMap.repeat.set(2, 3);
+  const frond = canvasTex(frondeCanvas());
+  PALMA = new THREE.MeshStandardMaterial({ map: frond, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.75 });
   const livre = (x) => livres.some(([a, b]) => x > a && x < b);
   const env = new THREE.Group();
   env.name = 'praca-matriz';
@@ -267,10 +338,13 @@ export function buildPraca(cfg, logoImg, finishX, livres = []) {
 
   // chão: grama ao longe, praça em calçada portuguesa e faixa central de lajotas
   add(env, new THREE.PlaneGeometry(L + 600, 700), std('#6aa845'), [XC, -0.06, 0], [-Math.PI / 2, 0, 0], false);
-  const ondas = canvasTex(sidewalkCanvas());
-  ondas.wrapS = ondas.wrapT = THREE.RepeatWrapping;
-  ondas.repeat.set(L / 1.8, 60 / 1.8);
-  add(env, new THREE.PlaneGeometry(L, 60), std('#ffffff', { map: ondas, roughness: 0.85 }), [XC, 0.0, 0], [-Math.PI / 2, 0, 0], false);
+  const calc = calcadaMaps();
+  const ondas = canvasTex(calc.cor), relevo = canvasTex(calc.normal);
+  for (const t of [ondas, relevo]) {
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(L / 4, 60 / 4);
+  }
+  add(env, new THREE.PlaneGeometry(L, 60), std('#ffffff', { map: ondas, normalMap: relevo, normalScale: new THREE.Vector2(0.8, 0.8), roughness: 0.9 }), [XC, 0.0, 0], [-Math.PI / 2, 0, 0], false);
   // faixas de lajotas cinza nas bordas, como na praça real
   const laj = canvasTex(lajotasCanvas());
   laj.wrapS = laj.wrapT = THREE.RepeatWrapping;
@@ -289,13 +363,15 @@ export function buildPraca(cfg, logoImg, finishX, livres = []) {
   const animaChafariz = chafariz(env, -2, 11);
   const adro = (x, z) => x < -6 && Math.abs(z) < 16; // área livre em frente à igreja
   // canteiros com sebe e flores
-  const sebe = std('#3d7a2c');
+  const sebe = std('#3d7a2c', { roughness: 0.9 });
+  const canteiros = [];
   const florCols = ['#ff4d6d', '#ffd166', '#ffffff', '#c77dff'];
   for (let x = X0 + 10; x < X1 - 30; x += 22) {
     for (const s of [-1, 1]) {
       const cz = s * (13 + R() * 6);
       if (livre(x) || adro(x, cz) || (x > -8 && x < 4 && s > 0)) continue;
-      add(env, new THREE.BoxGeometry(6, 0.25, 3.2), std('#6b4f3a'), [x, 0.12, cz], [0, 0, 0], false);
+      canteiros.push([x, cz]);
+      add(env, new THREE.BoxGeometry(6, 0.25, 3.2), std('#4a3a2b', { roughness: 1 }), [x, 0.12, cz], [0, 0, 0], false);
       add(env, new THREE.BoxGeometry(6.2, 0.6, 0.4), sebe, [x, 0.3, cz - 1.6]);
       add(env, new THREE.BoxGeometry(6.2, 0.6, 0.4), sebe, [x, 0.3, cz + 1.6]);
       for (let k = 0; k < 14; k++) add(env, new THREE.SphereGeometry(0.12, 6, 5), std(florCols[k % 4]), [x - 2.6 + R() * 5.2, 0.35, cz - 1.1 + R() * 2.2], [0, 0, 0], false);
@@ -366,6 +442,23 @@ export function buildPraca(cfg, logoImg, finishX, livres = []) {
     add(car, new THREE.BoxGeometry(2.1, 0.6, 1.55), body, [-0.2, 1.25, 0]);
     for (const [wx, wz] of [[1.25, 0.8], [-1.25, 0.8], [1.25, -0.8], [-1.25, -0.8]]) add(car, new THREE.CylinderGeometry(0.34, 0.34, 0.25, 12), std('#151515'), [wx, 0.34, wz], [Math.PI / 2, 0, 0]);
   }
+
+  // folhagem instanciada (3 tons de cartão de folhas)
+  const cartoes = [3, 9, 17].map((seed, k) => new THREE.MeshStandardMaterial({
+    map: canvasTex(folhagemCanvas(undefined, 256, seed)), alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.8,
+  }));
+  FOL.criar(env, cartoes);
+
+  // grama nos canteiros
+  const capim = new THREE.InstancedMesh(new THREE.ConeGeometry(0.035, 0.32, 3), std('#4f8f2f', { roughness: 0.9 }), 6000);
+  const mtx = new THREE.Matrix4();
+  let nCapim = 0;
+  for (const [cx, cz] of canteiros) for (let k = 0; k < 400 && nCapim < 6000; k++) {
+    mtx.makeRotationZ((R() - 0.5) * 0.5).setPosition(cx - 2.8 + R() * 5.6, 0.38, cz - 1.3 + R() * 2.6);
+    capim.setMatrixAt(nCapim++, mtx);
+  }
+  capim.count = nCapim;
+  env.add(capim);
 
   const fundo = paisagemDistante(env, R, X0, L);
   const chegada = cfg.semChegada ? null : porticoDeChegada(env, R, finishX, logoImg, livre, cfg.textoChegada || 'CHEGADA');

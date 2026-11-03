@@ -160,3 +160,163 @@ export function awningCanvas(cor) {
   }
   return c;
 }
+
+// ---------- texturas com relevo (realismo) ----------
+
+// Converte um mapa de altura (tons de cinza) em mapa de normais.
+export function normalFromHeight(src, forca = 2) {
+  const W = src.width, H = src.height;
+  const d = src.getContext('2d').getImageData(0, 0, W, H).data;
+  const h = (x, y) => d[(((y + H) % H) * W + ((x + W) % W)) * 4] / 255;
+  const c = canvas(W, H);
+  const g = c.getContext('2d');
+  const out = g.createImageData(W, H);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const dx = (h(x + 1, y) - h(x - 1, y)) * forca;
+      const dy = (h(x, y + 1) - h(x, y - 1)) * forca;
+      const l = Math.hypot(dx, dy, 1);
+      const i = (y * W + x) * 4;
+      out.data[i] = ((-dx / l) * 0.5 + 0.5) * 255;
+      out.data[i + 1] = ((dy / l) * 0.5 + 0.5) * 255;
+      out.data[i + 2] = ((1 / l) * 0.5 + 0.5) * 255;
+      out.data[i + 3] = 255;
+    }
+  }
+  g.putImageData(out, 0, 0);
+  return c;
+}
+
+// Calçada portuguesa com pedras irregulares: cor + altura (pedras altas, rejunte baixo).
+export function calcadaMaps(tam = 1024) {
+  const cor = canvas(tam, tam), alt = canvas(tam, tam);
+  const gc = cor.getContext('2d'), ga = alt.getContext('2d');
+  gc.fillStyle = '#6f6a62';
+  gc.fillRect(0, 0, tam, tam);
+  ga.fillStyle = '#000';
+  ga.fillRect(0, 0, tam, tam);
+  const rnd = seeded(23);
+  const p = tam / 96; // ~24 pedras por metro quando a textura cobre 4 m
+  for (let y = 0; y < tam; y += p) {
+    for (let x = 0; x < tam; x += p) {
+      const wave = Math.sin((x / tam) * Math.PI * 4) * tam * 0.14 + tam / 2;
+      const band = [0, tam, -tam].some((o) => Math.abs(y - wave + o) < tam * 0.085);
+      const v = band ? 35 + rnd() * 30 : 205 + rnd() * 40;
+      const jx = (rnd() - 0.5) * p * 0.25, jy = (rnd() - 0.5) * p * 0.25;
+      const w = p * (0.72 + rnd() * 0.2), hh = p * (0.72 + rnd() * 0.2);
+      gc.fillStyle = `rgb(${v},${v - 5},${v - 12})`;
+      ga.fillStyle = `rgb(${150 + rnd() * 100},0,0)`;
+      gc.beginPath();
+      ga.beginPath();
+      gc.ellipse(x + p / 2 + jx, y + p / 2 + jy, w / 2, hh / 2, rnd(), 0, Math.PI * 2);
+      ga.ellipse(x + p / 2 + jx, y + p / 2 + jy, w / 2, hh / 2, rnd(), 0, Math.PI * 2);
+      gc.fill();
+      ga.fill();
+    }
+  }
+  // o canal vermelho serve de altura
+  const ad = ga.getImageData(0, 0, tam, tam);
+  for (let i = 0; i < ad.data.length; i += 4) ad.data[i + 1] = ad.data[i + 2] = ad.data[i];
+  ga.putImageData(ad, 0, 0);
+  return { cor, normal: normalFromHeight(alt, 3) };
+}
+
+// Reboco: ruído suave de manchas (cor) e grão fino (relevo).
+export function rebocoMaps(base = '#f0d9bf', tam = 512) {
+  const cor = canvas(tam, tam), alt = canvas(tam, tam);
+  const gc = cor.getContext('2d'), ga = alt.getContext('2d');
+  gc.fillStyle = base;
+  gc.fillRect(0, 0, tam, tam);
+  ga.fillStyle = '#808080';
+  ga.fillRect(0, 0, tam, tam);
+  const rnd = seeded(41);
+  for (let i = 0; i < 400; i++) {
+    gc.fillStyle = `rgba(${rnd() < 0.5 ? '90,70,50' : '255,255,255'},${0.03 + rnd() * 0.04})`;
+    gc.beginPath();
+    gc.arc(rnd() * tam, rnd() * tam, 10 + rnd() * 60, 0, Math.PI * 2);
+    gc.fill();
+  }
+  for (let i = 0; i < 30000; i++) {
+    const v = 90 + rnd() * 80;
+    ga.fillStyle = `rgb(${v},${v},${v})`;
+    ga.fillRect(rnd() * tam, rnd() * tam, 2, 2);
+  }
+  // escorrido de chuva na parte de baixo
+  const gr = gc.createLinearGradient(0, tam * 0.75, 0, tam);
+  gr.addColorStop(0, 'rgba(80,60,40,0)');
+  gr.addColorStop(1, 'rgba(80,60,40,0.12)');
+  gc.fillStyle = gr;
+  gc.fillRect(0, 0, tam, tam);
+  return { cor, normal: normalFromHeight(alt, 0.6) };
+}
+
+export function cascaMaps(tam = 256) {
+  const cor = canvas(tam, tam), alt = canvas(tam, tam);
+  const gc = cor.getContext('2d'), ga = alt.getContext('2d');
+  gc.fillStyle = '#6b5a49';
+  gc.fillRect(0, 0, tam, tam);
+  ga.fillStyle = '#808080';
+  ga.fillRect(0, 0, tam, tam);
+  const rnd = seeded(7);
+  for (let i = 0; i < 260; i++) {
+    const x = rnd() * tam, w = 2 + rnd() * 6, v = rnd();
+    gc.fillStyle = `rgba(${v < 0.5 ? '40,30,20' : '150,135,115'},0.35)`;
+    gc.fillRect(x, 0, w, tam);
+    ga.fillStyle = `rgba(${v < 0.5 ? '0,0,0' : '255,255,255'},0.35)`;
+    ga.fillRect(x, 0, w, tam);
+  }
+  return { cor, normal: normalFromHeight(alt, 2.5) };
+}
+
+// Cartão de folhagem: muitas folhinhas com transparência (para copas instanciadas).
+export function folhagemCanvas(tons = ['#2f6b2a', '#3a7d31', '#4a8f38', '#285c25', '#5c9e3f'], tam = 256, seed = 3) {
+  const c = canvas(tam, tam);
+  const g = c.getContext('2d');
+  const rnd = seeded(seed);
+  for (let i = 0; i < 70; i++) {
+    const x = tam * (0.12 + rnd() * 0.76), y = tam * (0.12 + rnd() * 0.76);
+    if (Math.hypot(x - tam / 2, y - tam / 2) > tam * 0.42) continue;
+    const a = rnd() * Math.PI * 2, L = tam * (0.07 + rnd() * 0.05);
+    g.save();
+    g.translate(x, y);
+    g.rotate(a);
+    g.fillStyle = tons[Math.floor(rnd() * tons.length)];
+    g.beginPath();
+    g.ellipse(0, 0, L, L * 0.45, 0, 0, Math.PI * 2);
+    g.fill();
+    g.strokeStyle = 'rgba(20,40,15,0.5)';
+    g.lineWidth = 1;
+    g.beginPath();
+    g.moveTo(-L, 0);
+    g.lineTo(L, 0);
+    g.stroke();
+    g.restore();
+  }
+  return c;
+}
+
+// Folha de palmeira (fronde) com folíolos, vista de cima; transparente fora das folhas.
+export function frondeCanvas(tam = 512) {
+  const c = canvas(tam / 4, tam);
+  const g = c.getContext('2d');
+  const W = c.width;
+  g.strokeStyle = '#6f8f3a';
+  g.lineWidth = 4;
+  g.beginPath();
+  g.moveTo(W / 2, tam);
+  g.lineTo(W / 2, 0);
+  g.stroke();
+  for (let y = 10; y < tam - 10; y += 7) {
+    const k = 1 - Math.abs(y / tam - 0.45) * 1.4;
+    const L = (W / 2) * Math.max(0.2, k);
+    g.strokeStyle = y % 14 ? '#3f8a2f' : '#4f9a36';
+    g.lineWidth = 3;
+    for (const s of [-1, 1]) {
+      g.beginPath();
+      g.moveTo(W / 2, y);
+      g.lineTo(W / 2 + s * L, y + 18);
+      g.stroke();
+    }
+  }
+  return c;
+}

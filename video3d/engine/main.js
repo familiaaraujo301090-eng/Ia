@@ -5,6 +5,7 @@ import { buildCharacter } from './character.js';
 import { buildModelCharacter } from './modelCharacter.js';
 import { buildEnvironment, buildSky } from './environment.js';
 import { buildPraca } from './praca.js';
+import { setupRealismo, renderRealista } from './realismo.js';
 import { buildTimeline, poseFor, applyPose } from './animation.js';
 import { cameraFor } from './camera.js';
 import { makeOverlay } from './overlay.js';
@@ -84,6 +85,7 @@ window.setup = async (roteiro) => {
   const overlay = makeOverlay(logo);
 
   Object.assign(E, { THREE, renderer, scene, sky, sun, hemi, timeline, env, char, amigos, camera, out, overlay, logo, roteiro, W, H });
+  if (roteiro.cenario.realista) setupRealismo(E);
   E.sheets = buildSheets(E);
   return { total: timeline.total, finishX: timeline.finishX, cenas: timeline.cenas.map((c) => [c.id, c.inicio, c.fim]) };
 };
@@ -116,12 +118,12 @@ export function pose(t) {
   const [sx, sy, sz] = E.roteiro.cenario.sol || [-12, 22, 14];
   E.sun.position.set(st.x + sx, sy, sz);
   E.sun.target.position.set(st.x, 0, 0);
-  E.sky.position.set(st.x, 0, 0);
   const cam = cameraFor(st.cena, st.u, st.x, t);
   // "punch-in": cada cena começa um pouco mais aberta e fecha rápido
   E.camera.fov = cam.fov * (1 + 0.18 * Math.exp(-st.local / 0.12));
   E.camera.position.copy(cam.pos);
   E.camera.lookAt(cam.look);
+  E.sky.position.copy(E.camera.position);
   return st;
 }
 E.pose = pose;
@@ -131,7 +133,8 @@ export function renderComposite(t, W = E.W, H = E.H) {
   E.renderer.setSize(W, H);
   E.camera.aspect = W / H;
   E.camera.updateProjectionMatrix();
-  E.renderer.render(E.scene, E.camera);
+  if (E.composer) renderRealista(E, W, H);
+  else E.renderer.render(E.scene, E.camera);
   const out = W === E.out.width && H === E.out.height ? E.out : Object.assign(document.createElement('canvas'), { width: W, height: H });
   const g = out.getContext('2d');
   g.drawImage(E.renderer.domElement, 0, 0);
