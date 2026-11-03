@@ -40,7 +40,7 @@ export function setupRealismo(E) {
   E.hemi.intensity = 0.25;
   E.sun.intensity = 3.4;
   E.sun.color.set('#fff4e2');
-  E.sun.shadow.mapSize.set(4096, 4096);
+  E.sun.shadow.mapSize.set(2048, 2048);
   E.sun.shadow.radius = 3;
   const sc = E.sun.shadow.camera;
   sc.left = sc.bottom = -20;
@@ -56,8 +56,8 @@ export function setupRealismo(E) {
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
   const ao = new GTAOPass(scene, camera, W, H);
-  ao.updateGtaoMaterial({ radius: 0.7, distanceExponent: 1.2, thickness: 1.2, scale: 1.1, samples: 12 });
-  ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 12 });
+  ao.updateGtaoMaterial({ radius: 0.7, distanceExponent: 1.2, thickness: 1.2, scale: 1.1, samples: 6 });
+  ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 4, rings: 1, samples: 6 });
   composer.addPass(ao);
   composer.addPass(new UnrealBloomPass(new THREE.Vector2(W, H), 0.12, 0.4, 0.97));
   composer.addPass(new OutputPass());

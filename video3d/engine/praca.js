@@ -188,7 +188,8 @@ function novaFolhagem() {
           im.setMatrixAt(i, it.m);
           im.setColorAt(i, it.c);
         });
-        im.castShadow = im.receiveShadow = true;
+        // as folhas recebem sombra, mas quem projeta a sombra da copa é o miolo (bem mais barato)
+        im.receiveShadow = true;
         env.add(im);
       });
     },
