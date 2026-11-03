@@ -19,7 +19,7 @@
     "modelo": {
       "arquivo": "assets/robo.glb",
       "altura": 1.9,
-      "rotacaoY": 3.1416,
+      "rotacaoY": 0,
       "animacoes": {
         "correr": "Running",
         "acenar": "Wave",
