@@ -32,3 +32,8 @@ animacao3d/saida/*/quadros.txt
 animacao3d/saida/*/trilha.*
 animacao3d/saida/*/legendas.ass
 animacao3d/saida/*/video.mp4
+lemo/*/frames/
+lemo/*/test/
+lemo/*/out/
+lemo/*/render.log
+lemo/*/events.json
