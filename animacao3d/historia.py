@@ -486,6 +486,7 @@ CARTA = _jornada(
     ["Gancho: Elias diante da mesa escura.", "Etapa 1: a corrente de ferro aparece sobre a mesa.",
      "Etapa 2: o pergaminho se desenrola; a camera gira.", "Etapa 3: a pena escreve sobre o pergaminho.",
      "Etapa 4: a vela acende ao lado da carta.", "Etapa 5: o selo de cera, a carta enrolada; a corrente some."] + _FECHO)
+CARTA.update({"cenario": "cela", "clima": "sombria"})
 
 BABILONIA = _jornada(
     "O homem mais rico da Babilonia", "criar_babilonia", 0.86,

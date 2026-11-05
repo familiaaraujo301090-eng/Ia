@@ -234,7 +234,7 @@ def finalizar():
     if HIST.get("cenario") == "mar":
         audio, info = _trilha_mar(trilha, tempos, total + 0.5)
     else:
-        audio, info = trilha.compor("piano", total + 0.5)
+        audio, info = trilha.compor(HIST.get("clima", "piano"), total + 0.5)
     trilha.salvar(SAIDA / "trilha.wav", audio, info)
     fontes = SHORTS / "fontes"
     subprocess.run([
