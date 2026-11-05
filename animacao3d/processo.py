@@ -655,3 +655,133 @@ def criar_escultura(col, m, faixas):
     luz = _ponto("luz_anjo", (CX, CY + 0.3, z + 0.35), (1.0, 0.85, 0.6), col)
     _energia(luz, 0, f0)
     _energia(luz, 20, f0 + 40)
+
+
+def criar_carta(col, m, faixas):
+    """A última carta de Paulo: corrente, pergaminho, escrita, a vela do perdão, o selo e a carta enrolada."""
+    import materiais
+    _preparar(col, 8)
+    z = MESA_Z
+    etapas = faixas[1:6]
+    # Etapa 1: a corrente sobre a mesa
+    f0, _ = etapas[0]
+    ferro = materiais.simples("ferro", (0.16, 0.15, 0.14), 0.45, metal=1.0)
+    elos = []
+    for i in range(7):
+        bpy.ops.mesh.primitive_torus_add(major_radius=0.032, minor_radius=0.008,
+                                         location=(CX - 0.27 + i * 0.05, CY + 0.16, z + 0.012))
+        e = bpy.context.object
+        e.rotation_euler = (math.radians(90) if i % 2 else 0, 0, 0)
+        e.data.materials.append(ferro)
+        bpy.ops.object.shade_smooth()
+        pop(e, f0 + 3 * i)
+        elos.append(e)
+    # Etapa 2: o pergaminho se desenrola
+    f0, f1 = etapas[1]
+    esq = CX - 0.2
+    perg = _caixa("pergaminho", (CX, CY - 0.05, z + 0.006), (0.4, 0.28, 0.004), m["papel"], col)
+    _chave(perg, "scale", (0, 0.28, 0.004), 0)
+    _chave(perg, "location", (esq, CY - 0.05, z + 0.006), 0)
+    _chave(perg, "scale", (0, 0.28, 0.004), f0 + 6)
+    _chave(perg, "location", (esq, CY - 0.05, z + 0.006), f0 + 6)
+    _chave(perg, "scale", (0.4, 0.28, 0.004), f0 + (f1 - f0) * 2 // 3)
+    _chave(perg, "location", (CX, CY - 0.05, z + 0.006), f0 + (f1 - f0) * 2 // 3)
+    bpy.ops.mesh.primitive_cylinder_add(radius=0.016, depth=0.3, location=(esq, CY - 0.05, z + 0.016), rotation=(math.radians(90), 0, 0))
+    rolo = bpy.context.object
+    rolo.data.materials.append(m["papel"])
+    bpy.ops.object.shade_smooth()
+    pop(rolo, f0)
+    _chave(rolo, "location", (esq, CY - 0.05, z + 0.016), f0 + 6)
+    _chave(rolo, "location", (CX + 0.2, CY - 0.05, z + 0.016), f0 + (f1 - f0) * 2 // 3)
+    # Etapa 3: a pena escreve
+    f0, f1 = etapas[2]
+    bpy.ops.mesh.primitive_cone_add(vertices=24, radius1=0.004, radius2=0.028, depth=0.26)
+    pena = bpy.context.object
+    pena.data.materials.append(m["barba"])
+    pena.scale = (1, 0.25, 1)
+    bpy.ops.object.shade_smooth()
+    pena.rotation_euler = (math.radians(30), 0, math.radians(-35))
+    pop(pena, f0, (1, 0.25, 1))
+    texto = _caixa("texto", (esq + 0.02, CY - 0.05, z + 0.0095), (0, 0.24, 0.001), m["pagina"], col)
+    _chave(texto, "scale", (0, 0.24, 0.001), f0)
+    _chave(texto, "location", (esq + 0.02, CY - 0.05, z + 0.0095), f0)
+    _chave(texto, "scale", (0.36, 0.24, 0.001), f1)
+    _chave(texto, "location", (CX, CY - 0.05, z + 0.0095), f1)
+    for k in range(6):
+        f = f0 + (f1 - f0) * k // 5
+        _chave(pena, "location", (esq + 0.04 + 0.32 * k / 5, CY - 0.05 + 0.08 * ((-1) ** k), z + 0.14), f)
+    # Etapa 4: a vela do perdão acende
+    f0, _ = etapas[3]
+    bpy.ops.mesh.primitive_cylinder_add(radius=0.022, depth=0.14, location=(CX + 0.08, CY + 0.2, z + 0.07))
+    vela = bpy.context.object
+    vela.data.materials.append(materiais.simples("cera", (0.92, 0.86, 0.7), 0.5))
+    pop(vela, f0)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=1, location=(CX + 0.08, CY + 0.2, z + 0.165))
+    chama = bpy.context.object
+    chama.data.materials.append(m["chama"])
+    pop(chama, f0 + 12, (0.011, 0.011, 0.026))
+    luz = _ponto("luz_vela", (CX + 0.08, CY + 0.2, z + 0.2), (1.0, 0.62, 0.3), col)
+    _energia(luz, 0, f0 + 12)
+    _energia(luz, 6, f0 + 20)
+    # Etapa 5: o selo de cera, a carta enrolada, a corrente some
+    f0, f1 = etapas[4]
+    bpy.ops.mesh.primitive_cylinder_add(radius=0.032, depth=0.01, location=(CX, CY - 0.05, z + 0.013))
+    selo = bpy.context.object
+    selo.data.materials.append(materiais.simples("cera_vermelha", (0.45, 0.04, 0.03), 0.35))
+    bpy.ops.object.shade_smooth()
+    pop(selo, f0 + 4)
+    meio = f0 + (f1 - f0) // 2
+    for o in (perg, texto, rolo, pena):
+        sumir(o, meio)
+    bpy.ops.mesh.primitive_cylinder_add(radius=0.03, depth=0.3, location=(CX, CY - 0.05, z + 0.03), rotation=(math.radians(90), 0, 0))
+    carta = bpy.context.object
+    carta.data.materials.append(m["papel"])
+    bpy.ops.object.shade_smooth()
+    pop(carta, meio + 2)
+    _chave(selo, "location", (CX, CY - 0.05, z + 0.013), meio)
+    _chave(selo, "location", (CX, CY - 0.05 - 0.0, z + 0.062), meio + 4)
+    for i, e in enumerate(elos):
+        sumir(e, meio + 6 + 2 * i)
+
+
+def criar_babilonia(col, m, faixas):
+    """Tábua de argila e moedas: a cada etapa, um décimo é guardado e a pilha cresce sozinha."""
+    import materiais
+    _preparar(col, 9)
+    z = MESA_Z
+    etapas = faixas[1:6]
+    ouro = _ouro()
+    argila = materiais.simples("argila", (0.55, 0.36, 0.22), 0.85, ruido=0.4, escala_ruido=60, bump=0.4)
+    # Etapa 1: a tábua de argila com marcas (cuneiforme)
+    f0, _ = etapas[0]
+    tab = _caixa("tabua", (CX - 0.2, CY + 0.1, z + 0.02), (0.22, 0.3, 0.04), argila, col)
+    tab.rotation_euler = (0, 0, math.radians(12))
+    pop(tab, f0)
+    for i in range(18):
+        r = (i * 7919) % 100 / 100
+        k = _caixa("cunha", (CX - 0.27 + (i % 3) * 0.06, CY - 0.02 + (i // 3) * 0.045, z + 0.041),
+                   (0.03, 0.006, 0.004), m["madeira"], col)
+        k.rotation_euler = (0, 0, math.radians(12 + 40 * r))
+        pop(k, f0 + 6 + i)
+    # Etapas 2 a 5: moedas ganhas (pilha da direita) e o décimo guardado (pilha da esquerda), que cresce sozinha
+    def moeda(x, y, h, f):
+        bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=0.028, depth=0.006, location=(x, y, z + 0.004 + h * 0.0065))
+        c = bpy.context.object
+        c.data.materials.append(ouro)
+        bpy.ops.object.shade_smooth()
+        pop(c, f)
+        return c
+    ganho = 0
+    guardado = 0
+    for e, (f0, f1) in enumerate(etapas[1:]):
+        n = [10, 10, 10, 10][e]
+        for k in range(n):
+            f = f0 + (f1 - f0) * k // (n + 4)
+            if k == 0:          # o primeiro décimo vai para a pilha guardada
+                moeda(CX + 0.12, CY - 0.12, guardado, f); guardado += 1
+            else:
+                moeda(CX + 0.26, CY - 0.05, ganho % 14, f); ganho += 1
+        if e >= 1:              # o dinheiro guardado trabalha: a pilha cresce sozinha
+            for k in range(guardado * (e + 1) // 2):
+                moeda(CX + 0.06 + 0.06 * ((k // 8) % 2), CY - 0.12 - 0.06 * (k // 16), guardado + k % 8, f0 + (f1 - f0) // 2 + 2 * k)
+        guardado += e * 2

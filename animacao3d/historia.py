@@ -471,5 +471,37 @@ TEMPESTADE = {
     ],
 }
 
-HISTORIAS = {"a-tempestade": TEMPESTADE, "kintsugi": KINTSUGI, "ouro-no-fogo": OURO_FOGO, "diamante": DIAMANTE,
+CARTA = _jornada(
+    "A ultima carta", "criar_carta", 0.9,
+    [("ETAPA 1/5", "A CELA"), ("ETAPA 2/5", "O ABANDONO"), ("ETAPA 3/5", "A CARTA"), ("ETAPA 4/5", "O PERDÃO"),
+     ("ETAPA 5/5", "A ENTREGA")],
+    ["Esta é a última carta de um homem que sabia que ia morrer. E ela termina com uma frase que muda tudo.",
+     "Roma, ano 67. Paulo está preso. Acorrentado, numa cela fria.",
+     "Quase todos o abandonaram. Ele pede só os pergaminhos e uma capa, porque o inverno está chegando.",
+     "E escreve para Timóteo, como um pai escreve para um filho.",
+     "Sobre quem o deixou sozinho, ele não pede vingança. Escreve: que isso não lhes seja cobrado.",
+     "A carta é selada e enviada. Dois mil anos depois, ela ainda chega até nós.",
+     "*Combati o bom combate, terminei a corrida, guardei a fé.* Ele não disse venci. Disse: não desisti.",
+     "Se hoje fosse a sua última carta, o que você escreveria? Comenta. Segue a Lamparina."],
+    ["Gancho: Elias diante da mesa escura.", "Etapa 1: a corrente de ferro aparece sobre a mesa.",
+     "Etapa 2: o pergaminho se desenrola; a camera gira.", "Etapa 3: a pena escreve sobre o pergaminho.",
+     "Etapa 4: a vela acende ao lado da carta.", "Etapa 5: o selo de cera, a carta enrolada; a corrente some."] + _FECHO)
+
+BABILONIA = _jornada(
+    "O homem mais rico da Babilonia", "criar_babilonia", 0.86,
+    [("REGRA 1/5", "A TÁBUA"), ("REGRA 2/5", "UM DÉCIMO É SEU"), ("REGRA 3/5", "CONTROLE OS GASTOS"),
+     ("REGRA 4/5", "FAÇA O OURO TRABALHAR"), ("REGRA 5/5", "PROTEJA O QUE É SEU")],
+    ["Um escravo virou o homem mais rico da Babilônia. E o segredo dele cabe numa moeda.",
+     "É a história que George Clason escreveu em 1926, inspirada em tábuas de argila. O nome do homem era Arkad.",
+     "Primeira regra: de cada dez moedas que entram, uma é sua. Guarde antes de pagar qualquer coisa.",
+     "Segunda: o que você ganha não é o que você pode gastar. Viva com as nove.",
+     "Terceira: faça o ouro trabalhar. A moeda guardada traz outras moedas.",
+     "Quarta: proteja o que é seu. Nada de promessa de ganho fácil.",
+     "*A riqueza não é o que você ganha. É o que você guarda.* E ela começa com uma moeda só.",
+     "Quanto você guardou este mês? Comenta. Segue a Lamparina."],
+    ["Gancho: Elias diante da mesa, uma moeda brilhando.", "Etapa 1: a tábua de argila com marcas cuneiformes.",
+     "Etapa 2: a primeira moeda vai para a pilha guardada.", "Etapa 3: moedas entram; uma em cada dez é guardada.",
+     "Etapa 4: a pilha guardada cresce sozinha.", "Etapa 5: as duas pilhas, a guardada maior; grua subindo."] + _FECHO)
+
+HISTORIAS = {"homem-mais-rico-da-babilonia": BABILONIA, "a-ultima-carta": CARTA, "a-tempestade": TEMPESTADE, "kintsugi": KINTSUGI, "ouro-no-fogo": OURO_FOGO, "diamante": DIAMANTE,
              "quatro-mil-semanas": AMPULHETA, "anjo-no-marmore": ESCULTURA, "vida-nao-esta-parada": VIDA_PARADA, "lamparina-mais-antiga": LAMPARINA, "codex-leicester": CODEX, "livro-medieval": LIVRO_MEDIEVAL}
