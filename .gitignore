@@ -37,3 +37,4 @@ lemo/*/test/
 lemo/*/out/
 lemo/*/render.log
 lemo/*/events.json
+lemo/*/*.mp4
