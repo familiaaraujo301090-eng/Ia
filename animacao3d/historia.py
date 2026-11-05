@@ -503,6 +503,7 @@ BABILONIA = _jornada(
     ["Gancho: Elias diante da mesa, uma moeda brilhando.", "Etapa 1: a tábua de argila com marcas cuneiformes.",
      "Etapa 2: a primeira moeda vai para a pilha guardada.", "Etapa 3: moedas entram; uma em cada dez é guardada.",
      "Etapa 4: a pilha guardada cresce sozinha.", "Etapa 5: as duas pilhas, a guardada maior; grua subindo."] + _FECHO)
+BABILONIA.update({"cenario": "babilonia", "clima": "locrio"})
 
 HISTORIAS = {"homem-mais-rico-da-babilonia": BABILONIA, "a-ultima-carta": CARTA, "a-tempestade": TEMPESTADE, "kintsugi": KINTSUGI, "ouro-no-fogo": OURO_FOGO, "diamante": DIAMANTE,
              "quatro-mil-semanas": AMPULHETA, "anjo-no-marmore": ESCULTURA, "vida-nao-esta-parada": VIDA_PARADA, "lamparina-mais-antiga": LAMPARINA, "codex-leicester": CODEX, "livro-medieval": LIVRO_MEDIEVAL}
