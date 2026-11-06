@@ -38,3 +38,7 @@ lemo/*/out/
 lemo/*/render.log
 lemo/*/events.json
 lemo/*/*.mp4
+animacao3d/saida/*/quadros/
+animacao3d/saida/*/tmp/
+animacao3d/saida/*/*.blend
+animacao3d/saida/*/*.blend1
