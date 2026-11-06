@@ -16,7 +16,7 @@ TITULO = "CENARIO: A AGORA DE ATENAS"
 VISTAS = [("VISAO GERAL", (0.3, -4.8, 2.0), (0.6, 0.6, 1.3), 24, False),
           ("PLANTA (DE CIMA)", (0.6, -0.2, 10), (0.6, -0.2, 0), 10, True),
           ("O BARRIL E O CAO", (0.6, -1.8, 1.2), (-1.5, 0.6, 0.5), 28, False),
-          ("DETALHE: MESA", (0.9, -1.6, 1.25), (1.6, -0.35, 0.85), 30, False)]
+          ("DETALHE: A PEDRA", (-0.4, -1.5, 0.8), (0.2, -0.2, 0.3), 30, False)]
 
 MESA_Z = 0.81
 
@@ -147,10 +147,9 @@ def criar(col, m, semente=21):
     anf = [(0.02, 0.0), (0.09, 0.04), (0.17, 0.2), (0.19, 0.38), (0.15, 0.55), (0.07, 0.66), (0.06, 0.74), (0.09, 0.77)]
     for x, y, s in ((-2.6, 2.0, 1.0), (-2.35, 2.1, 0.8), (1.9, 2.0, 0.9), (-0.3, 1.9, 0.75)):
         _torno("anfora", [(r * s, z * s) for r, z in anf], (x, y, 0.02), barro, col)
-    # mesa de marmore no lugar de sempre
-    _cubo("mesa_tampo", (1.6, -0.45, MESA_Z - 0.03), (1.4, 0.8, 0.06), marmore, col)
-    for dx in (-0.5, 0.5):
-        _cubo("pe_mesa", (1.6 + dx, -0.45, MESA_Z / 2 - 0.03), (0.16, 0.6, MESA_Z - 0.06), marmore, col)
+    # sem mesa: uma pedra baixa ao lado do barril, onde Diogenes sentava (os objetos ficam em cima dela)
+    pd = _cubo("pedra", (0.2, -0.3, 0.15), (0.7, 0.5, 0.3), calcario, col, (0, 0, math.radians(4)))
+    pd.modifiers.new("canto", "BEVEL").width = 0.03
     mk = _cubo("livro_aberto", (1.9, -0.5, MESA_Z), (0.01, 0.01, 0.01), m["papel"], col)
     mk.hide_render = True
     # luz: sol baixo de fim de tarde pela esquerda, ceu azul preenchendo

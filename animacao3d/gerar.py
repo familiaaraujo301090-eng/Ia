@@ -69,6 +69,8 @@ def construir(tempos, total):
         cen.animar(col, m, p, faixas, HIST)
     historia.aplicar_acoes(p, HIST["planos"], faixas, HIST.get("inicio"))
     historia.criar_cameras(HIST["planos"], faixas, col, cena)
+    if HIST.get("centro"):
+        processo.CX, processo.CY, processo.MESA_Z = HIST["centro"]
     if HIST.get("extra"):
         getattr(processo, HIST["extra"])(col, m, faixas)
     cena.frame_start, cena.frame_end = 0, faixas[-1][1]

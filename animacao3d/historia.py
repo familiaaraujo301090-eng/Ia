@@ -327,6 +327,22 @@ def _jornada(titulo, extra, cz, contador, roteiro, descs):
             "roteiro": roteiro, "planos": planos_jornada(cz, descs)}
 
 
+def deslocar(hist, centro):
+    """Leva a jornada para outro ponto do cenario (sem mesa): objetos, cameras e Elias andam juntos.
+    centro = (x, y, z) onde ficam os objetos; o padrao e a mesa (1.6, -0.45, 0.81)."""
+    dx, dy = centro[0] - 1.6, centro[1] + 0.45
+    mv = lambda v: (v[0] + dx, v[1] + dy, v[2])
+    for pl in hist["planos"]:
+        cam = pl["cam"]
+        for k in ("de", "ate", "alvo", "alvo_de", "alvo_ate", "centro"):
+            if k in cam:
+                cam[k] = mv(cam[k])
+    x, y = hist["inicio"]["pos"]
+    hist["inicio"] = dict(hist["inicio"], pos=(x + dx, y + dy))
+    hist["centro"] = centro
+    return hist
+
+
 _FECHO = ["Elias se vira para quem assiste; aproximacao ate o close.", "Final: Elias acena ao lado da mesa."]
 
 KINTSUGI = _jornada(
@@ -506,7 +522,7 @@ BABILONIA = _jornada(
 BABILONIA.update({"cenario": "babilonia", "clima": "locrio", "gancho": "DE ESCRAVO|A MAIS RICO|DA BABILÔNIA"})
 
 DIOGENES = _jornada(
-    "Diogenes vendo o seu feed", "criar_diogenes", 0.9,
+    "Diogenes vendo o seu feed", "criar_diogenes", 0.38,
     [],
     ["Diógenes morava num barril e andava com uma lamparina acesa em pleno dia. Imagina ele vendo o seu feed.",
      "Atenas, quatrocentos anos antes de Cristo. Ele dizia que procurava um homem de verdade. Nunca achou.",
@@ -516,9 +532,10 @@ DIOGENES = _jornada(
      "Quando Alexandre, o Grande, ofereceu dar a ele o que quisesse, Diógenes respondeu: sai da frente do meu sol.",
      "*Quem precisa de pouco é livre.* Talvez o que te falta não seja mais. Seja menos.",
      "O que Diógenes diria do seu último post? Comenta. Segue a Lamparina."],
-    ["Gancho: Elias na agora, o barril e o cao ao fundo.", "A lamparina acende em pleno dia sobre a mesa.",
+    ["Gancho: Elias na agora, ao lado do barril e do cao.", "A lamparina acende em pleno dia sobre a pedra.",
      "O celular aparece: o carro novo; a camera gira.", "O feed rola: a selfie com filtro.",
-     "O feed rola: a briga; o celular vibra.", "A tela apaga, o celular tomba; o sol entra na mesa."] + _FECHO)
+     "O feed rola: a briga; o celular vibra.", "A tela apaga, o celular tomba; o sol entra na pedra."] + _FECHO)
+deslocar(DIOGENES, (0.2, -0.3, 0.3))
 DIOGENES.update({"cenario": "atenas", "clima": "piano", "gancho": "DIÓGENES|VENDO O SEU FEED"})
 
 HISTORIAS = {"diogenes-vendo-o-seu-feed": DIOGENES, "homem-mais-rico-da-babilonia": BABILONIA, "a-ultima-carta": CARTA, "a-tempestade": TEMPESTADE, "kintsugi": KINTSUGI, "ouro-no-fogo": OURO_FOGO, "diamante": DIAMANTE,
