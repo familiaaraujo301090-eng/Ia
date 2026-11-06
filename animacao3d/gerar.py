@@ -225,6 +225,13 @@ def finalizar():
         i = next(k for k, l in enumerate(leg) if l.startswith("Style: P,"))
         leg[i + 1:i + 1] = estilos
         leg += extra[1:]
+    if HIST.get("gancho"):
+        # Gancho escrito no segundo 0: o publico decide em 2-3 s se fica (postar/DESEMPENHO.md).
+        i = next(k for k, l in enumerate(leg) if l.startswith("Style: P,"))
+        leg.insert(i + 1, "Style: Gancho,Inter ExtraBold,96,&H004CC8F5,&H004CC8F5,&H00101010,&HB4000000,0,0,0,0,100,100,1,0,3,6,0,8,70,70,470,1")
+        leg.append(modelos.dialogo(0, 0.0, HIST.get("gancho_dur", 3.0), "Gancho",
+                                   "{\\fscx70\\fscy70\\t(0,180,\\fscx105\\fscy105)\\t(180,300,\\fscx100\\fscy100)\\fad(0,250)}"
+                                   + HIST["gancho"].replace("|", "\\N")))
     (SAIDA / "legendas.ass").write_text("\n".join(leg) + "\n", encoding="utf-8")
     import trilha
     feitos = sorted(q for q in (SAIDA / "quadros").glob("*.png") if int(q.stem) % PASSO == 0)

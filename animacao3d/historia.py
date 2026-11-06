@@ -486,7 +486,7 @@ CARTA = _jornada(
     ["Gancho: Elias diante da mesa escura.", "Etapa 1: a corrente de ferro aparece sobre a mesa.",
      "Etapa 2: o pergaminho se desenrola; a camera gira.", "Etapa 3: a pena escreve sobre o pergaminho.",
      "Etapa 4: a vela acende ao lado da carta.", "Etapa 5: o selo de cera, a carta enrolada; a corrente some."] + _FECHO)
-CARTA.update({"cenario": "cela", "clima": "sombria"})
+CARTA.update({"cenario": "cela", "clima": "sombria", "gancho": "A ÚLTIMA CARTA|DE UM CONDENADO"})
 
 BABILONIA = _jornada(
     "O homem mais rico da Babilonia", "criar_babilonia", 0.86,
@@ -503,7 +503,7 @@ BABILONIA = _jornada(
     ["Gancho: Elias diante da mesa, uma moeda brilhando.", "Etapa 1: a tábua de argila com marcas cuneiformes.",
      "Etapa 2: a primeira moeda vai para a pilha guardada.", "Etapa 3: moedas entram; uma em cada dez é guardada.",
      "Etapa 4: a pilha guardada cresce sozinha.", "Etapa 5: as duas pilhas, a guardada maior; grua subindo."] + _FECHO)
-BABILONIA.update({"cenario": "babilonia", "clima": "locrio"})
+BABILONIA.update({"cenario": "babilonia", "clima": "locrio", "gancho": "DE ESCRAVO|A MAIS RICO|DA BABILÔNIA"})
 
 HISTORIAS = {"homem-mais-rico-da-babilonia": BABILONIA, "a-ultima-carta": CARTA, "a-tempestade": TEMPESTADE, "kintsugi": KINTSUGI, "ouro-no-fogo": OURO_FOGO, "diamante": DIAMANTE,
              "quatro-mil-semanas": AMPULHETA, "anjo-no-marmore": ESCULTURA, "vida-nao-esta-parada": VIDA_PARADA, "lamparina-mais-antiga": LAMPARINA, "codex-leicester": CODEX, "livro-medieval": LIVRO_MEDIEVAL}
