@@ -219,7 +219,8 @@ def finalizar():
             b = pal[k + 1][1]
         cor = "\\c&H4CC8F5&" if dest else ""
         leg.append(modelos.dialogo(0, a, b, "P", f"{{{cor}\\fscx88\\fscy88\\t(0,80,\\fscx100\\fscy100)}}{w.strip('.,;:!?').upper()}"))
-    if HIST.get("passos") or HIST.get("contador"):
+    # Etapas sao a estrutura do roteiro, nao texto na tela (pedido do usuario); so aparecem se pedido.
+    if HIST.get("mostrar_etapas") and (HIST.get("passos") or HIST.get("contador")):
         extra = contador_de_passos(tempos)
         estilos = extra[0].replace("#ESTILOS#", "").split("|")
         i = next(k for k, l in enumerate(leg) if l.startswith("Style: P,"))

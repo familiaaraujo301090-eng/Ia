@@ -785,3 +785,104 @@ def criar_babilonia(col, m, faixas):
             for k in range(guardado * (e + 1) // 2):
                 moeda(CX + 0.06 + 0.06 * ((k // 8) % 2), CY - 0.12 - 0.06 * (k // 16), guardado + k % 8, f0 + (f1 - f0) // 2 + 2 * k)
         guardado += e * 2
+
+
+def criar_diogenes(col, m, faixas):
+    """A lamparina acesa em pleno dia e um celular cuja tela rola o feed: carro, selfie, briga; depois apaga."""
+    import materiais
+    from pathlib import Path
+    _preparar(col, 7)
+    z = MESA_Z
+    etapas = faixas[1:6]
+    barro = materiais.simples("barro_lamp", (0.6, 0.33, 0.18), 0.7, ruido=0.3, escala_ruido=18, bump=0.2)
+    # Etapa 1: a lamparina de Diogenes, acesa em pleno dia ("procuro um homem")
+    f0, _ = etapas[0]
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=1, location=(CX - 0.32, CY + 0.12, z + 0.035))
+    lp = bpy.context.object
+    lp.scale = (0.09, 0.06, 0.035)
+    lp.data.materials.append(barro)
+    bpy.ops.object.shade_smooth()
+    pop(lp, f0)
+    bico = _caixa("bico", (CX - 0.22, CY + 0.12, z + 0.05), (0.07, 0.03, 0.025), barro, col)
+    pop(bico, f0 + 2)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=1, location=(CX - 0.19, CY + 0.12, z + 0.09))
+    ch = bpy.context.object
+    ch.scale = (0.012, 0.012, 0.035)
+    ch.data.materials.append(m["chama"])
+    pop(ch, f0 + 10)
+    luz = _ponto("luz_lamp", (CX - 0.19, CY + 0.12, z + 0.16), (1.0, 0.6, 0.3), col)
+    _energia(luz, 0, f0 + 10)
+    _energia(luz, 6, f0 + 18)
+    # o celular, em pe num apoio, virado para a camera
+    corpo_mat = materiais.simples("celular", (0.02, 0.02, 0.025), 0.25, metal=0.6)
+    tela = bpy.data.materials.new("tela_feed")
+    tela.use_nodes = True
+    nt = tela.node_tree
+    nt.nodes.remove(nt.nodes["Principled BSDF"])
+    em = nt.nodes.new("ShaderNodeEmission")
+    tex = nt.nodes.new("ShaderNodeTexImage")
+    tex.image = bpy.data.images.load(str(Path(__file__).parent / "texturas" / "feed-diogenes.png"))
+    uv = nt.nodes.new("ShaderNodeTexCoord")
+    mp = nt.nodes.new("ShaderNodeMapping")
+    mp.inputs["Scale"].default_value = (1, 1 / 3, 1)
+    nt.links.new(uv.outputs["UV"], mp.inputs["Vector"])
+    nt.links.new(mp.outputs["Vector"], tex.inputs["Vector"])
+    nt.links.new(tex.outputs["Color"], em.inputs["Color"])
+    nt.links.new(em.outputs[0], nt.nodes["Material Output"].inputs["Surface"])
+    loc = mp.inputs["Location"]
+    forca = em.inputs["Strength"]
+    pivo = bpy.data.objects.new("celular_pivo", None)
+    pivo.location = (CX + 0.12, CY - 0.05, z + 0.005)
+    col.objects.link(pivo)
+    caixa = _caixa("celular_corpo", (0, 0, 0.14), (0.15, 0.012, 0.28), corpo_mat, col)
+    caixa.parent = pivo
+    bpy.ops.mesh.primitive_plane_add(size=1, location=(0, -0.0065, 0.14))
+    sc = bpy.context.object
+    sc.name = "celular_tela"
+    sc.scale = (0.138, 0.245, 1)
+    sc.rotation_euler = (math.radians(90), 0, 0)
+    sc.data.materials.append(tela)
+    for c in sc.users_collection:
+        c.objects.unlink(sc)
+    col.objects.link(sc)
+    sc.parent = pivo
+    apoio = _caixa("apoio", (CX + 0.12, CY + 0.04, z + 0.03), (0.12, 0.1, 0.06), m["madeira"], col)
+    # Etapa 2: o celular aparece no primeiro post (o carro novo)
+    f0, f1 = etapas[1]
+    pivo.rotation_euler = (math.radians(-18), 0, math.radians(8))
+    pivo.keyframe_insert("rotation_euler", frame=0)
+    pop(pivo, f0)
+    pop(apoio, f0)
+    _valor(forca, 0.0, f0)
+    _valor(forca, 2.2, f0 + 8)
+    loc.default_value = (0, 2 / 3, 0)
+    loc.keyframe_insert("default_value", frame=f0)
+    # Etapas 3 e 4: o dedo invisivel rola o feed (selfie com filtro, depois a briga)
+    for e, alvo in ((2, 1 / 3), (3, 0.0)):
+        g0, g1 = etapas[e]
+        loc.keyframe_insert("default_value", frame=g0)
+        loc.default_value = (0, alvo + 0.03, 0)
+        loc.keyframe_insert("default_value", frame=g0 + 9)
+        loc.default_value = (0, alvo, 0)
+        loc.keyframe_insert("default_value", frame=g0 + 14)
+    # na briga, o celular vibra
+    g0, g1 = etapas[3]
+    for k in range(0, min(40, g1 - g0), 3):
+        pivo.rotation_euler = (math.radians(-18), 0, math.radians(8 + (2.5 if k % 2 else -2.5)))
+        pivo.keyframe_insert("rotation_euler", frame=g0 + 18 + k)
+    pivo.rotation_euler = (math.radians(-18), 0, math.radians(8))
+    pivo.keyframe_insert("rotation_euler", frame=g0 + 18 + 42)
+    # Etapa 5: "sai da frente do meu sol" - a tela apaga e o celular tomba de cara na mesa; o sol entra
+    f0, f1 = etapas[4]
+    _valor(forca, 2.2, f0 + 4)
+    _valor(forca, 0.0, f0 + 10)
+    pivo.keyframe_insert("rotation_euler", frame=f0 + 10)
+    pivo.rotation_euler = (math.radians(88), 0, math.radians(8))
+    pivo.keyframe_insert("rotation_euler", frame=f0 + 20)
+    pivo.location = (CX + 0.12, CY - 0.05, z + 0.005)
+    pivo.keyframe_insert("location", frame=f0 + 10)
+    pivo.location = (CX + 0.12, CY - 0.2, z + 0.012)
+    pivo.keyframe_insert("location", frame=f0 + 20)
+    sol = bpy.data.objects["luz_objeto"]
+    _energia(sol, 7, f0 + 8)
+    _energia(sol, 30, f0 + 26)

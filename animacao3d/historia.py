@@ -505,5 +505,21 @@ BABILONIA = _jornada(
      "Etapa 4: a pilha guardada cresce sozinha.", "Etapa 5: as duas pilhas, a guardada maior; grua subindo."] + _FECHO)
 BABILONIA.update({"cenario": "babilonia", "clima": "locrio", "gancho": "DE ESCRAVO|A MAIS RICO|DA BABILÔNIA"})
 
-HISTORIAS = {"homem-mais-rico-da-babilonia": BABILONIA, "a-ultima-carta": CARTA, "a-tempestade": TEMPESTADE, "kintsugi": KINTSUGI, "ouro-no-fogo": OURO_FOGO, "diamante": DIAMANTE,
+DIOGENES = _jornada(
+    "Diogenes vendo o seu feed", "criar_diogenes", 0.9,
+    [],
+    ["Diógenes morava num barril e andava com uma lamparina acesa em pleno dia. Imagina ele vendo o seu feed.",
+     "Atenas, quatrocentos anos antes de Cristo. Ele dizia que procurava um homem de verdade. Nunca achou.",
+     "Primeiro post: alguém mostrando o carro novo. Diógenes riria. Quanta coisa de que eu não preciso.",
+     "Segundo: uma selfie com filtro. Ele perguntaria: e quem é você quando ninguém está olhando?",
+     "Terceiro: uma briga nos comentários. Você perde a paz para ganhar uma discussão.",
+     "Quando Alexandre, o Grande, ofereceu dar a ele o que quisesse, Diógenes respondeu: sai da frente do meu sol.",
+     "*Quem precisa de pouco é livre.* Talvez o que te falta não seja mais. Seja menos.",
+     "O que Diógenes diria do seu último post? Comenta. Segue a Lamparina."],
+    ["Gancho: Elias na agora, o barril e o cao ao fundo.", "A lamparina acende em pleno dia sobre a mesa.",
+     "O celular aparece: o carro novo; a camera gira.", "O feed rola: a selfie com filtro.",
+     "O feed rola: a briga; o celular vibra.", "A tela apaga, o celular tomba; o sol entra na mesa."] + _FECHO)
+DIOGENES.update({"cenario": "atenas", "clima": "piano", "gancho": "DIÓGENES|VENDO O SEU FEED"})
+
+HISTORIAS = {"diogenes-vendo-o-seu-feed": DIOGENES, "homem-mais-rico-da-babilonia": BABILONIA, "a-ultima-carta": CARTA, "a-tempestade": TEMPESTADE, "kintsugi": KINTSUGI, "ouro-no-fogo": OURO_FOGO, "diamante": DIAMANTE,
              "quatro-mil-semanas": AMPULHETA, "anjo-no-marmore": ESCULTURA, "vida-nao-esta-parada": VIDA_PARADA, "lamparina-mais-antiga": LAMPARINA, "codex-leicester": CODEX, "livro-medieval": LIVRO_MEDIEVAL}
