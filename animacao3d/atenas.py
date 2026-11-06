@@ -31,13 +31,10 @@ def _esfera(nome, loc, esc, mat, col, seg=24):
 
 
 def _coluna(x, y, h, r, mat, col):
-    _cubo("plinto", (x, y, 0.06), (r * 2.6, r * 2.6, 0.12), mat, col)
     bpy.ops.mesh.primitive_cylinder_add(vertices=20, radius=r, depth=h, location=(x, y, 0.12 + h / 2))
     c = bpy.context.object
     c.name = "coluna"
     c.data.materials.append(mat)
-    tc = c.modifiers.new("afina", "SIMPLE_DEFORM")
-    tc.deform_method, tc.factor = "TAPER", -0.18
     _obj(c, col)
     _cil("equino", (x, y, 0.12 + h + 0.05), r * 1.25, 0.1, mat, col, verts=20)
     _cubo("abaco", (x, y, 0.12 + h + 0.14), (r * 2.7, r * 2.7, 0.08), mat, col)
@@ -115,7 +112,7 @@ def criar(col, m, semente=21):
     perfil = [(0.18, -0.7), (0.4, -0.6), (0.55, -0.3), (0.58, 0.0), (0.55, 0.3), (0.45, 0.55), (0.32, 0.66), (0.33, 0.72)]
     bx, by = -1.25, 0.55
     p = _torno("pithos", perfil, (bx, by, 0.56), barro, col)
-    p.rotation_euler = (math.radians(90), 0, math.radians(-35))
+    p.rotation_euler = (math.radians(90), 0, math.radians(35))
     boca = _cil("boca_escura", (0, 0, 0), 0.3, 0.02, escuro, col)
     boca.parent = p
     boca.location = (0, 0, 0.7)

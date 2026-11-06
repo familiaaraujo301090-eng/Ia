@@ -797,20 +797,20 @@ def criar_diogenes(col, m, faixas):
     barro = materiais.simples("barro_lamp", (0.6, 0.33, 0.18), 0.7, ruido=0.3, escala_ruido=18, bump=0.2)
     # Etapa 1: a lamparina de Diogenes, acesa em pleno dia ("procuro um homem")
     f0, _ = etapas[0]
-    bpy.ops.mesh.primitive_uv_sphere_add(radius=1, location=(CX - 0.32, CY + 0.12, z + 0.035))
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=1, location=(CX - 0.3, CY + 0.18, z + 0.035))
     lp = bpy.context.object
     lp.scale = (0.09, 0.06, 0.035)
     lp.data.materials.append(barro)
     bpy.ops.object.shade_smooth()
     pop(lp, f0)
-    bico = _caixa("bico", (CX - 0.22, CY + 0.12, z + 0.05), (0.07, 0.03, 0.025), barro, col)
+    bico = _caixa("bico", (CX - 0.2, CY + 0.18, z + 0.05), (0.07, 0.03, 0.025), barro, col)
     pop(bico, f0 + 2)
-    bpy.ops.mesh.primitive_uv_sphere_add(radius=1, location=(CX - 0.19, CY + 0.12, z + 0.09))
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=1, location=(CX - 0.17, CY + 0.18, z + 0.09))
     ch = bpy.context.object
     ch.scale = (0.012, 0.012, 0.035)
     ch.data.materials.append(m["chama"])
     pop(ch, f0 + 10)
-    luz = _ponto("luz_lamp", (CX - 0.19, CY + 0.12, z + 0.16), (1.0, 0.6, 0.3), col)
+    luz = _ponto("luz_lamp", (CX - 0.17, CY + 0.18, z + 0.16), (1.0, 0.6, 0.3), col)
     _energia(luz, 0, f0 + 10)
     _energia(luz, 6, f0 + 18)
     # o celular, em pe num apoio, virado para a camera
@@ -832,7 +832,7 @@ def criar_diogenes(col, m, faixas):
     loc = mp.inputs["Location"]
     forca = em.inputs["Strength"]
     pivo = bpy.data.objects.new("celular_pivo", None)
-    pivo.location = (CX + 0.12, CY - 0.05, z + 0.005)
+    pivo.location = (CX + 0.02, CY - 0.02, z + 0.005)
     col.objects.link(pivo)
     caixa = _caixa("celular_corpo", (0, 0, 0.14), (0.15, 0.012, 0.28), corpo_mat, col)
     caixa.parent = pivo
@@ -846,7 +846,7 @@ def criar_diogenes(col, m, faixas):
         c.objects.unlink(sc)
     col.objects.link(sc)
     sc.parent = pivo
-    apoio = _caixa("apoio", (CX + 0.12, CY + 0.04, z + 0.03), (0.12, 0.1, 0.06), m["madeira"], col)
+    apoio = _caixa("apoio", (CX + 0.02, CY + 0.07, z + 0.03), (0.12, 0.1, 0.06), m["madeira"], col)
     # Etapa 2: o celular aparece no primeiro post (o carro novo)
     f0, f1 = etapas[1]
     pivo.rotation_euler = (math.radians(-18), 0, math.radians(8))
@@ -879,9 +879,9 @@ def criar_diogenes(col, m, faixas):
     pivo.keyframe_insert("rotation_euler", frame=f0 + 10)
     pivo.rotation_euler = (math.radians(88), 0, math.radians(8))
     pivo.keyframe_insert("rotation_euler", frame=f0 + 20)
-    pivo.location = (CX + 0.12, CY - 0.05, z + 0.005)
+    pivo.location = (CX + 0.02, CY - 0.02, z + 0.005)
     pivo.keyframe_insert("location", frame=f0 + 10)
-    pivo.location = (CX + 0.12, CY - 0.2, z + 0.012)
+    pivo.location = (CX + 0.02, CY - 0.17, z + 0.012)
     pivo.keyframe_insert("location", frame=f0 + 20)
     sol = bpy.data.objects["luz_objeto"]
     _energia(sol, 7, f0 + 8)
