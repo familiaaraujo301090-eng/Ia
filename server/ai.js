@@ -103,7 +103,62 @@ async function text(user, prompt, { extra = '', effort = 'low', maxTokens = 8000
 
 // ---------- Chat (streaming) ----------
 
-export async function chatStream(user, history, onText) {
+// Tools the chat can use to act on the user's data. Executors are passed in by the route
+// (they run scoped to the logged-in user).
+const ToolInputs = {
+  criar_tarefa: z.object({
+    title: z.string().min(1).max(300),
+    detail: z.string().max(2000).optional(),
+    due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    minutes: z.number().int().min(1).max(600).optional(),
+    goal_id: z.number().int().nullable().optional(),
+  }),
+  criar_compromisso: z.object({
+    title: z.string().min(1).max(300),
+    start: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/),
+    end: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/).nullable().optional(),
+    notes: z.string().max(2000).optional(),
+  }),
+  criar_meta: z.object({
+    title: z.string().min(1).max(300),
+    why: z.string().max(2000).optional(),
+    deadline: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+    area: z.string().max(60).optional(),
+  }),
+  salvar_nota: z.object({ title: z.string().min(1).max(200), content: z.string().max(50000) }),
+};
+
+const CHAT_TOOLS = [
+  {
+    name: 'criar_tarefa',
+    description: 'Cria uma tarefa na lista da pessoa. Use quando ela pedir para lembrar/anotar algo a fazer, ou aceitar uma sugestão de tarefa. due_date em YYYY-MM-DD (padrão hoje). goal_id = id da meta relacionada, se houver.',
+    input_schema: { type: 'object', properties: { title: { type: 'string' }, detail: { type: 'string' }, due_date: { type: 'string' }, minutes: { type: 'integer' }, goal_id: { type: ['integer', 'null'] } }, required: ['title'] },
+  },
+  {
+    name: 'criar_compromisso',
+    description: 'Adiciona um compromisso na agenda. start/end no formato YYYY-MM-DDTHH:mm, fuso local.',
+    input_schema: { type: 'object', properties: { title: { type: 'string' }, start: { type: 'string' }, end: { type: ['string', 'null'] }, notes: { type: 'string' } }, required: ['title', 'start'] },
+  },
+  {
+    name: 'criar_meta',
+    description: 'Cria uma nova meta quando a pessoa declarar claramente um objetivo que quer acompanhar. deadline em YYYY-MM-DD.',
+    input_schema: { type: 'object', properties: { title: { type: 'string' }, why: { type: 'string' }, deadline: { type: ['string', 'null'] }, area: { type: 'string' } }, required: ['title'] },
+  },
+  {
+    name: 'salvar_nota',
+    description: 'Salva um texto no editor de notas da pessoa (ex: roteiro, plano, lista de ideias) quando ela pedir para guardar.',
+    input_schema: { type: 'object', properties: { title: { type: 'string' }, content: { type: 'string' } }, required: ['title', 'content'] },
+  },
+].map((t) => ({ ...t, eager_input_streaming: true }));
+
+const CHAT_EXTRA = `Você está no chat. Converse, faça perguntas quando precisar entender melhor, e termine com um próximo passo claro quando fizer sentido.
+Você pode agir no app com as ferramentas (criar tarefa, compromisso, meta, nota). Use-as quando a pessoa pedir ou aceitar, e depois confirme em uma frase o que foi feito. Não crie coisas sem a pessoa querer.`;
+
+/**
+ * Streams a chat reply. `actions` maps tool names to functions that perform them for this user
+ * and return a short description (or throw). `onAction` receives that description for the UI.
+ */
+export async function chatStream(user, history, onText, actions = {}, onAction = () => {}) {
   if (!aiEnabled) {
     const reply = demo.chat(user, history.at(-1)?.content || '');
     for (const chunk of reply.match(/.{1,24}/gs)) {
@@ -112,22 +167,50 @@ export async function chatStream(user, history, onText) {
     }
     return reply;
   }
+  const messages = [...history];
+  let textOut = '';
   try {
-    const stream = client.beta.messages.stream({
-      model: MODEL,
-      max_tokens: 16000,
-      ...FALLBACK,
-      output_config: { effort: 'low' },
-      system: system(user, 'Você está no chat. Converse, faça perguntas quando precisar entender melhor, e termine com um próximo passo claro quando fizer sentido.'),
-      messages: history,
-    });
-    stream.on('text', (t) => onText(t));
-    const final = await stream.finalMessage();
-    if (final.stop_reason === 'refusal') {
-      const msg = '\n\n_(Não consegui responder isso. Pode reformular?)_';
-      onText(msg);
+    for (let round = 0; round < 5; round++) {
+      const stream = client.beta.messages.stream({
+        model: MODEL,
+        max_tokens: 16000,
+        ...FALLBACK,
+        output_config: { effort: 'low' },
+        system: system(user, CHAT_EXTRA),
+        tools: CHAT_TOOLS,
+        messages,
+      });
+      stream.on('text', (t) => { textOut += t; onText(t); });
+      const final = await stream.finalMessage();
+      if (final.stop_reason === 'refusal') {
+        onText('\n\n_(Não consegui responder isso. Pode reformular?)_');
+        break;
+      }
+      const uses = final.content.filter((b) => b.type === 'tool_use');
+      if (final.stop_reason !== 'tool_use' || !uses.length) break;
+      messages.push({ role: 'assistant', content: final.content });
+      const results = [];
+      for (const use of uses) {
+        const schema = ToolInputs[use.name];
+        const parsed = schema?.safeParse(use.input);
+        if (!schema || !actions[use.name]) {
+          results.push({ type: 'tool_result', tool_use_id: use.id, is_error: true, content: 'Ferramenta indisponível.' });
+        } else if (!parsed.success) {
+          results.push({ type: 'tool_result', tool_use_id: use.id, is_error: true, content: `Entrada inválida: ${parsed.error.message}` });
+        } else {
+          try {
+            const done = actions[use.name](parsed.data);
+            onAction(done);
+            results.push({ type: 'tool_result', tool_use_id: use.id, content: done });
+          } catch (e) {
+            results.push({ type: 'tool_result', tool_use_id: use.id, is_error: true, content: e.message });
+          }
+        }
+      }
+      messages.push({ role: 'user', content: results });
+      if (textOut && !textOut.endsWith('\n')) { textOut += '\n\n'; onText('\n\n'); }
     }
-    return final.content.filter((b) => b.type === 'text').map((b) => b.text).join('');
+    return textOut;
   } catch (err) {
     throw friendlyError(err);
   }

@@ -392,8 +392,31 @@ app.post('/api/ai/chat', aiLimit, async (req, res) => {
   res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders();
   const send = (obj) => res.write(`data: ${JSON.stringify(obj)}\n\n`);
+  const uid = req.user.id;
+  const actions = {
+    criar_tarefa: (t) => {
+      const due = isDate(t.due_date) ? t.due_date : localDate();
+      q.run('INSERT INTO tasks (user_id, goal_id, title, detail, due_date, minutes, source) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        uid, ownGoal(uid, t.goal_id), t.title, t.detail || '', due, t.minutes || 15, 'ai');
+      return `✅ Tarefa criada: "${t.title}" (${due})`;
+    },
+    criar_compromisso: (e) => {
+      const ev = createEvent(uid, e);
+      if (!ev) throw new Error('Data/hora inválida.');
+      return `📅 Agendado: "${ev.title}" em ${ev.start.replace('T', ' às ')}`;
+    },
+    criar_meta: (g) => {
+      const { lastInsertRowid } = q.run('INSERT INTO goals (user_id, title, why, area, deadline) VALUES (?, ?, ?, ?, ?)',
+        uid, g.title, g.why || '', g.area || 'geral', isDate(g.deadline) ? g.deadline : null);
+      return `🎯 Meta criada: "${g.title}" (id ${lastInsertRowid}). Abra em Metas para gerar o plano.`;
+    },
+    salvar_nota: (n) => {
+      q.run('INSERT INTO notes (user_id, title, content) VALUES (?, ?, ?)', uid, n.title, n.content);
+      return `📝 Nota salva: "${n.title}"`;
+    },
+  };
   try {
-    const full = await ai.chatStream(req.user, history, (t) => send({ t }));
+    const full = await ai.chatStream(req.user, history, (t) => send({ t }), actions, (a) => send({ action: a }));
     if (full) q.run('INSERT INTO messages (user_id, role, content) VALUES (?, ?, ?)', req.user.id, 'assistant', full);
     send({ done: true });
   } catch (err) {

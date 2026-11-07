@@ -250,7 +250,7 @@ views.agenda = async (main) => {
     </form>
     <div id="days">${days.length ? days.map((day) => `
       <div class="day-group"><h3>${day === from ? 'Hoje · ' : day === addDays(from, 1) ? 'Amanhã · ' : ''}${fmtDate(day)}</h3>
-        ${byDay[day].events.map((e) => `<div class="event" data-ev="${e.id}"><div class="event-time">${e.start.slice(11)}</div><div style="flex:1"><b>${esc(e.title)}</b>${e.end ? `<div class="small muted">até ${e.end.slice(11)}</div>` : ''}${e.notes ? `<div class="small muted">${esc(e.notes)}</div>` : ''}</div><button class="btn sm ghost danger" data-del-ev="${e.id}" aria-label="Excluir">${icon('trash')}</button></div>`).join('')}
+        ${byDay[day].events.map((e) => `<div class="event" data-ev="${e.id}"><div class="event-time">${e.start.slice(11)}</div><div style="flex:1"><b>${esc(e.title)}</b>${e.end ? `<div class="small muted">até ${e.end.slice(11)}</div>` : ''}${e.notes ? `<div class="small muted">${esc(e.notes.length > 140 ? `${e.notes.slice(0, 140)}…` : e.notes)}</div>` : ''}</div><button class="btn sm ghost danger" data-del-ev="${e.id}" aria-label="Excluir">${icon('trash')}</button></div>`).join('')}
         ${byDay[day].tasks.length ? `<div class="small muted">📋 ${byDay[day].tasks.filter((t) => t.done).length}/${byDay[day].tasks.length} tarefas: ${byDay[day].tasks.slice(0, 3).map((t) => esc(t.title)).join(' · ')}${byDay[day].tasks.length > 3 ? '…' : ''}</div>` : ''}
       </div>`).join('') : '<div class="card empty">Agenda livre pelos próximos 30 dias.</div>'}</div>
 
@@ -406,7 +406,7 @@ views.chat = async (main) => {
       <button class="btn sm ghost" id="clear-chat">Limpar conversa</button></div>
     <div class="chat">
       <div class="chat-log" id="log">${history.length ? history.map(bubble).join('') : `<div class="empty">Desabafe, peça ideias, planeje o dia. Estou aqui.</div>`}</div>
-      <div class="suggestions">${['Me ajuda a planejar meu dia', 'Estou travado, o que faço agora?', 'Me dá 5 ideias de post para hoje', 'Como eu divulgo meu trabalho?'].map((s) => `<button data-s="${esc(s)}">${esc(s)}</button>`).join('')}</div>
+      <div class="suggestions">${['Me ajuda a planejar meu dia', 'Estou travado, o que faço agora?', 'Me dá 5 ideias de post para hoje', 'Agenda uma reunião amanhã às 10h', 'Como eu divulgo meu trabalho?'].map((s) => `<button data-s="${esc(s)}">${esc(s)}</button>`).join('')}</div>
       <form class="chat-input" id="chat-form">
         <textarea id="msg" placeholder="Escreva sua mensagem…" rows="1" aria-label="Mensagem"></textarea>
         <button class="btn primary" type="submit" aria-label="Enviar">Enviar</button>
@@ -442,6 +442,7 @@ views.chat = async (main) => {
           if (!p.startsWith('data: ')) continue;
           const ev = JSON.parse(p.slice(6));
           if (ev.t) { acc += ev.t; out.innerHTML = md(acc); log.scrollTop = log.scrollHeight; }
+          if (ev.action) { out.insertAdjacentHTML('afterend', `<div class="chip accent" style="align-self:flex-start">${esc(ev.action)}</div>`); }
           if (ev.error) throw new Error(ev.error);
         }
       }
@@ -571,10 +572,20 @@ views.legendas = async (main) => {
       const full = (o) => `${o.caption}\n\n${o.cta}\n\n${o.hashtags.map((h) => (h.startsWith('#') ? h : `#${h}`)).join(' ')}`;
       $('#cap-out').innerHTML = `
         <div class="grid grid-2">${r.options.map((o, i) => `
-          <div class="card stack"><div class="row between"><b>Opção ${i + 1}</b><button class="btn sm" data-copy="${i}">Copiar</button></div>
+          <div class="card stack"><div class="row between"><b>Opção ${i + 1}</b><div class="row" style="gap:6px"><button class="btn sm" data-sched="${i}">📅 Agendar post</button><button class="btn sm" data-copy="${i}">Copiar</button></div></div>
             <div class="copy-box">${esc(full(o))}</div></div>`).join('')}</div>
         <div class="card" style="margin-top:16px"><p><b>⏰ Melhor horário:</b> ${esc(r.best_time)}</p><p style="margin:0"><b>💡 Dica:</b> ${esc(r.tip)}</p></div>`;
       $$('[data-copy]').forEach((b) => b.onclick = () => copy(full(r.options[Number(b.dataset.copy)])));
+      $$('[data-sched]').forEach((b) => b.onclick = async () => {
+        const when = prompt('Quando postar? (AAAA-MM-DD HH:MM)', `${addDays(state.today, 1)} 19:00`);
+        if (!when) return;
+        const start = when.trim().replace(' ', 'T');
+        const o = r.options[Number(b.dataset.sched)];
+        try {
+          await api('/api/events', { method: 'POST', body: { title: `Postar no ${$('#c-platform').value}: ${o.hook}`.slice(0, 300), start, notes: full(o) } });
+          toast('Post agendado na Agenda! A legenda fica nas notas do compromisso.');
+        } catch (e) { toast(e.message); }
+      });
     });
   };
 };
