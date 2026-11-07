@@ -886,3 +886,148 @@ def criar_diogenes(col, m, faixas):
     sol = bpy.data.objects["luz_objeto"]
     _energia(sol, 7, f0 + 8)
     _energia(sol, 30, f0 + 26)
+
+
+def criar_ansiedade(col, m, faixas):
+    """A ansiedade como uma criaturinha de fumaca escura com olhos acesos: chega pequena, faz o relogio
+    disparar, cresce quando obedecida, recua quando a vela acende e volta ao tamanho real com o amanhecer."""
+    import materiais
+    _preparar(col, 3)
+    z = MESA_Z
+    et = faixas[1:6]
+    fumaca = materiais.simples("fumaca", (0.012, 0.01, 0.02), 0.65, ruido=0.6, escala_ruido=25, bump=0.8)
+    olho = bpy.data.materials.new("olho")
+    olho.use_nodes = True
+    nt = olho.node_tree
+    nt.nodes.remove(nt.nodes["Principled BSDF"])
+    em = nt.nodes.new("ShaderNodeEmission")
+    em.inputs["Color"].default_value = (1.0, 0.85, 0.45, 1)
+    nt.links.new(em.outputs[0], nt.nodes["Material Output"].inputs["Surface"])
+    brilho = em.inputs["Strength"]
+
+    def esfera(nome, loc, esc, mat, pai):
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=12, radius=1, location=loc)
+        o = bpy.context.object
+        o.name, o.scale = nome, esc
+        o.data.materials.append(mat)
+        bpy.ops.object.shade_smooth()
+        for c in o.users_collection:
+            c.objects.unlink(o)
+        col.objects.link(o)
+        o.parent = pai
+        return o
+
+    # a criatura: corpo de gota, cabeca, bracos finos caidos e dois olhos
+    bicho = bpy.data.objects.new("ansiedade", None)
+    bicho.location = (CX + 0.08, CY + 0.0, z)
+    col.objects.link(bicho)
+    corpo = esfera("ans_corpo", (0, 0, 0.07), (0.06, 0.055, 0.075), fumaca, bicho)
+    tx = bpy.data.textures.new("fumaca_tx", "CLOUDS")
+    tx.noise_scale = 0.25
+    dp = corpo.modifiers.new("fumaca", "DISPLACE")
+    dp.texture, dp.strength = tx, 0.25
+    corpo.modifiers.new("liso", "SUBSURF").levels = 2
+    esfera("ans_cabeca", (0, -0.005, 0.16), (0.05, 0.047, 0.045), fumaca, bicho)
+    for s in (-1, 1):
+        esfera("ans_olho", (s * 0.019, -0.042, 0.168), (0.011, 0.006, 0.014), olho, bicho)
+        b = esfera("ans_braco", (s * 0.06, -0.01, 0.06), (0.009, 0.009, 0.05), fumaca, bicho)
+        b.rotation_euler = (0, math.radians(s * 25), 0)
+        esfera("ans_chifre", (s * 0.03, 0, 0.205), (0.008, 0.008, 0.022), fumaca, bicho).rotation_euler = (0, math.radians(s * 30), 0)
+
+    def tam(v, f):
+        bicho.scale = (v, v, v)
+        bicho.keyframe_insert("scale", frame=f)
+
+    # o despertador
+    vermelho = materiais.simples("despertador", (0.6, 0.05, 0.04), 0.35, metal=0.4)
+    branco = materiais.simples("mostrador", (0.92, 0.9, 0.85), 0.4)
+    rx, ry = CX - 0.1, CY - 0.07
+    rel = []
+    rel.append(_caixa("rel_pe", (rx, ry, z + 0.01), (0.07, 0.03, 0.02), vermelho, col))
+    bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=0.055, depth=0.035, location=(rx, ry, z + 0.075),
+                                        rotation=(math.radians(90), 0, 0))
+    rel.append(bpy.context.object)
+    rel[-1].data.materials.append(vermelho)
+    bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=0.047, depth=0.004, location=(rx, ry - 0.018, z + 0.075),
+                                        rotation=(math.radians(90), 0, 0))
+    rel.append(bpy.context.object)
+    rel[-1].data.materials.append(branco)
+    for s in (-1, 1):
+        bpy.ops.mesh.primitive_uv_sphere_add(radius=0.022, location=(rx + s * 0.035, ry, z + 0.13))
+        rel.append(bpy.context.object)
+        rel[-1].data.materials.append(vermelho)
+    eixo = bpy.data.objects.new("rel_eixo", None)
+    eixo.location = (rx, ry - 0.022, z + 0.075)
+    col.objects.link(eixo)
+    for nome, comp, larg in (("ponteiro_h", 0.026, 0.005), ("ponteiro_m", 0.038, 0.003)):
+        pt = _caixa(nome, (rx, ry - 0.022, z + 0.075 + comp / 2), (larg, 0.002, comp), m["madeira"], col)
+        pt.parent = eixo
+        pt.location = (0, 0, comp / 2)
+        rel.append(pt)
+    for o in rel[1:5]:
+        for c in o.users_collection:
+            c.objects.unlink(o)
+        col.objects.link(o)
+    # a vela (apagada ate a etapa 4)
+    vx, vy = CX - 0.02, CY + 0.12
+    _cil_v = _caixa("vela", (vx, vy, z + 0.045), (0.035, 0.035, 0.09), materiais.simples("cera", (0.9, 0.86, 0.75), 0.6, sss=0.3), col)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=1, location=(vx, vy, z + 0.105))
+    chama = bpy.context.object
+    chama.scale = (0.008, 0.008, 0.022)
+    chama.data.materials.append(m["chama"])
+    luz_vela = _ponto("luz_vela", (vx, vy - 0.04, z + 0.16), (1.0, 0.6, 0.3), col)
+
+    # Etapa 1: ela chega, pequena, e abre os olhos
+    f0, f1 = et[0]
+    tam(0.0, 0)
+    tam(0.0, f0)
+    tam(0.6, f0 + 8)
+    tam(0.5, f0 + 12)
+    _valor(brilho, 0.0, f0 + 14)
+    _valor(brilho, 8.0, f0 + 20)
+    for o in rel:
+        if o.parent is None:
+            pop(o, f0 + 4)
+    pop(eixo, f0 + 4)
+    _chave(bicho, "rotation_euler", (0, 0, 0), f0)
+    # Etapa 2: o relogio dispara; ela se vira para ele
+    f0, f1 = et[1]
+    _chave(eixo, "rotation_euler", (0, 0, 0), f0 + 6)
+    _chave(eixo, "rotation_euler", (0, -math.tau * 10, 0), f1)
+    _chave(bicho, "rotation_euler", (0, 0, 0), f0 + 6)
+    _chave(bicho, "rotation_euler", (0, 0, math.radians(-35)), f0 + 20)
+    for k in range(f0 + 24, f1, 4):        # o despertador treme
+        for o in rel:
+            if o.parent is None:
+                o.location.x += 0.003 if (k // 4) % 2 else -0.003
+                o.keyframe_insert("location", frame=k)
+    # Etapa 3: cada vez que voce obedece, ela cresce (e o quarto escurece)
+    f0, f1 = et[2]
+    _chave(bicho, "rotation_euler", (0, 0, math.radians(-35)), f0)
+    _chave(bicho, "rotation_euler", (0, 0, 0), f0 + 15)
+    tam(0.5, f0 + 4)
+    tam(1.9, f1)
+    _valor(brilho, 8.0, f0)
+    _valor(brilho, 25.0, f1)
+    _energia(bpy.data.objects["luz_objeto"], 3, f0)
+    _energia(bpy.data.objects["luz_objeto"], 0.6, f1)
+    # Etapa 4: a vela acende e ela recua
+    f0, f1 = et[3]
+    fv = f0 + (f1 - f0) // 2
+    pop(chama, fv)
+    _energia(luz_vela, 0, fv)
+    _energia(luz_vela, 9, fv + 10)
+    tam(1.9, fv + 2)
+    tam(1.15, fv + 22)
+    _chave(bicho, "location", (CX + 0.08, CY, z), fv + 2)
+    _chave(bicho, "location", (CX + 0.11, CY + 0.06, z), fv + 22)
+    _valor(brilho, 25.0, fv + 2)
+    _valor(brilho, 6.0, fv + 22)
+    # Etapa 5: respira; ela volta ao tamanho que e e os olhos quase apagam
+    f0, f1 = et[4]
+    tam(1.15, f0)
+    tam(0.25, f1 - 10)
+    _valor(brilho, 6.0, f0)
+    _valor(brilho, 1.0, f1 - 10)
+    _energia(bpy.data.objects["luz_objeto"], 0.6, f0)
+    _energia(bpy.data.objects["luz_objeto"], 4, f1)

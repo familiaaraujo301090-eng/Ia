@@ -538,5 +538,22 @@ DIOGENES = _jornada(
 deslocar(DIOGENES, (0.2, -0.3, 0.3))
 DIOGENES.update({"cenario": "atenas", "clima": "piano", "gancho": "DIÓGENES|VENDO O SEU FEED"})
 
-HISTORIAS = {"diogenes-vendo-o-seu-feed": DIOGENES, "homem-mais-rico-da-babilonia": BABILONIA, "a-ultima-carta": CARTA, "a-tempestade": TEMPESTADE, "kintsugi": KINTSUGI, "ouro-no-fogo": OURO_FOGO, "diamante": DIAMANTE,
+ANSIEDADE = _jornada(
+    "Se a sua ansiedade fosse uma pessoa", "criar_ansiedade", 0.64,
+    [],
+    ["Se a sua ansiedade fosse uma pessoa, ela seria assim. E você já teria expulsado ela de casa.",
+     "Ela chega de madrugada. Pequena. Senta do seu lado e sussurra: e se der errado?",
+     "Ela mora no futuro. Faz o relógio correr e te cobra por coisas que nem aconteceram.",
+     "E cada vez que você obedece, ela cresce. Até ocupar o quarto inteiro.",
+     "Mas ela tem um ponto fraco: ela não aguenta o agora. Acende uma luz.",
+     "Respira devagar. Olha o que está bem na sua frente. E ela volta a ser do tamanho que é.",
+     "*Não se preocupem com o amanhã.* Cada dia já tem o seu próprio peso. Jesus disse isso há dois mil anos.",
+     "O que a sua ansiedade mais te diz? Comenta. Segue a Lamparina."],
+    ["Gancho: Elias no quarto escuro, a cidade na janela.", "Ela chega pequena no criado-mudo e abre os olhos.",
+     "O despertador dispara e treme; ela se vira para ele.", "Ela cresce; o quarto escurece.",
+     "A vela acende; ela recua.", "Ela encolhe; o ceu amanhece na janela."] + _FECHO)
+deslocar(ANSIEDADE, (0.6, -0.3, 0.55))
+ANSIEDADE.update({"cenario": "quarto", "clima": "sombria", "gancho": "SE A SUA ANSIEDADE|FOSSE UMA PESSOA"})
+
+HISTORIAS = {"ansiedade-fosse-uma-pessoa": ANSIEDADE, "diogenes-vendo-o-seu-feed": DIOGENES, "homem-mais-rico-da-babilonia": BABILONIA, "a-ultima-carta": CARTA, "a-tempestade": TEMPESTADE, "kintsugi": KINTSUGI, "ouro-no-fogo": OURO_FOGO, "diamante": DIAMANTE,
              "quatro-mil-semanas": AMPULHETA, "anjo-no-marmore": ESCULTURA, "vida-nao-esta-parada": VIDA_PARADA, "lamparina-mais-antiga": LAMPARINA, "codex-leicester": CODEX, "livro-medieval": LIVRO_MEDIEVAL}
