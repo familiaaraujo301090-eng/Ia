@@ -111,3 +111,28 @@ const P = {
   rocket: '<path d="M5 15c-1.5 1.5-2 5-2 5s3.5-.5 5-2"/><path d="M9 15l-3-3a12 12 0 0 1 12-9 12 12 0 0 1-9 12z"/>',
 };
 export const icon = (name) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || ''}</svg>`;
+
+/** In-page confirm/prompt. `input`: false | true (text) | an input type. Resolves true/false, or the typed value/null. */
+export function ask(message, { input = false, value = '', placeholder = '', okLabel = 'Confirmar', danger = false } = {}) {
+  return new Promise((resolve) => {
+    const d = document.createElement('dialog');
+    const type = input === true ? 'text' : input;
+    d.innerHTML = `<form method="dialog" class="stack">
+      <p style="margin:0;white-space:pre-line;font-weight:600">${esc(message)}</p>
+      ${input ? `<input type="${esc(type)}" id="ask-input" value="${esc(value)}" placeholder="${esc(placeholder)}" aria-label="Resposta">` : ''}
+      <div class="row" style="justify-content:flex-end">
+        <button class="btn ${danger ? 'danger' : 'primary'}" value="ok">${esc(okLabel)}</button>
+        <button class="btn" type="button" data-cancel style="order:-1">Cancelar</button>
+      </div></form>`;
+    document.body.append(d);
+    d.querySelector('[data-cancel]').onclick = () => d.close('cancel');
+    d.addEventListener('close', () => {
+      const ok = d.returnValue === 'ok';
+      const v = input ? d.querySelector('input').value.trim() : true;
+      d.remove();
+      resolve(ok ? v : input ? null : false);
+    });
+    d.showModal();
+    d.querySelector(input ? 'input' : 'button[value=ok]').focus();
+  });
+}

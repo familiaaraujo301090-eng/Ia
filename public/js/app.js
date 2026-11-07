@@ -1,4 +1,4 @@
-import { $, $$, esc, api, toast, md, fmtDate, addDays, busy, copy, icon } from './util.js';
+import { $, $$, esc, api, toast, md, fmtDate, addDays, busy, copy, icon, ask } from './util.js';
 
 const state = { me: null, ai: false, today: null };
 const app = $('#app');
@@ -287,7 +287,7 @@ views.agenda = async (main) => {
   };
   main.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-del-ev]');
-    if (b && confirm('Excluir este compromisso?')) { await api(`/api/events/${b.dataset.delEv}`, { method: 'DELETE' }); refresh(); }
+    if (b && await ask('Excluir este compromisso?', { okLabel: 'Excluir', danger: true })) { await api(`/api/events/${b.dataset.delEv}`, { method: 'DELETE' }); refresh(); }
   });
 };
 
@@ -338,7 +338,7 @@ views.metas = async (main, id) => {
     });
   };
   $('#import-plan').onclick = async () => {
-    if (!confirm('Importar o plano de divulgação de 30 dias? Ele cria uma meta com 1 tarefa por dia, começando hoje.')) return;
+    if (!await ask('Importar o plano de divulgação de 30 dias? Ele cria uma meta com 1 tarefa por dia, começando hoje.', { okLabel: 'Importar' })) return;
     const r = await api('/api/goals/import-launch-plan', { method: 'POST', body: {} });
     toast('Plano importado! Sua primeira tarefa já está em Hoje.');
     location.hash = `#/metas/${r.id}`;
@@ -380,7 +380,7 @@ async function goalDetail(main, id) {
   const refresh = () => goalDetail(main, id);
   bindTasks(main, refresh);
   $('#status').onchange = async (e) => { await api(`/api/goals/${id}`, { method: 'PATCH', body: { status: e.target.value } }); if (e.target.value === 'concluida') toast('Meta concluída! Orgulho de você 🎉'); refresh(); };
-  $('#del-goal').onclick = async () => { if (confirm('Excluir esta meta e todas as tarefas dela?')) { await api(`/api/goals/${id}`, { method: 'DELETE' }); location.hash = '#/metas'; } };
+  $('#del-goal').onclick = async () => { if (await ask('Excluir esta meta e todas as tarefas dela?', { okLabel: 'Excluir', danger: true })) { await api(`/api/goals/${id}`, { method: 'DELETE' }); location.hash = '#/metas'; } };
   $('#plan7').onclick = (e) => busy(e.currentTarget, async () => {
     const last = g.tasks.map((t) => t.due_date).sort().at(-1);
     const start = last && last >= state.today ? addDays(last, 1) : state.today;
@@ -453,7 +453,7 @@ views.chat = async (main) => {
   $('#chat-form').onsubmit = (e) => { e.preventDefault(); const t = input.value.trim(); input.value = ''; send(t); };
   input.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#chat-form').requestSubmit(); } };
   $$('[data-s]').forEach((b) => b.onclick = () => send(b.dataset.s));
-  $('#clear-chat').onclick = async () => { if (confirm('Apagar todo o histórico da conversa?')) { await api('/api/chat', { method: 'DELETE' }); views.chat(main); } };
+  $('#clear-chat').onclick = async () => { if (await ask('Apagar todo o histórico da conversa?', { okLabel: 'Apagar', danger: true })) { await api('/api/chat', { method: 'DELETE' }); views.chat(main); } };
 };
 
 // ---------------- EDITOR ----------------
@@ -505,12 +505,12 @@ views.editor = async (main, id) => {
     $('#ai-result').classList.remove('hidden');
   });
   $$('[data-ai]').forEach((b) => b.onclick = () => run(b, b.dataset.ai));
-  $('#custom-ai').onclick = (e) => { const ins = prompt('O que a IA deve fazer com o texto?'); if (ins) run(e.currentTarget, 'custom', ins); };
+  $('#custom-ai').onclick = async (e) => { const btn = e.currentTarget; const ins = await ask('O que a IA deve fazer com o texto?', { input: true, placeholder: 'Ex: deixe mais curto e engraçado', okLabel: 'Pedir' }); if (ins) run(btn, 'custom', ins); };
   $('#ai-replace').onclick = () => { body.value = result; save(); autosize(); $('#ai-result').classList.add('hidden'); };
   $('#ai-append').onclick = () => { body.value = `${body.value}\n\n${result}`; save(); autosize(); $('#ai-result').classList.add('hidden'); };
   $('#ai-copy').onclick = () => copy(result);
   $('#ai-close').onclick = () => $('#ai-result').classList.add('hidden');
-  $('#del-note').onclick = async () => { if (confirm('Excluir esta nota?')) { await api(`/api/notes/${note.id}`, { method: 'DELETE' }); go('#/editor'); } };
+  $('#del-note').onclick = async () => { if (await ask('Excluir esta nota?', { okLabel: 'Excluir', danger: true })) { await api(`/api/notes/${note.id}`, { method: 'DELETE' }); go('#/editor'); } };
 };
 
 // ---------------- IDEIAS ----------------
@@ -577,7 +577,7 @@ views.legendas = async (main) => {
         <div class="card" style="margin-top:16px"><p><b>⏰ Melhor horário:</b> ${esc(r.best_time)}</p><p style="margin:0"><b>💡 Dica:</b> ${esc(r.tip)}</p></div>`;
       $$('[data-copy]').forEach((b) => b.onclick = () => copy(full(r.options[Number(b.dataset.copy)])));
       $$('[data-sched]').forEach((b) => b.onclick = async () => {
-        const when = prompt('Quando postar? (AAAA-MM-DD HH:MM)', `${addDays(state.today, 1)} 19:00`);
+        const when = await ask('Quando postar?', { input: 'datetime-local', value: `${addDays(state.today, 1)}T19:00`, okLabel: 'Agendar' });
         if (!when) return;
         const start = when.trim().replace(' ', 'T');
         const o = r.options[Number(b.dataset.sched)];
@@ -635,7 +635,7 @@ views.perfil = async (main, arg) => {
   };
   $('#logout').onclick = async () => { await api('/api/auth/logout', { method: 'POST' }); state.me = null; go('#/entrar'); };
   $('#del-acc').onclick = async () => {
-    if (prompt('Isso apaga TODOS os seus dados. Digite EXCLUIR para confirmar.') !== 'EXCLUIR') return;
+    if (await ask('Isso apaga TODOS os seus dados. Digite EXCLUIR para confirmar.', { input: true, okLabel: 'Excluir conta', danger: true }) !== 'EXCLUIR') return;
     await api('/api/me', { method: 'DELETE' });
     state.me = null;
     location.hash = '#/entrar';
