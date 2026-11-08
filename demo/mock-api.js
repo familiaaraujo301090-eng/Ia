@@ -1,17 +1,17 @@
 // Backend simulado que roda no navegador, usado só na versão de teste (link).
 // Intercepta fetch('/api/...') e responde como o servidor real em modo demonstração.
 // Os dados ficam no navegador de quem está testando.
-import { localDate, addDays } from '../server/time.js';
+import { localDate, localDateTime, addDays } from '../server/time.js';
 import * as demo from '../server/demo.js';
 import { LAUNCH_PLAN } from '../server/launchPlan.js';
 
-const KEY = 'rumo-demo-db-v1';
+const KEY = 'rumo-demo-db-v2';
 const empty = () => ({ seq: 1, session: null, users: [], goals: [], tasks: [], events: [], notes: [], messages: [], checkins: [] });
 let db;
 try { db = JSON.parse(localStorage.getItem(KEY)) || empty(); } catch { db = empty(); }
 const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch { /* sem storage: só memória */ } };
 const id = () => db.seq++;
-const now = () => new Date().toISOString().replace('T', ' ').slice(0, 19);
+const now = () => localDateTime().replace('T', ' ');
 const isDate = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
 const isDT = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v);
 const s = (v, max = 5000) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
@@ -69,7 +69,7 @@ on('POST', '/api/auth/register', (b) => {
   if (!s(b.name) || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) fail(400, 'Informe nome e e-mail válidos.');
   if (String(b.password || '').length < 6) fail(400, 'A senha precisa ter pelo menos 6 caracteres.');
   if (db.users.some((u) => u.email === email)) fail(409, 'E-mail já cadastrado.');
-  const u = { id: id(), name: s(b.name, 80), email, password: b.password, about: '', niche: '', tone: 'motivador e direto' };
+  const u = { id: id(), name: s(b.name, 80), email, password: b.password, about: '', niche: '', tone: 'motivador e direto', role: '', daily_minutes: 30, onboarded: 0 };
   db.users.push(u);
   db.session = u.id;
   return { ok: true };
@@ -83,7 +83,7 @@ on('POST', '/api/auth/login', (b) => {
 on('POST', '/api/auth/logout', () => { db.session = null; return { ok: true }; });
 
 on('GET', '/api/me', () => { const { password, ...user } = me(); return { user, ai: false, today: localDate() }; });
-on('PUT', '/api/me', (b) => { const u = me(); Object.assign(u, { name: s(b.name, 80) || u.name, about: s(b.about, 1000), niche: s(b.niche, 200), tone: s(b.tone, 100) || u.tone }); return { ok: true }; });
+on('PUT', '/api/me', (b) => { const u = me(); Object.assign(u, { name: s(b.name, 80) || u.name, about: s(b.about, 1000), niche: s(b.niche, 200), tone: s(b.tone, 100) || u.tone, daily_minutes: Number(b.daily_minutes) || u.daily_minutes }); return { ok: true }; });
 on('DELETE', '/api/me', () => {
   const u = me();
   for (const k of ['goals', 'tasks', 'events', 'notes', 'messages', 'checkins']) db[k] = db[k].filter((x) => x.user_id !== u.id);
@@ -140,15 +140,35 @@ on('PATCH', '/api/tasks/:id', (b, q, rid) => {
 on('DELETE', '/api/tasks/:id', (b, q, rid) => { const uid = me().id; db.tasks = db.tasks.filter((t) => !(t.user_id === uid && t.id === Number(rid))); return { ok: true }; });
 
 on('GET', '/api/goals', () => progress(me().id));
-on('POST', '/api/goals/import-launch-plan', () => {
-  const u = me();
+function importLaunch(u) {
   const start = localDate();
   const g = { id: id(), user_id: u.id, title: LAUNCH_PLAN.title, why: LAUNCH_PLAN.why, area: LAUNCH_PLAN.area, deadline: addDays(start, 29), status: 'ativa', created_at: now(),
     plan: 'Plano de 30 dias em 4 semanas: **Fundação** → **Ritmo** → **Prova e parcerias** → **Conversão e escala**. Uma tarefa por dia.' };
   db.goals.push(g);
   LAUNCH_PLAN.tasks.forEach(([title, detail, minutes], i) => addTask(u.id, { title, detail, minutes, goal_id: g.id, due_date: addDays(start, i) }, 'plano'));
   return { id: g.id };
+}
+on('POST', '/api/goals/import-launch-plan', () => importLaunch(me()));
+
+on('POST', '/api/onboarding', async (b) => {
+  const u = me();
+  Object.assign(u, { name: s(b.name, 80) || u.name, role: s(b.role, 80), about: s(b.about, 1000), niche: s(b.niche, 200), tone: s(b.tone, 100) || u.tone, daily_minutes: Number(b.daily_minutes) || 30 });
+  let goal = null;
+  if (s(b.goal)) {
+    await wait(900);
+    goal = { id: id(), user_id: u.id, title: s(b.goal, 300), why: s(b.why, 2000), area: s(b.area, 60) || 'geral', deadline: isDate(b.deadline) ? b.deadline : null, status: 'ativa', created_at: now(), plan: '' };
+    db.goals.push(goal);
+    const plan = demo.goalPlan(goal, 7);
+    plan.tasks.forEach((t) => addTask(u.id, { ...t, goal_id: goal.id, due_date: addDays(localDate(), t.day_offset) }, 'ai'));
+    goal.plan = `${plan.summary}\n\n**Primeiro passo agora:** ${plan.first_step}`;
+    db.messages.push({ id: id(), user_id: u.id, role: 'assistant', created_at: now(),
+      content: `Prontinho, ${u.name.split(' ')[0]}! 🎉 Criei sua meta **${goal.title}** com um plano de 7 dias.\n\n**Seu primeiro passo agora:** ${plan.first_step}\n\nAs tarefas de hoje estão logo acima. Toque em **✓ Feito** quando terminar, ou em **🆘 Me ajuda** que eu te entrego a solução.` });
+  }
+  if (b.launch_plan) importLaunch(u);
+  u.onboarded = 1;
+  return { ok: true, goal_id: goal?.id ?? null };
 });
+on('POST', '/api/onboarding/skip', () => { me().onboarded = 1; return { ok: true }; });
 on('GET', '/api/goals/:id', (b, q, rid) => {
   const g = own(db.goals, me().id, rid) || fail(404, 'Meta não encontrada.');
   return { ...g, tasks: db.tasks.filter((t) => t.goal_id === g.id).sort(byDateId) };
@@ -227,29 +247,37 @@ on('POST', '/api/ai/review', async () => {
   return { text: demo.review(`Tarefas: ${rows.filter((r) => r.done).length}/${rows.length} concluídas.`) };
 });
 
-on('GET', '/api/chat', () => mine(db.messages, me().id).slice(-100));
+on('GET', '/api/chat', (b, q) => { const all = mine(db.messages, me().id); return q.get('today') ? all.filter((m) => m.created_at >= localDate()).slice(-60) : all.slice(-100); });
 on('DELETE', '/api/chat', () => { const uid = me().id; db.messages = db.messages.filter((m) => m.user_id !== uid); return { ok: true }; });
 
 function chatStream(b) {
   const u = me();
-  const message = s(b.message, 8000);
+  const helpTask = b.help_task_id ? own(db.tasks, u.id, b.help_task_id) : null;
+  const message = helpTask ? `🆘 Me ajuda com: ${helpTask.title}` : s(b.message, 8000);
   if (!message) fail(400, 'Mensagem vazia.');
   db.messages.push({ id: id(), user_id: u.id, role: 'user', content: message, created_at: now() });
-  // No teste, pedidos de agendamento viram compromisso de verdade (como a IA real faz).
-  let action = null;
-  if (/\b(agend|marc)\w*/i.test(message) && /(\d{1,2}\s*(h|:)|amanh|hoje)/i.test(message)) {
-    const ev = addEvent(u.id, demo.parseEvent(message.replace(/^(por favor,?\s*)?(agend\w*|marc\w*)\s+(uma?\s+)?/i, '')));
-    if (ev) action = `📅 Agendado: "${ev.title}" em ${ev.start.replace('T', ' às ')}`;
-  }
-  const reply = action ? `Pronto! Coloquei na sua agenda. Quer que eu crie uma tarefa de preparação também?\n\n> _Versão de teste: com a IA real ligada, eu entendo pedidos bem mais livres._` : demo.chat(u, message);
+  const done = [];
+  const acts = {
+    concluir_tarefa: ({ task_id }) => { const t = own(db.tasks, u.id, task_id); t.done = 1; return `✅ Feito: "${t.title}"`; },
+    reagendar_tarefa: ({ task_id, due_date }) => { const t = own(db.tasks, u.id, task_id); t.due_date = due_date; return `⏭️ "${t.title}" movida para amanhã`; },
+    criar_compromisso: (e) => { const ev = addEvent(u.id, e); return ev ? `📅 Agendado: "${ev.title}" em ${ev.start.slice(8, 10)}/${ev.start.slice(5, 7)} às ${ev.start.slice(11)}` : 'Não entendi a data.'; },
+    criar_tarefa: (t) => { addTask(u.id, t, 'ai'); return `➕ Tarefa criada: "${t.title}"`; },
+  };
+  const today = localDate();
+  const reply = demo.chatTurn(u, message, {
+    helpTask,
+    todayTasks: mine(db.tasks, u.id).filter((t) => t.due_date === today),
+    act: (name, input) => { const d = acts[name](input); done.push(d); return d; },
+  }).replace('configure `ANTHROPIC_API_KEY` para respostas reais da IA', 'na versão publicada a IA real personaliza tudo para você');
   db.messages.push({ id: id(), user_id: u.id, role: 'assistant', content: reply, created_at: now() });
   persist();
   const enc = new TextEncoder();
   const body = new ReadableStream({
     async start(ctrl) {
       const send = (o) => ctrl.enqueue(enc.encode(`data: ${JSON.stringify(o)}\n\n`));
-      if (action) send({ action });
-      for (const chunk of reply.match(/[\s\S]{1,18}/g)) { send({ t: chunk }); await wait(20); }
+      await wait(400);
+      for (const chunk of reply.match(/[\s\S]{1,18}/g)) { send({ t: chunk }); await wait(15); }
+      for (const a of done) send({ action: a });
       send({ done: true });
       ctrl.close();
     },
@@ -280,13 +308,8 @@ window.fetch = async (input, init = {}) => {
   }
 };
 
-// Conta de teste pronta, com o plano de divulgação já importado.
+// Conta de teste pronta (ainda não configurada, para passar pelo passo a passo).
 if (!db.users.length) {
-  const u = { id: id(), name: 'Visitante', email: 'teste@rumo.app', password: 'rumo123', about: '', niche: '', tone: 'motivador e direto' };
-  db.users.push(u);
-  const prev = db.session;
-  db.session = u.id;
-  routes.find((r) => r.re.test('/api/goals/import-launch-plan')).fn();
-  db.session = prev;
+  db.users.push({ id: id(), name: 'Visitante', email: 'teste@rumo.app', password: 'rumo123', about: '', niche: '', tone: 'motivador e direto', role: '', daily_minutes: 30, onboarded: 0 });
   persist();
 }

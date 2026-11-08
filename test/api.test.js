@@ -106,3 +106,40 @@ test('AI tools respond in demo mode', async () => {
   assert.match(chat.body, /"done":true/);
   assert.equal((await c('/api/chat')).body.length, 2);
 });
+
+test('onboarding saves profile, creates goal with plan and launch plan', async () => {
+  const c = await client('onb@x.com');
+  assert.equal((await c('/api/me')).body.user.onboarded, 0);
+  const r = await c('/api/onboarding', 'POST', { name: 'Ana', role: 'Empreendedor(a)', about: 'vendo bolos', goal: 'Faturar 5 mil', why: 'liberdade', deadline: '2030-01-01', daily_minutes: 45, tone: 'gentil e acolhedor', launch_plan: true });
+  assert.equal(r.status, 200);
+  const me = (await c('/api/me')).body.user;
+  assert.equal(me.onboarded, 1);
+  assert.equal(me.daily_minutes, 45);
+  assert.equal(me.name, 'Ana');
+  const goals = (await c('/api/goals')).body;
+  assert.equal(goals.length, 2);
+  const msgs = (await c('/api/chat?today=1')).body;
+  assert.equal(msgs.length, 1);
+  assert.match(msgs[0].content, /Faturar 5 mil/);
+});
+
+test('chat acts on tasks: done, postpone, help', async () => {
+  const c = await client('act@x.com');
+  const t1 = (await c('/api/tasks', 'POST', { title: 'Gravar vídeo de apresentação' })).body;
+  const t2 = (await c('/api/tasks', 'POST', { title: 'Responder comentários' })).body;
+  const t3 = (await c('/api/tasks', 'POST', { title: 'Criar página de vendas' })).body;
+  const help = await c('/api/ai/chat', 'POST', { help_task_id: t1.id });
+  assert.match(help.body, /capcut|canva/i);
+  const late = await c('/api/ai/chat', 'POST', { message: 'Estou sem tempo hoje' });
+  assert.match(late.body, /movida para amanhã/);
+  const today = (await c('/api/today')).body.tasks;
+  assert.equal(today.length, 1);
+  const all = await c('/api/ai/chat', 'POST', { message: 'Terminei tudo!' });
+  assert.match(all.body, /Feito/);
+  assert.equal((await c('/api/today')).body.tasks.filter((t) => t.done).length, 1);
+  // someone else can't ask help about my task
+  const other = await client('act2@x.com');
+  const r = await other('/api/ai/chat', 'POST', { help_task_id: t2.id });
+  assert.equal(r.status, 400);
+  assert.ok(t3.id);
+});

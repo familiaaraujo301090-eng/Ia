@@ -19,6 +19,63 @@ export function chat(user, message) {
   return body + NOTE;
 }
 
+const LINKS = [
+  [/post|reels|vídeo|video|conteúdo|conteudo|story|stories|carrossel|grav/i, [['Canva (artes e carrosséis grátis)', 'https://www.canva.com'], ['CapCut (editar vídeos)', 'https://www.capcut.com']]],
+  [/bio|perfil|instagram/i, [['Linktree (link na bio)', 'https://linktr.ee'], ['Central de Ajuda do Instagram', 'https://help.instagram.com']]],
+  [/página|pagina|site|landing|captura/i, [['Carrd (página simples)', 'https://carrd.co'], ['Google Sites (grátis)', 'https://sites.google.com']]],
+  [/anúncio|anuncio|impulsion|tráfego|trafego/i, [['Meta Ads (anúncios)', 'https://www.facebook.com/business/ads']]],
+  [/whatsapp|mensag|direct|dm/i, [['WhatsApp Business', 'https://business.whatsapp.com']]],
+  [/pagamento|cobrar|pix|venda/i, [['Mercado Pago', 'https://www.mercadopago.com.br']]],
+];
+
+function helpReply(task) {
+  const links = LINKS.filter(([re]) => re.test(`${task.title} ${task.detail}`)).flatMap(([, l]) => l);
+  links.push(['Pesquisar no Google', `https://www.google.com/search?q=${encodeURIComponent(task.title)}`]);
+  return `Bora resolver **${task.title}** juntos 👇
+
+**Passo a passo (${task.minutes} min):**
+1. Separe ${Math.max(5, Math.round(task.minutes / 3))} minutos sem celular e abra só o que precisa.
+2. Faça a versão mais simples possível primeiro. ${task.detail || ''}
+3. Revise rapidinho e finalize. Feito é melhor que perfeito.
+4. Volte aqui e toque em **✓ Feito**.
+
+**Links úteis:**
+${links.map(([n, u]) => `- [${n}](${u})`).join('\n')}${NOTE}`;
+}
+
+/** Turno de conversa no modo demonstração: entende alguns pedidos e age no app. */
+export function chatTurn(user, message, { helpTask = null, todayTasks = [], act = () => '' } = {}) {
+  if (helpTask) return helpReply(helpTask);
+  const m = message.toLowerCase();
+  const pending = todayTasks.filter((t) => !t.done);
+  if (/terminei tudo|fiz tudo|conclu[ií] tudo/.test(m)) {
+    pending.forEach((t) => act('concluir_tarefa', { task_id: t.id }));
+    return `Que dia! 🔥 Marquei ${pending.length} tarefa(s) como feitas. Quer uma tarefa extra ou prefere descansar com a consciência tranquila?${NOTE}`;
+  }
+  if (/sem tempo|não vou conseguir|nao vou conseguir|adiar|amanhã eu faço|cansad/.test(m)) {
+    const tomorrow = addDays(localDate(), 1);
+    pending.slice(1).forEach((t) => act('reagendar_tarefa', { task_id: t.id, due_date: tomorrow }));
+    return pending.length
+      ? `Tudo bem, a vida acontece. Deixei só **${pending[0].title}** para hoje e passei o resto para amanhã. Consegue fazer essa uma?${NOTE}`
+      : `Hoje está livre de tarefas pendentes. Descansa! 😌${NOTE}`;
+  }
+  const doneMatch = pending.find((t) => m.includes(t.title.toLowerCase().slice(0, 18)));
+  if (doneMatch && /fiz|feito|terminei|concluí|conclui/.test(m)) {
+    act('concluir_tarefa', { task_id: doneMatch.id });
+    return `Boa! Marquei **${doneMatch.title}** como feita. ✅${NOTE}`;
+  }
+  if (/(agend|marc)\w*/.test(m) && /(\d{1,2}\s*(h|:)|amanh|hoje)/.test(m)) {
+    const ev = parseEvent(message.replace(/^(por favor,?\s*)?(agend\w*|marc\w*)\s+(uma?\s+)?/i, ''));
+    act('criar_compromisso', ev);
+    return `Pronto! Coloquei na sua agenda. Quer que eu crie uma tarefa de preparação também?${NOTE}`;
+  }
+  if (/tarefa extra|mais uma tarefa|quero mais/.test(m)) {
+    act('criar_tarefa', { title: 'Escreva 3 ideias de conteúdo sobre sua meta', detail: 'Use a aba Amplificar ideias se travar.', minutes: 10 });
+    return `Adicionei uma tarefa rápida de 10 minutos na sua lista. 💪${NOTE}`;
+  }
+  return chat(user, message);
+}
+
 export function goalPlan(goal, days) {
   const steps = [
     ['Escreva em 3 linhas como é ter alcançado a meta', 'Seja concreto: números, datas, como você se sente.', 10],

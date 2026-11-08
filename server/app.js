@@ -6,7 +6,7 @@ import {
   setSessionCookie, clearSessionCookie, requireUser,
 } from './auth.js';
 import * as ai from './ai.js';
-import { localDate, addDays } from './time.js';
+import { localDate, localDateTime, addDays } from './time.js';
 import { LAUNCH_PLAN } from './launchPlan.js';
 
 export const app = express();
@@ -84,8 +84,9 @@ app.use('/api', requireUser);
 app.get('/api/me', (req, res) => res.json({ user: req.user, ai: ai.aiEnabled, today: localDate() }));
 app.put('/api/me', (req, res) => {
   const name = str(req.body.name, 80) || req.user.name;
-  q.run('UPDATE users SET name = ?, about = ?, niche = ?, tone = ? WHERE id = ?',
-    name, str(req.body.about, 1000), str(req.body.niche, 200), str(req.body.tone, 100) || 'motivador e direto', req.user.id);
+  q.run('UPDATE users SET name = ?, about = ?, niche = ?, tone = ?, daily_minutes = ? WHERE id = ?',
+    name, str(req.body.about, 1000), str(req.body.niche, 200), str(req.body.tone, 100) || 'motivador e direto',
+    Math.max(5, Math.min(600, Number(req.body.daily_minutes) || req.user.daily_minutes || 30)), req.user.id);
   res.json({ ok: true });
 });
 app.delete('/api/me', (req, res) => {
@@ -248,14 +249,17 @@ app.post('/api/goals/:id/plan', aiLimit, wrap(async (req, res) => {
   res.json({ plan, planText });
 }));
 
-app.post('/api/goals/import-launch-plan', (req, res) => {
-  const start = isDate(req.body.start) ? req.body.start : localDate();
+function importLaunchPlan(uid, start = localDate()) {
   const { lastInsertRowid } = q.run('INSERT INTO goals (user_id, title, why, area, deadline, plan) VALUES (?, ?, ?, ?, ?, ?)',
-    req.user.id, LAUNCH_PLAN.title, LAUNCH_PLAN.why, LAUNCH_PLAN.area, addDays(start, 29),
+    uid, LAUNCH_PLAN.title, LAUNCH_PLAN.why, LAUNCH_PLAN.area, addDays(start, 29),
     'Plano de 30 dias em 4 semanas: **Fundação** → **Ritmo** → **Prova e parcerias** → **Conversão e escala**. Uma tarefa por dia. Veja o guia completo em docs/PLANO_DE_DIVULGACAO.md.');
-  insertTasks(req.user.id, Number(lastInsertRowid),
+  insertTasks(uid, Number(lastInsertRowid),
     LAUNCH_PLAN.tasks.map(([title, detail, minutes], i) => ({ title, detail, minutes, day_offset: i })), start, 'plano');
-  res.status(201).json({ id: Number(lastInsertRowid) });
+  return Number(lastInsertRowid);
+}
+
+app.post('/api/goals/import-launch-plan', (req, res) => {
+  res.status(201).json({ id: importLaunchPlan(req.user.id, isDate(req.body.start) ? req.body.start : localDate()) });
 });
 
 // ---------- AI daily tasks ----------
@@ -372,7 +376,11 @@ app.post('/api/ai/review', aiLimit, wrap(async (req, res) => {
 }));
 
 // ---------- chat ----------
+// created_at das mensagens é gravado no horário local, para filtrar "a conversa de hoje".
 app.get('/api/chat', (req, res) => {
+  if (req.query.today) {
+    return res.json(q.all('SELECT id, role, content, created_at FROM messages WHERE user_id = ? AND created_at >= ? ORDER BY id DESC LIMIT 60', req.user.id, localDate()).reverse());
+  }
   res.json(q.all('SELECT id, role, content, created_at FROM messages WHERE user_id = ? ORDER BY id DESC LIMIT 100', req.user.id).reverse());
 });
 app.delete('/api/chat', (req, res) => {
@@ -380,11 +388,78 @@ app.delete('/api/chat', (req, res) => {
   res.json({ ok: true });
 });
 
+function addMessage(uid, role, content) {
+  q.run('INSERT INTO messages (user_id, role, content, created_at) VALUES (?, ?, ?, ?)', uid, role, content, localDateTime().replace('T', ' '));
+}
+
+/** Ações que a IA pode executar, sempre restritas ao usuário logado. */
+function chatActions(uid) {
+  const task = (id) => q.get('SELECT * FROM tasks WHERE id = ? AND user_id = ?', id, uid) || (() => { throw new Error(`Tarefa ${id} não encontrada.`); })();
+  return {
+    criar_tarefa: (t) => {
+      const due = isDate(t.due_date) ? t.due_date : localDate();
+      q.run('INSERT INTO tasks (user_id, goal_id, title, detail, due_date, minutes, source) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        uid, ownGoal(uid, t.goal_id), t.title, t.detail || '', due, t.minutes || 15, 'ai');
+      return `➕ Tarefa criada: "${t.title}"${due === localDate() ? '' : ` (${due})`}`;
+    },
+    concluir_tarefa: ({ task_id, done = true }) => {
+      const t = task(task_id);
+      q.run('UPDATE tasks SET done = ?, done_at = ? WHERE id = ?', done ? 1 : 0, done ? new Date().toISOString() : null, t.id);
+      return done ? `✅ Feito: "${t.title}"` : `↩️ Reaberta: "${t.title}"`;
+    },
+    reagendar_tarefa: ({ task_id, due_date }) => {
+      const t = task(task_id);
+      q.run('UPDATE tasks SET due_date = ? WHERE id = ?', due_date, t.id);
+      return `⏭️ "${t.title}" movida para ${due_date === addDays(localDate(), 1) ? 'amanhã' : due_date}`;
+    },
+    editar_tarefa: ({ task_id, title, detail, minutes }) => {
+      const t = task(task_id);
+      q.run('UPDATE tasks SET title = ?, detail = ?, minutes = ? WHERE id = ?', title || t.title, detail ?? t.detail, minutes || t.minutes, t.id);
+      return `✏️ Tarefa ajustada: "${title || t.title}"`;
+    },
+    excluir_tarefa: ({ task_id }) => {
+      const t = task(task_id);
+      q.run('DELETE FROM tasks WHERE id = ?', t.id);
+      return `🗑️ Tarefa removida: "${t.title}"`;
+    },
+    criar_compromisso: (e) => {
+      const ev = createEvent(uid, e);
+      if (!ev) throw new Error('Data/hora inválida.');
+      return `📅 Agendado: "${ev.title}" em ${ev.start.slice(8, 10)}/${ev.start.slice(5, 7)} às ${ev.start.slice(11)}`;
+    },
+    criar_meta: (g) => {
+      const { lastInsertRowid } = q.run('INSERT INTO goals (user_id, title, why, area, deadline) VALUES (?, ?, ?, ?, ?)',
+        uid, g.title, g.why || '', g.area || 'geral', isDate(g.deadline) ? g.deadline : null);
+      return `🎯 Meta criada: "${g.title}" (id ${lastInsertRowid}). Abra em Metas para gerar o plano.`;
+    },
+    atualizar_meta: ({ goal_id, status, deadline, why }) => {
+      const g = q.get('SELECT * FROM goals WHERE id = ? AND user_id = ?', goal_id, uid);
+      if (!g) throw new Error(`Meta ${goal_id} não encontrada.`);
+      q.run('UPDATE goals SET status = ?, deadline = ?, why = ? WHERE id = ?', status || g.status, deadline === undefined ? g.deadline : deadline, why ?? g.why, g.id);
+      return `🎯 Meta atualizada: "${g.title}"${status ? ` (${status})` : ''}`;
+    },
+    atualizar_perfil: (p) => {
+      const u = q.get('SELECT about, niche, tone, daily_minutes FROM users WHERE id = ?', uid);
+      q.run('UPDATE users SET about = ?, niche = ?, tone = ?, daily_minutes = ? WHERE id = ?',
+        p.about ?? u.about, p.niche ?? u.niche, p.tone ?? u.tone, p.daily_minutes ?? u.daily_minutes, uid);
+      return '👤 Perfil atualizado';
+    },
+    salvar_nota: (n) => {
+      q.run('INSERT INTO notes (user_id, title, content) VALUES (?, ?, ?)', uid, n.title, n.content);
+      return `📝 Nota salva: "${n.title}"`;
+    },
+  };
+}
+
 app.post('/api/ai/chat', aiLimit, async (req, res) => {
-  const message = str(req.body.message, 8000);
+  const uid = req.user.id;
+  const helpTask = req.body.help_task_id
+    ? q.get('SELECT * FROM tasks WHERE id = ? AND user_id = ?', Number(req.body.help_task_id), uid)
+    : null;
+  const message = helpTask ? `🆘 Me ajuda com: ${helpTask.title}` : str(req.body.message, 8000);
   if (!message) return bad(res, 'Mensagem vazia.');
-  q.run('INSERT INTO messages (user_id, role, content) VALUES (?, ?, ?)', req.user.id, 'user', message);
-  const history = q.all('SELECT role, content FROM messages WHERE user_id = ? ORDER BY id DESC LIMIT 30', req.user.id).reverse();
+  addMessage(uid, 'user', message);
+  const history = q.all('SELECT role, content FROM messages WHERE user_id = ? ORDER BY id DESC LIMIT 30', uid).reverse();
   while (history.length && history[0].role !== 'user') history.shift();
 
   res.setHeader('Content-Type', 'text/event-stream');
@@ -392,37 +467,51 @@ app.post('/api/ai/chat', aiLimit, async (req, res) => {
   res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders();
   const send = (obj) => res.write(`data: ${JSON.stringify(obj)}\n\n`);
-  const uid = req.user.id;
-  const actions = {
-    criar_tarefa: (t) => {
-      const due = isDate(t.due_date) ? t.due_date : localDate();
-      q.run('INSERT INTO tasks (user_id, goal_id, title, detail, due_date, minutes, source) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        uid, ownGoal(uid, t.goal_id), t.title, t.detail || '', due, t.minutes || 15, 'ai');
-      return `✅ Tarefa criada: "${t.title}" (${due})`;
-    },
-    criar_compromisso: (e) => {
-      const ev = createEvent(uid, e);
-      if (!ev) throw new Error('Data/hora inválida.');
-      return `📅 Agendado: "${ev.title}" em ${ev.start.replace('T', ' às ')}`;
-    },
-    criar_meta: (g) => {
-      const { lastInsertRowid } = q.run('INSERT INTO goals (user_id, title, why, area, deadline) VALUES (?, ?, ?, ?, ?)',
-        uid, g.title, g.why || '', g.area || 'geral', isDate(g.deadline) ? g.deadline : null);
-      return `🎯 Meta criada: "${g.title}" (id ${lastInsertRowid}). Abra em Metas para gerar o plano.`;
-    },
-    salvar_nota: (n) => {
-      q.run('INSERT INTO notes (user_id, title, content) VALUES (?, ?, ?)', uid, n.title, n.content);
-      return `📝 Nota salva: "${n.title}"`;
-    },
-  };
   try {
-    const full = await ai.chatStream(req.user, history, (t) => send({ t }), actions, (a) => send({ action: a }));
-    if (full) q.run('INSERT INTO messages (user_id, role, content) VALUES (?, ?, ?)', req.user.id, 'assistant', full);
+    const full = await ai.chatStream(req.user, history, {
+      onText: (t) => send({ t }),
+      onAction: (a) => send({ action: a }),
+      actions: chatActions(uid),
+      today: () => q.all('SELECT * FROM tasks WHERE user_id = ? AND due_date = ? ORDER BY id', uid, localDate()),
+      helpTask,
+    });
+    if (full) addMessage(uid, 'assistant', full);
     send({ done: true });
   } catch (err) {
     send({ error: err.message || 'Erro na IA.' });
   }
   res.end();
+});
+
+// ---------- onboarding (passo a passo do novo usuário) ----------
+app.post('/api/onboarding', aiLimit, wrap(async (req, res) => {
+  const uid = req.user.id;
+  const b = req.body;
+  const minutes = Math.max(5, Math.min(600, Number(b.daily_minutes) || 30));
+  q.run('UPDATE users SET name = ?, role = ?, about = ?, niche = ?, tone = ?, daily_minutes = ? WHERE id = ?',
+    str(b.name, 80) || req.user.name, str(b.role, 80), str(b.about, 1000), str(b.niche, 200), str(b.tone, 100) || 'motivador e direto', minutes, uid);
+  const user = { ...req.user, name: str(b.name, 80) || req.user.name, role: str(b.role, 80), about: str(b.about, 1000), niche: str(b.niche, 200), tone: str(b.tone, 100), daily_minutes: minutes };
+  let goalId = null;
+  const title = str(b.goal, 300);
+  if (title) {
+    const { lastInsertRowid } = q.run('INSERT INTO goals (user_id, title, why, area, deadline) VALUES (?, ?, ?, ?, ?)',
+      uid, title, str(b.why, 2000), str(b.area, 60) || 'geral', isDate(b.deadline) ? b.deadline : null);
+    goalId = Number(lastInsertRowid);
+    const g = q.get('SELECT * FROM goals WHERE id = ?', goalId);
+    const plan = await ai.goalPlan(user, g, 7);
+    insertTasks(uid, goalId, plan.tasks, localDate(), 'ai');
+    q.run('UPDATE goals SET plan = ? WHERE id = ?',
+      `${plan.summary}\n\n**Marcos**\n${plan.milestones.map((m) => `- ${m.title} — ${m.by}`).join('\n')}\n\n**Primeiro passo agora:** ${plan.first_step}`, goalId);
+    addMessage(uid, 'assistant', `Prontinho, ${user.name.split(' ')[0]}! 🎉 Criei sua meta **${title}** com um plano de 7 dias.\n\n**Seu primeiro passo agora:** ${plan.first_step}\n\nAs tarefas de hoje estão logo acima. Toque em **✓ Feito** quando terminar, ou em **🆘 Me ajuda** que eu te entrego a solução.`);
+  }
+  if (b.launch_plan) importLaunchPlan(uid);
+  q.run('UPDATE users SET onboarded = 1 WHERE id = ?', uid);
+  res.json({ ok: true, goal_id: goalId });
+}));
+
+app.post('/api/onboarding/skip', (req, res) => {
+  q.run('UPDATE users SET onboarded = 1 WHERE id = ?', req.user.id);
+  res.json({ ok: true });
 });
 
 // ---------- export ----------

@@ -84,6 +84,12 @@ CREATE TABLE IF NOT EXISTS checkins (
 );
 `);
 
+// Migrações simples: adiciona colunas novas em bancos já existentes.
+const userCols = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
+for (const [col, def] of [['onboarded', 'INTEGER DEFAULT 0'], ['role', "TEXT DEFAULT ''"], ['daily_minutes', 'INTEGER DEFAULT 30']]) {
+  if (!userCols.includes(col)) db.exec(`ALTER TABLE users ADD COLUMN ${col} ${def}`);
+}
+
 export const q = {
   get: (sql, ...p) => db.prepare(sql).get(...p),
   all: (sql, ...p) => db.prepare(sql).all(...p),

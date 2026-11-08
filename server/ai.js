@@ -26,7 +26,8 @@ Princípios:
 export function userContext(user) {
   const today = localDate();
   const goals = q.all(`SELECT id, title, why, area, deadline FROM goals WHERE user_id = ? AND status = 'ativa' ORDER BY id`, user.id);
-  const tasks = q.all(`SELECT title, done, minutes, goal_id FROM tasks WHERE user_id = ? AND due_date = ? ORDER BY id`, user.id, today);
+  const tasks = q.all(`SELECT id, title, detail, done, minutes, goal_id FROM tasks WHERE user_id = ? AND due_date = ? ORDER BY id`, user.id, today);
+  const overdue = q.get(`SELECT COUNT(*) c FROM tasks WHERE user_id = ? AND due_date < ? AND done = 0`, user.id, today).c;
   const events = q.all(
     `SELECT title, start FROM events WHERE user_id = ? AND start >= ? ORDER BY start LIMIT 8`,
     user.id, today
@@ -36,18 +37,20 @@ export function userContext(user) {
   ).c;
   const lines = [
     `Agora: ${localDateTime()} (${weekday(today)}).`,
-    `Pessoa: ${user.name}.${user.about ? ` Sobre: ${user.about}.` : ''}${user.niche ? ` Nicho/área: ${user.niche}.` : ''}`,
+    `Pessoa: ${user.name}.${user.role ? ` Perfil: ${user.role}.` : ''}${user.about ? ` Sobre: ${user.about}.` : ''}${user.niche ? ` Nicho/área: ${user.niche}.` : ''}`,
+    `Tempo disponível por dia para as metas: ~${user.daily_minutes || 30} min.`,
     `Tom preferido: ${user.tone || 'motivador e direto'}.`,
     goals.length
       ? `Metas ativas:\n${goals.map((g) => `- [${g.id}] ${g.title}${g.deadline ? ` (prazo ${g.deadline})` : ''}${g.why ? ` — porquê: ${g.why}` : ''}`).join('\n')}`
       : 'Ainda não cadastrou metas.',
     tasks.length
-      ? `Tarefas de hoje:\n${tasks.map((t) => `- [${t.done ? 'x' : ' '}] ${t.title} (${t.minutes} min)`).join('\n')}`
+      ? `Tarefas de hoje (use o id nas ferramentas):\n${tasks.map((t) => `- id ${t.id} [${t.done ? 'feita' : 'pendente'}] ${t.title} (${t.minutes} min)${t.goal_id ? ` meta ${t.goal_id}` : ''}${t.detail ? ` — ${t.detail.slice(0, 160)}` : ''}`).join('\n')}`
       : 'Nenhuma tarefa para hoje ainda.',
+    overdue ? `Tarefas atrasadas de dias anteriores: ${overdue}.` : '',
     events.length ? `Próximos compromissos:\n${events.map((e) => `- ${e.start.replace('T', ' ')} ${e.title}`).join('\n')}` : 'Agenda livre.',
     `Tarefas concluídas nos últimos 7 dias: ${doneWeek}.`,
   ];
-  return lines.join('\n');
+  return lines.filter(Boolean).join('\n');
 }
 
 function system(user, extra = '') {
@@ -105,79 +108,108 @@ async function text(user, prompt, { extra = '', effort = 'low', maxTokens = 8000
 
 // Tools the chat can use to act on the user's data. Executors are passed in by the route
 // (they run scoped to the logged-in user).
+const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const ymdhm = z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
 const ToolInputs = {
   criar_tarefa: z.object({
     title: z.string().min(1).max(300),
     detail: z.string().max(2000).optional(),
-    due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    due_date: ymd.optional(),
     minutes: z.number().int().min(1).max(600).optional(),
     goal_id: z.number().int().nullable().optional(),
   }),
+  concluir_tarefa: z.object({ task_id: z.number().int(), done: z.boolean().optional() }),
+  reagendar_tarefa: z.object({ task_id: z.number().int(), due_date: ymd }),
+  editar_tarefa: z.object({
+    task_id: z.number().int(),
+    title: z.string().min(1).max(300).optional(),
+    detail: z.string().max(2000).optional(),
+    minutes: z.number().int().min(1).max(600).optional(),
+  }),
+  excluir_tarefa: z.object({ task_id: z.number().int() }),
   criar_compromisso: z.object({
     title: z.string().min(1).max(300),
-    start: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/),
-    end: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/).nullable().optional(),
+    start: ymdhm,
+    end: ymdhm.nullable().optional(),
     notes: z.string().max(2000).optional(),
   }),
   criar_meta: z.object({
     title: z.string().min(1).max(300),
     why: z.string().max(2000).optional(),
-    deadline: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+    deadline: ymd.nullable().optional(),
     area: z.string().max(60).optional(),
+  }),
+  atualizar_meta: z.object({
+    goal_id: z.number().int(),
+    status: z.enum(['ativa', 'pausada', 'concluida']).optional(),
+    deadline: ymd.nullable().optional(),
+    why: z.string().max(2000).optional(),
+  }),
+  atualizar_perfil: z.object({
+    about: z.string().max(1000).optional(),
+    niche: z.string().max(200).optional(),
+    tone: z.string().max(100).optional(),
+    daily_minutes: z.number().int().min(5).max(600).optional(),
   }),
   salvar_nota: z.object({ title: z.string().min(1).max(200), content: z.string().max(50000) }),
 };
 
+const obj = (properties, required = []) => ({ type: 'object', properties, required });
 const CHAT_TOOLS = [
-  {
-    name: 'criar_tarefa',
-    description: 'Cria uma tarefa na lista da pessoa. Use quando ela pedir para lembrar/anotar algo a fazer, ou aceitar uma sugestão de tarefa. due_date em YYYY-MM-DD (padrão hoje). goal_id = id da meta relacionada, se houver.',
-    input_schema: { type: 'object', properties: { title: { type: 'string' }, detail: { type: 'string' }, due_date: { type: 'string' }, minutes: { type: 'integer' }, goal_id: { type: ['integer', 'null'] } }, required: ['title'] },
-  },
-  {
-    name: 'criar_compromisso',
-    description: 'Adiciona um compromisso na agenda. start/end no formato YYYY-MM-DDTHH:mm, fuso local.',
-    input_schema: { type: 'object', properties: { title: { type: 'string' }, start: { type: 'string' }, end: { type: ['string', 'null'] }, notes: { type: 'string' } }, required: ['title', 'start'] },
-  },
-  {
-    name: 'criar_meta',
-    description: 'Cria uma nova meta quando a pessoa declarar claramente um objetivo que quer acompanhar. deadline em YYYY-MM-DD.',
-    input_schema: { type: 'object', properties: { title: { type: 'string' }, why: { type: 'string' }, deadline: { type: ['string', 'null'] }, area: { type: 'string' } }, required: ['title'] },
-  },
-  {
-    name: 'salvar_nota',
-    description: 'Salva um texto no editor de notas da pessoa (ex: roteiro, plano, lista de ideias) quando ela pedir para guardar.',
-    input_schema: { type: 'object', properties: { title: { type: 'string' }, content: { type: 'string' } }, required: ['title', 'content'] },
-  },
+  { name: 'criar_tarefa', description: 'Cria uma tarefa. due_date YYYY-MM-DD (padrão hoje). goal_id = meta relacionada, se houver.', input_schema: obj({ title: { type: 'string' }, detail: { type: 'string' }, due_date: { type: 'string' }, minutes: { type: 'integer' }, goal_id: { type: ['integer', 'null'] } }, ['title']) },
+  { name: 'concluir_tarefa', description: 'Marca uma tarefa como feita (done=true, padrão) ou desfaz (done=false). Use quando a pessoa disser que fez algo.', input_schema: obj({ task_id: { type: 'integer' }, done: { type: 'boolean' } }, ['task_id']) },
+  { name: 'reagendar_tarefa', description: 'Muda a data de uma tarefa (ex: passar para amanhã quando a pessoa não tiver tempo).', input_schema: obj({ task_id: { type: 'integer' }, due_date: { type: 'string' } }, ['task_id', 'due_date']) },
+  { name: 'editar_tarefa', description: 'Ajusta título, detalhe ou duração de uma tarefa (ex: deixar menor/mais fácil).', input_schema: obj({ task_id: { type: 'integer' }, title: { type: 'string' }, detail: { type: 'string' }, minutes: { type: 'integer' } }, ['task_id']) },
+  { name: 'excluir_tarefa', description: 'Remove uma tarefa, só quando a pessoa pedir explicitamente.', input_schema: obj({ task_id: { type: 'integer' } }, ['task_id']) },
+  { name: 'criar_compromisso', description: 'Adiciona compromisso na agenda. start/end YYYY-MM-DDTHH:mm, fuso local.', input_schema: obj({ title: { type: 'string' }, start: { type: 'string' }, end: { type: ['string', 'null'] }, notes: { type: 'string' } }, ['title', 'start']) },
+  { name: 'criar_meta', description: 'Cria uma meta quando a pessoa declarar um objetivo que quer acompanhar.', input_schema: obj({ title: { type: 'string' }, why: { type: 'string' }, deadline: { type: ['string', 'null'] }, area: { type: 'string' } }, ['title']) },
+  { name: 'atualizar_meta', description: 'Pausa, conclui, reativa ou muda prazo/motivo de uma meta.', input_schema: obj({ goal_id: { type: 'integer' }, status: { type: 'string', enum: ['ativa', 'pausada', 'concluida'] }, deadline: { type: ['string', 'null'] }, why: { type: 'string' } }, ['goal_id']) },
+  { name: 'atualizar_perfil', description: 'Atualiza o perfil quando a pessoa contar algo novo sobre si, seu nicho, o tom que prefere ou quanto tempo tem por dia.', input_schema: obj({ about: { type: 'string' }, niche: { type: 'string' }, tone: { type: 'string' }, daily_minutes: { type: 'integer' } }) },
+  { name: 'salvar_nota', description: 'Salva um texto no editor (roteiro, plano, modelo, lista) quando a pessoa pedir para guardar ou quando você entregar um material longo que ela vai reutilizar.', input_schema: obj({ title: { type: 'string' }, content: { type: 'string' } }, ['title', 'content']) },
 ].map((t) => ({ ...t, eager_input_streaming: true }));
 
-const CHAT_EXTRA = `Você está no chat. Converse, faça perguntas quando precisar entender melhor, e termine com um próximo passo claro quando fizer sentido.
-Você pode agir no app com as ferramentas (criar tarefa, compromisso, meta, nota). Use-as quando a pessoa pedir ou aceitar, e depois confirme em uma frase o que foi feito. Não crie coisas sem a pessoa querer.`;
+// Busca na web (executada pela Anthropic) para trazer links e informações atuais.
+const WEB_SEARCH = { type: 'web_search_20260209', name: 'web_search', max_uses: 3, user_location: { type: 'approximate', country: 'BR', timezone: 'America/Sao_Paulo' } };
+
+const CHAT_EXTRA = `Você está na conversa principal do app (a tela "Hoje" e o chat). Você ajuda em TUDO que a pessoa precisar.
+- Converse de forma curta. Termine com um próximo passo claro quando fizer sentido.
+- Você pode agir no app com as ferramentas: concluir, adiar, editar, criar ou excluir tarefas; criar compromissos e metas; atualizar metas e perfil; salvar notas. Quando a pessoa disser que fez algo, marque como feita. Se disser que não tem tempo, proponha reagendar ou diminuir a tarefa e faça isso. Depois de agir, confirme em uma frase.
+- Quando pedirem ajuda com uma tarefa, ENTREGUE a solução: o material pronto (texto, modelo, roteiro, lista, conta, mensagem), um passo a passo curto e, se útil, links. Faça o máximo possível pela pessoa.
+- Use web_search quando precisar de links, ferramentas, preços, regras ou informações atuais. Nunca invente links: só cite URLs que vieram da busca ou que você tem certeza que existem (ex: sites oficiais conhecidos). Escreva links em markdown [nome](url).`;
+
+const HELP_SUFFIX = (t) => `\n\n[Contexto da tarefa — id ${t.id}: "${t.title}"${t.detail ? `. Detalhe: ${t.detail}` : ''}. Duração prevista: ${t.minutes} min. Entregue a solução pronta para eu executar agora, um passo a passo curto e links úteis se precisar.]`;
 
 /**
- * Streams a chat reply. `actions` maps tool names to functions that perform them for this user
- * and return a short description (or throw). `onAction` receives that description for the UI.
+ * Streams a chat reply.
+ * opts.actions maps tool names to functions that act for this user and return a short description;
+ * opts.today() lists today's tasks (used by demo mode); opts.helpTask is a task the user asked help with.
  */
-export async function chatStream(user, history, onText, actions = {}, onAction = () => {}) {
+export async function chatStream(user, history, { onText, onAction = () => {}, actions = {}, today = () => [], helpTask = null }) {
   if (!aiEnabled) {
-    const reply = demo.chat(user, history.at(-1)?.content || '');
-    for (const chunk of reply.match(/.{1,24}/gs)) {
+    const last = history.at(-1)?.content || '';
+    const reply = demo.chatTurn(user, last, {
+      helpTask,
+      todayTasks: today(),
+      act: (name, input) => { const d = actions[name](input); onAction(d); return d; },
+    });
+    for (const chunk of reply.match(/[\s\S]{1,24}/g)) {
       onText(chunk);
       await new Promise((r) => setTimeout(r, 15));
     }
     return reply;
   }
-  const messages = [...history];
+  const messages = history.map((m) => ({ role: m.role, content: m.content }));
+  if (helpTask && messages.length) messages[messages.length - 1].content += HELP_SUFFIX(helpTask);
   let textOut = '';
   try {
-    for (let round = 0; round < 5; round++) {
+    for (let round = 0; round < 8; round++) {
       const stream = client.beta.messages.stream({
         model: MODEL,
         max_tokens: 16000,
         ...FALLBACK,
-        output_config: { effort: 'low' },
+        output_config: { effort: helpTask ? 'medium' : 'low' },
         system: system(user, CHAT_EXTRA),
-        tools: CHAT_TOOLS,
+        tools: [...CHAT_TOOLS, WEB_SEARCH],
         messages,
       });
       stream.on('text', (t) => { textOut += t; onText(t); });
@@ -185,6 +217,11 @@ export async function chatStream(user, history, onText, actions = {}, onAction =
       if (final.stop_reason === 'refusal') {
         onText('\n\n_(Não consegui responder isso. Pode reformular?)_');
         break;
+      }
+      if (final.stop_reason === 'pause_turn') {
+        // a busca na web ainda está em andamento: devolve o turno para o servidor continuar
+        messages.push({ role: 'assistant', content: final.content });
+        continue;
       }
       const uses = final.content.filter((b) => b.type === 'tool_use');
       if (final.stop_reason !== 'tool_use' || !uses.length) break;
@@ -266,7 +303,7 @@ export async function dailyTasks(user, recent) {
   return structured(
     user,
     DailySchema,
-    `Monte as pequenas tarefas de HOJE (3 a 5 no total, somando no máximo ~90 minutos), cobrindo as metas ativas.
+    `Monte as pequenas tarefas de HOJE (3 a 5 no total, somando no máximo ~${user.daily_minutes || 30} minutos), cobrindo as metas ativas.
 Considere o que já existe hoje e o histórico recente para não repetir e para dar continuidade.
 Histórico recente (últimos dias):
 ${recent || '(sem histórico)'}`,

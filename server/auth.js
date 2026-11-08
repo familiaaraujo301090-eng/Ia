@@ -59,7 +59,7 @@ export function requireUser(req, res, next) {
   const token = sessionToken(req);
   if (!token) return res.status(401).json({ error: 'Faça login para continuar.' });
   const row = q.get(
-    `SELECT u.id, u.name, u.email, u.about, u.niche, u.tone, s.expires_at
+    `SELECT u.id, u.name, u.email, u.about, u.niche, u.tone, u.role, u.daily_minutes, u.onboarded, s.expires_at
        FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?`,
     token
   );

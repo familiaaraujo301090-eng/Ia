@@ -26,9 +26,13 @@ async function route() {
       Object.assign(state, { me: me.user, ai: me.ai, today: me.today });
     } catch { return renderAuth(); }
   }
+  if (name === 'boas-vindas') return renderOnboarding();
+  if (!state.me.onboarded) { location.hash = '#/boas-vindas'; return; }
   const view = views[name] || views.hoje;
   renderShell(name in views ? name : 'hoje');
-  const main = $('#main');
+  const old = $('#main');
+  const main = old.cloneNode(false);
+  old.replaceWith(main);
   main.innerHTML = '<div class="empty"><span class="loading"></span></div>';
   try { await view(main, decodeURIComponent(arg || '')); } catch (e) { main.innerHTML = `<div class="card empty">${esc(e.message)}</div>`; }
   window.scrollTo(0, 0);
@@ -90,7 +94,7 @@ function renderAuth() {
     const body = { name: $('#a-name').value, email: $('#a-email').value, password: $('#a-pass').value };
     try {
       await api(mode === 'register' ? '/api/auth/register' : '/api/auth/login', { method: 'POST', body });
-      go(mode === 'register' ? '#/perfil/novo' : '#/hoje');
+      go(mode === 'register' ? '#/boas-vindas' : '#/hoje');
     } catch (err) { toast(err.message); }
   };
 }
@@ -135,89 +139,263 @@ function bindTasks(root, refresh) {
   });
 }
 
-// ---------------- HOJE ----------------
+// ---------------- shared: conversa com a IA ----------------
+const bubble = (m) => `<div class="bubble ${m.role} ${m.role === 'assistant' ? 'md' : ''}">${m.role === 'assistant' ? md(m.content) : esc(m.content)}</div>`;
+
+/**
+ * Envia uma mensagem (ou pedido de ajuda) e mostra a resposta da IA chegando aos poucos dentro de `log`.
+ * Resolve com o número de ações que a IA executou no app.
+ */
+async function talk(log, payload, display, { scroll = () => {} } = {}) {
+  $('.empty', log)?.remove();
+  log.insertAdjacentHTML('beforeend', bubble({ role: 'user', content: display }));
+  log.insertAdjacentHTML('beforeend', '<div class="bubble assistant md"><span class="loading"></span> <span class="muted small">pensando…</span></div>');
+  const out = log.lastElementChild;
+  scroll();
+  let acc = '';
+  let actions = 0;
+  let anchor = out;
+  try {
+    const res = await fetch('/api/ai/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Erro ao enviar.');
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const parts = buf.split('\n\n');
+      buf = parts.pop();
+      for (const p of parts) {
+        if (!p.startsWith('data: ')) continue;
+        const ev = JSON.parse(p.slice(6));
+        if (ev.t) { acc += ev.t; out.innerHTML = md(acc); scroll(); }
+        if (ev.action) {
+          actions++;
+          anchor.insertAdjacentHTML('afterend', `<div class="action-chip">${esc(ev.action)}</div>`);
+          anchor = anchor.nextElementSibling;
+        }
+        if (ev.error) throw new Error(ev.error);
+      }
+    }
+    if (!acc) out.remove();
+  } catch (e) {
+    out.innerHTML = `<span style="color:var(--danger)">${esc(e.message)}</span>`;
+  }
+  scroll();
+  return actions;
+}
+
+// ---------------- HOJE (as tarefas do dia em forma de conversa) ----------------
+function taskCard(t, goalName) {
+  if (t.done) {
+    return `<div class="task-card done" data-id="${t.id}">
+      <button class="check" data-act="toggle" aria-label="Desfazer">${icon('check')}</button>
+      <div class="task-body"><div class="task-title">${esc(t.title)}</div></div>
+    </div>`;
+  }
+  return `<div class="task-card" data-id="${t.id}">
+    <div class="row" style="align-items:flex-start;flex-wrap:nowrap;gap:12px">
+      <button class="check" data-act="toggle" aria-label="Marcar como feita"></button>
+      <div class="task-body">
+        <div class="task-title">${esc(t.title)}</div>
+        ${t.detail ? `<div class="task-detail">${esc(t.detail)}</div>` : ''}
+        <div class="row small" style="gap:6px;margin-top:6px">
+          <span class="chip">⏱ ${t.minutes} min</span>
+          ${goalName ? `<span class="chip">🎯 ${esc(goalName.length > 34 ? `${goalName.slice(0, 34)}…` : goalName)}</span>` : ''}
+        </div>
+      </div>
+    </div>
+    <div class="task-buttons">
+      <button class="btn sm primary" data-act="toggle">✓ Feito</button>
+      <button class="btn sm" data-act="help">🆘 Me ajuda</button>
+      <button class="btn sm" data-act="talk">💬 Falar</button>
+      <button class="btn sm ghost" data-act="later">⏭ Amanhã</button>
+      <button class="btn sm ghost danger" data-act="del" aria-label="Excluir tarefa">${icon('trash')}</button>
+    </div>
+  </div>`;
+}
+
 views.hoje = async (main) => {
-  const d = await api('/api/today');
+  const [d, msgs] = await Promise.all([api('/api/today'), api('/api/chat?today=1')]);
   state.today = d.date;
-  const hour = new Date().getHours();
-  const hello = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
-  const doneCount = d.tasks.filter((t) => t.done).length;
-  const pct = d.tasks.length ? Math.round((doneCount / d.tasks.length) * 100) : 0;
-  const weekMap = Object.fromEntries(d.week.map((w) => [w.d, w]));
+  const first = esc(state.me.name.split(' ')[0]);
   const moods = ['😞', '😕', '😐', '🙂', '🤩'];
 
   main.innerHTML = `
     ${!state.ai ? '<div class="banner">IA em <b>modo demonstração</b>. Para respostas reais, configure <code>ANTHROPIC_API_KEY</code> no servidor (veja o README).</div>' : ''}
-    <div class="card hero" style="margin-bottom:16px">
-      <div class="row between">
-        <div>
-          <h1>${hello}, ${esc(state.me.name.split(' ')[0])}!</h1>
-          <p class="muted" style="margin:0">${fmtDate(d.date)} · ${d.streak ? `🔥 ${d.streak} dia${d.streak > 1 ? 's' : ''} seguido${d.streak > 1 ? 's' : ''}` : 'Comece sua sequência hoje'}</p>
-        </div>
-        <button class="btn" id="gen-daily" data-busy="Montando seu dia…">${icon('spark')} Tarefas do dia com IA</button>
-      </div>
-      <p id="daily-msg" class="hidden" style="margin:12px 0 0;font-weight:500"></p>
-    </div>
-
-    <div class="grid grid-2">
-      <section class="card">
-        <div class="row between"><h2>Tarefas de hoje</h2><span class="muted small">${doneCount}/${d.tasks.length}</span></div>
-        <div class="progress" style="margin:6px 0 10px"><span style="width:${pct}%"></span></div>
-        <div id="today-tasks">${d.tasks.length ? d.tasks.map((t) => taskRow(t)).join('') : `<div class="empty">Nada para hoje ainda.<br>Toque em <b>Tarefas do dia com IA</b> ou adicione abaixo.</div>`}</div>
-        <form id="add-task" class="row" style="margin-top:10px;flex-wrap:nowrap">
-          <input type="text" id="new-task" placeholder="Adicionar tarefa rápida…" aria-label="Nova tarefa">
-          <button class="btn primary" type="submit" aria-label="Adicionar">${icon('plus')}</button>
+    <div class="today-layout">
+      <section class="today-feed">
+        <div id="today-head"></div>
+        <div class="feed" id="today-block"></div>
+        <div class="feed" id="today-msgs">${msgs.map(bubble).join('')}</div>
+        <form class="composer" id="composer">
+          <div class="suggestions" id="quick">
+            ${[['plan', '✨ Montar meu dia'], ['msg', 'Terminei tudo! 🎉'], ['msg', 'Estou sem tempo hoje'], ['msg', 'Me dá uma tarefa extra'], ['msg', 'Estou travado, me ajuda a começar']]
+              .map(([k, l]) => `<button type="button" data-q="${k}" data-text="${esc(l)}">${esc(l)}</button>`).join('')}
+          </div>
+          <div class="row" style="flex-wrap:nowrap;gap:8px">
+            <textarea id="say" rows="1" placeholder="Fale com a IA: “fiz a primeira”, “hoje não dá”, “marca dentista sexta 15h”…" aria-label="Mensagem para a IA"></textarea>
+            <button class="btn primary" type="submit" aria-label="Enviar">Enviar</button>
+          </div>
         </form>
-        ${d.overdue.length ? `<details style="margin-top:14px"><summary class="muted small">Pendentes de dias anteriores (${d.overdue.length})</summary><div id="overdue">${d.overdue.map((t) => taskRow(t, { showDate: true })).join('')}</div></details>` : ''}
       </section>
 
-      <div class="stack">
+      <aside class="stack today-side">
         <section class="card">
           <h2>Sua semana</h2>
-          <div class="week">${Array.from({ length: 7 }, (_, i) => {
-            const day = addDays(d.date, i - 6);
-            const w = weekMap[day];
-            const ratio = w && w.total ? w.done / w.total : 0;
-            const lvl = !w || !w.done ? '' : ratio >= 1 ? 'l3' : ratio >= 0.5 ? 'l2' : 'l1';
-            return `<div><div class="dot ${lvl}">${w ? w.done : ''}</div>${fmtDate(day, { weekday: 'short' }).replace('.', '')}</div>`;
-          }).join('')}</div>
-          <button class="btn sm" id="review" style="margin-top:12px" data-busy="Analisando…">${icon('spark')} Revisão da semana com IA</button>
+          <div class="week" id="week"></div>
+          <button class="btn sm" id="review" style="margin-top:12px" data-busy="Analisando…">${icon('spark')} Revisão da semana</button>
           <div id="review-out" class="md small" style="margin-top:10px"></div>
         </section>
-
         <section class="card">
           <h2>Como você está hoje?</h2>
-          <div class="moods">${moods.map((m, i) => `<button data-mood="${i + 1}" class="${d.checkin?.mood === i + 1 ? 'sel' : ''}" aria-label="Humor ${i + 1}">${m}</button>`).join('')}</div>
+          <div class="moods">${moods.map((m, i) => `<button type="button" data-mood="${i + 1}" class="${d.checkin?.mood === i + 1 ? 'sel' : ''}" aria-label="Humor ${i + 1} de 5">${m}</button>`).join('')}</div>
         </section>
-
-        <section class="card">
-          <div class="row between"><h2>Próximos compromissos</h2><a href="#/agenda" class="small">Agenda →</a></div>
-          ${d.events.length ? d.events.map((e) => `<div class="row" style="padding:6px 0"><b style="min-width:92px">${e.start.slice(0, 10) === d.date ? 'Hoje' : 'Amanhã'} ${e.start.slice(11)}</b><span>${esc(e.title)}</span></div>`).join('') : '<p class="muted small">Nada marcado para hoje e amanhã.</p>'}
-        </section>
-
         <section class="card">
           <div class="row between"><h2>Metas</h2><a href="#/metas" class="small">Ver todas →</a></div>
-          ${d.goals.length ? d.goals.slice(0, 4).map((g) => `<a href="#/metas/${g.id}" style="display:block;color:inherit;text-decoration:none;padding:6px 0"><div class="row between small"><b>${esc(g.title)}</b><span class="muted">${g.total ? Math.round((g.done / g.total) * 100) : 0}%</span></div><div class="progress"><span style="width:${g.total ? (g.done / g.total) * 100 : 0}%"></span></div></a>`).join('') : '<p class="muted small">Você ainda não tem metas. <a href="#/metas">Criar a primeira</a></p>'}
+          <div id="goals-mini"></div>
         </section>
-      </div>
+      </aside>
     </div>`;
 
-  const refresh = () => views.hoje(main);
-  bindTasks(main, refresh);
-  $('#add-task').onsubmit = async (e) => {
-    e.preventDefault();
-    const title = $('#new-task').value.trim();
-    if (!title) return;
-    await api('/api/tasks', { method: 'POST', body: { title, due_date: d.date } });
-    refresh();
-  };
-  $('#gen-daily').onclick = (e) => busy(e.currentTarget, async () => {
-    const r = await api('/api/ai/daily', { method: 'POST', body: {} });
-    await refresh();
-    const msg = $('#daily-msg');
-    msg.textContent = r.message;
-    msg.classList.remove('hidden');
+  let data = d;
+  const goalNames = () => Object.fromEntries(data.goals.map((g) => [g.id, g.title]));
+  const scrollEnd = () => window.scrollTo({ top: document.body.scrollHeight });
+
+  function renderBlock() {
+    const done = data.tasks.filter((t) => t.done).length;
+    const total = data.tasks.length;
+    const pct = total ? Math.round((done / total) * 100) : 0;
+    const left = data.tasks.filter((t) => !t.done);
+    const mins = left.reduce((s, t) => s + t.minutes, 0);
+    const hour = new Date().getHours();
+    const hello = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
+    $('#today-head').innerHTML = `
+      <div class="today-hero">
+        <div class="row between" style="align-items:flex-end">
+          <div><h1 style="margin:0">${hello}, ${first}!</h1>
+            <div class="muted small">${fmtDate(data.date)} · ${data.streak ? `🔥 ${data.streak} dia${data.streak > 1 ? 's' : ''} seguido${data.streak > 1 ? 's' : ''}` : 'comece sua sequência hoje'}</div></div>
+          <div class="small" style="text-align:right"><b>${done}/${total}</b> feitas</div>
+        </div>
+        <div class="progress" style="margin-top:10px"><span style="width:${pct}%"></span></div>
+      </div>`;
+
+    let intro;
+    if (!total) {
+      intro = `Ainda não montei seu dia, ${first}. Quer que eu prepare as tarefas de hoje a partir das suas metas?
+        <div style="margin-top:10px"><button class="btn primary sm" data-q="plan">✨ Montar meu dia</button></div>`;
+    } else if (!left.length) {
+      intro = md(`**Você concluiu tudo hoje! 🎉** Isso é constância de verdade.\n\nQuer uma tarefa extra, ou prefere fazer a revisão da semana?`);
+    } else {
+      const focus = data.goals[0]?.title;
+      intro = md(`Aqui está seu dia: **${left.length} tarefa${left.length > 1 ? 's' : ''}**, uns **${mins} min** no total.${focus ? ` Foco principal: _${focus}_.` : ''}\n\nComece pela primeira 👇 Se travar, toque em **🆘 Me ajuda** que eu te entrego a solução.`);
+    }
+    const ev = data.events.filter((e) => e.start.startsWith(data.date));
+    $('#today-block').innerHTML = `
+      <div class="bubble assistant">${intro}</div>
+      ${data.tasks.filter((t) => !t.done).map((t) => taskCard(t, goalNames()[t.goal_id])).join('')}
+      ${done ? `<details class="done-list"><summary class="muted small">✅ Feitas hoje (${done})</summary>${data.tasks.filter((t) => t.done).map((t) => taskCard(t)).join('')}</details>` : ''}
+      ${data.overdue.length ? `<div class="bubble assistant">Ficaram <b>${data.overdue.length}</b> tarefa${data.overdue.length > 1 ? 's' : ''} de dias anteriores. <div class="row" style="margin-top:8px"><button class="btn sm" data-q="bring">Trazer para hoje</button><button class="btn sm ghost" data-q="clear-overdue">Descartar</button></div></div>` : ''}
+      ${ev.length ? `<div class="bubble assistant">📅 Hoje na agenda: ${ev.map((e) => `<b>${e.start.slice(11)}</b> ${esc(e.title)}`).join(' · ')}</div>` : ''}`;
+
+    const weekMap = Object.fromEntries(data.week.map((w) => [w.d, w]));
+    $('#week').innerHTML = Array.from({ length: 7 }, (_, i) => {
+      const day = addDays(data.date, i - 6);
+      const w = weekMap[day];
+      const ratio = w && w.total ? w.done / w.total : 0;
+      const lvl = !w || !w.done ? '' : ratio >= 1 ? 'l3' : ratio >= 0.5 ? 'l2' : 'l1';
+      return `<div><div class="dot ${lvl}">${w ? w.done : ''}</div>${fmtDate(day, { weekday: 'short' }).replace('.', '')}</div>`;
+    }).join('');
+    $('#goals-mini').innerHTML = data.goals.length
+      ? data.goals.slice(0, 4).map((g) => `<a href="#/metas/${g.id}" class="goal-mini"><div class="row between small" style="flex-wrap:nowrap"><b>${esc(g.title)}</b><span class="muted">${g.total ? Math.round((g.done / g.total) * 100) : 0}%</span></div><div class="progress"><span style="width:${g.total ? (g.done / g.total) * 100 : 0}%"></span></div></a>`).join('')
+      : '<p class="muted small">Nenhuma meta ainda. <a href="#/metas">Criar</a></p>';
+  }
+
+  async function reload() {
+    data = await api('/api/today');
+    renderBlock();
+  }
+  renderBlock();
+
+  const log = $('#today-msgs');
+  const say = $('#say');
+  let busyTalk = false;
+  async function converse(payload, display) {
+    if (busyTalk) return;
+    busyTalk = true;
+    try {
+      const acted = await talk(log, payload, display, { scroll: scrollEnd });
+      if (acted) await reload();
+    } finally { busyTalk = false; }
+  }
+  function note(text) {
+    log.insertAdjacentHTML('beforeend', `<div class="action-chip">${esc(text)}</div>`);
+  }
+
+  async function planDay(btn) {
+    const run = async () => {
+      const r = await api('/api/ai/daily', { method: 'POST', body: {} });
+      await reload();
+      log.insertAdjacentHTML('beforeend', bubble({ role: 'assistant', content: `${r.message}\n\nAdicionei **${r.count} tarefas** para hoje. Estão logo acima. 👆` }));
+      scrollEnd();
+    };
+    if (btn) await busy(btn, run); else await run();
+  }
+
+  main.addEventListener('click', async (e) => {
+    const q = e.target.closest('[data-q]');
+    if (q) {
+      if (q.dataset.q === 'plan') return planDay(q);
+      if (q.dataset.q === 'msg') return converse({ message: q.dataset.text }, q.dataset.text);
+      if (q.dataset.q === 'bring' || q.dataset.q === 'clear-overdue') {
+        for (const t of data.overdue) {
+          if (q.dataset.q === 'bring') await api(`/api/tasks/${t.id}`, { method: 'PATCH', body: { due_date: data.date } });
+          else await api(`/api/tasks/${t.id}`, { method: 'DELETE' });
+        }
+        await reload();
+        return toast(q.dataset.q === 'bring' ? 'Trouxe as pendentes para hoje.' : 'Pendentes descartadas.');
+      }
+    }
+    const btn = e.target.closest('[data-act]');
+    const card = e.target.closest('.task-card');
+    if (!btn || !card) return;
+    const t = data.tasks.find((x) => String(x.id) === card.dataset.id);
+    if (!t) return;
+    const act = btn.dataset.act;
+    if (act === 'toggle') {
+      await api(`/api/tasks/${t.id}`, { method: 'PATCH', body: { done: !t.done } });
+      await reload();
+      if (!t.done) {
+        const left = data.tasks.filter((x) => !x.done).length;
+        toast(left ? ['Boa! 🔥', 'Mais um passo! 💪', 'Isso aí! ✅', 'Constância vence talento. 🚀'][Math.floor(Math.random() * 4)] : 'Dia completo! 🎉');
+      }
+    } else if (act === 'help') {
+      converse({ help_task_id: t.id }, `🆘 Me ajuda com: ${t.title}`);
+    } else if (act === 'talk') {
+      say.value = `Sobre "${t.title}": `;
+      say.focus();
+      say.scrollIntoView({ block: 'center' });
+    } else if (act === 'later') {
+      await api(`/api/tasks/${t.id}`, { method: 'PATCH', body: { due_date: addDays(data.date, 1) } });
+      await reload();
+      note(`⏭️ "${t.title}" ficou para amanhã`);
+    } else if (act === 'del') {
+      if (!await ask(`Excluir a tarefa "${t.title}"?`, { okLabel: 'Excluir', danger: true })) return;
+      await api(`/api/tasks/${t.id}`, { method: 'DELETE' });
+      await reload();
+    }
   });
+
+  $('#composer').onsubmit = (e) => {
+    e.preventDefault();
+    const text = say.value.trim();
+    if (!text) return;
+    say.value = '';
+    converse({ message: text }, text);
+  };
+  say.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#composer').requestSubmit(); } };
   $('#review').onclick = (e) => busy(e.currentTarget, async () => {
     const r = await api('/api/ai/review', { method: 'POST', body: {} });
     $('#review-out').innerHTML = md(r.text);
@@ -225,8 +403,139 @@ views.hoje = async (main) => {
   $$('[data-mood]').forEach((b) => b.onclick = async () => {
     await api('/api/checkin', { method: 'POST', body: { mood: Number(b.dataset.mood) } });
     $$('[data-mood]').forEach((x) => x.classList.toggle('sel', x === b));
-    toast(Number(b.dataset.mood) <= 2 ? 'Dias difíceis passam. Que tal conversar com a IA?' : 'Anotado!');
+    if (Number(b.dataset.mood) <= 2) converse({ message: 'Hoje não estou num dia bom.' }, 'Hoje não estou num dia bom. 😕');
+    else toast('Anotado!');
   });
+  if (msgs.length) scrollEnd();
+};
+
+// ---------------- BOAS-VINDAS (passo a passo do novo usuário) ----------------
+const ROLES = ['Empreendedor(a)', 'Criador(a) de conteúdo', 'Freelancer / autônomo', 'Estudante', 'Trabalho CLT e quero mudar', 'Outro'];
+const GOAL_EXAMPLES = {
+  'Empreendedor(a)': ['Faturar R$ 5 mil por mês', 'Conseguir os primeiros 10 clientes', 'Lançar meu produto'],
+  'Criador(a) de conteúdo': ['Chegar a 10 mil seguidores', 'Postar todos os dias por 30 dias', 'Fechar minha primeira publi'],
+  'Freelancer / autônomo': ['Ter agenda cheia de clientes', 'Aumentar meu preço em 30%', 'Montar meu portfólio'],
+  Estudante: ['Passar no concurso/vestibular', 'Estudar 2h por dia', 'Aprender inglês'],
+  'Trabalho CLT e quero mudar': ['Ter uma renda extra de R$ 2 mil', 'Mudar de área em 6 meses', 'Abrir meu negócio'],
+  Outro: ['Organizar minha vida financeira', 'Entrar em forma', 'Ler 12 livros no ano'],
+};
+const TONES = ['motivador e direto', 'gentil e acolhedor', 'exigente, sem passar a mão na cabeça', 'divertido e leve', 'técnico e objetivo'];
+
+function onboardingSteps(a) {
+  const name = a.name ? esc(a.name.split(' ')[0]) : '';
+  const steps = [
+    { key: 'name', q: 'Oi! Eu sou o <b>Rumo</b>, sua IA parceira. 👋<br>Vou te fazer umas perguntas rápidas (uns 2 minutos) para deixar o app do seu jeito.<br><br><b>Como você quer ser chamado(a)?</b>', input: 'text', required: true },
+    { key: 'role', q: `Prazer, ${name}! <b>O que melhor descreve você hoje?</b>`, chips: ROLES, required: true },
+    { key: 'about', q: '<b>Conte em uma ou duas frases o que você faz ou quer fazer.</b><br><span class="muted small">Quanto mais eu souber, melhores ficam suas tarefas.</span>', input: 'textarea', placeholder: 'Ex: Faço bolos caseiros e vendo pelo Instagram. Quero transformar isso na minha renda principal.', extra: { key: 'niche', label: 'Seu nicho ou área (opcional)', placeholder: 'Ex: confeitaria, fitness, design' } },
+    { key: 'goal', q: '<b>Qual é a sua meta principal agora?</b> Onde você quer chegar?', input: 'text', chips: GOAL_EXAMPLES[a.role] || GOAL_EXAMPLES.Outro, chipsFill: true, required: true, placeholder: 'Escreva com suas palavras' },
+    { key: 'why', q: '<b>Por que isso é importante para você?</b><br><span class="muted small">Nos dias difíceis eu vou te lembrar disso.</span>', input: 'textarea', placeholder: 'Ex: Quero ter liberdade e mais tempo com minha família.' },
+    { key: 'deadline', q: '<b>Em quanto tempo você quer chegar lá?</b>', chips: ['1 mês', '3 meses', '6 meses', '1 ano'], input: 'date' },
+    { key: 'daily_minutes', q: '<b>Quanto tempo por dia você consegue dedicar a isso?</b><br><span class="muted small">Seja realista. Pouco todo dia vence muito de vez em quando.</span>', chips: ['15 min', '30 min', '1 hora', '2 horas'], required: true },
+    { key: 'tone', q: '<b>Como você prefere que eu fale com você?</b>', chips: TONES, required: true },
+  ];
+  if (['Empreendedor(a)', 'Criador(a) de conteúdo', 'Freelancer / autônomo'].includes(a.role)) {
+    steps.push({ key: 'launch_plan', q: 'Última! Tenho um <b>plano de divulgação de 30 dias</b>, uma tarefa por dia, para você ser visto(a) e conquistar clientes. <b>Quer incluir?</b>', chips: ['Sim, quero!', 'Agora não'], required: true });
+  }
+  return steps;
+}
+
+const DEADLINES = { '1 mês': 30, '3 meses': 91, '6 meses': 182, '1 ano': 365 };
+const MINUTES = { '15 min': 15, '30 min': 30, '1 hora': 60, '2 horas': 120 };
+
+function renderOnboarding() {
+  const a = { name: state.me.name };
+  let i = 0;
+  app.innerHTML = '<div class="ob"><div class="ob-card" id="ob"></div></div>';
+  const box = $('#ob');
+
+  function show() {
+    const steps = onboardingSteps(a);
+    const s = steps[i];
+    const val = a[s.key] ?? '';
+    box.innerHTML = `
+      <div class="row between small muted"><span>${i + 1} de ${steps.length}</span><button class="btn sm ghost" id="ob-skip">Pular configuração</button></div>
+      <div class="progress" style="margin:8px 0 18px"><span style="width:${((i + 1) / steps.length) * 100}%"></span></div>
+      <div class="row" style="align-items:flex-start;flex-wrap:nowrap;gap:10px">
+        <span class="brand-mark" style="flex:none">➜</span>
+        <div class="bubble assistant ob-q">${s.q}</div>
+      </div>
+      <form id="ob-form" class="stack" style="margin-top:16px">
+        ${s.chips ? `<div class="choice">${s.chips.map((c) => `<button type="button" class="${(s.key === 'deadline' ? a.deadline_label : s.key === 'daily_minutes' ? a.minutes_label : s.key === 'launch_plan' ? a.launch_label : val) === c ? 'sel' : ''}" data-c="${esc(c)}">${esc(c)}</button>`).join('')}</div>` : ''}
+        ${s.input === 'text' ? `<input type="text" id="ob-in" value="${esc(val)}" placeholder="${esc(s.placeholder || '')}" aria-label="Resposta">` : ''}
+        ${s.input === 'textarea' ? `<textarea id="ob-in" placeholder="${esc(s.placeholder || '')}" aria-label="Resposta">${esc(val)}</textarea>` : ''}
+        ${s.input === 'date' ? `<label for="ob-in">Ou escolha uma data</label><input type="date" id="ob-in" value="${esc(a.deadline || '')}">` : ''}
+        ${s.extra ? `<div><label for="ob-extra">${s.extra.label}</label><input type="text" id="ob-extra" value="${esc(a[s.extra.key] || '')}" placeholder="${esc(s.extra.placeholder)}"></div>` : ''}
+        <div class="row between" style="margin-top:6px">
+          ${i ? '<button type="button" class="btn ghost" id="ob-back">← Voltar</button>' : '<span></span>'}
+          <button class="btn primary" type="submit">${i === steps.length - 1 ? 'Montar meu plano ✨' : 'Continuar →'}</button>
+        </div>
+      </form>`;
+    const input = $('#ob-in');
+    input?.focus();
+    $$('.choice button', box).forEach((b) => b.onclick = () => {
+      const c = b.dataset.c;
+      if (s.key === 'deadline') { a.deadline_label = c; a.deadline = addDays(state.today || new Date().toISOString().slice(0, 10), DEADLINES[c]); if (input) input.value = a.deadline; }
+      else if (s.key === 'daily_minutes') { a.minutes_label = c; a.daily_minutes = MINUTES[c]; }
+      else if (s.key === 'launch_plan') { a.launch_label = c; a.launch_plan = c.startsWith('Sim'); }
+      else if (s.chipsFill && input) { input.value = c; }
+      else a[s.key] = c;
+      $$('.choice button', box).forEach((x) => x.classList.toggle('sel', x === b));
+      if (!s.input && !s.chipsFill) $('#ob-form').requestSubmit();
+    });
+    $('#ob-back')?.addEventListener('click', () => { i--; show(); });
+    $('#ob-skip').onclick = async () => {
+      await api('/api/onboarding/skip', { method: 'POST', body: {} });
+      state.me.onboarded = 1;
+      go('#/tutorial');
+    };
+    $('#ob-form').onsubmit = (e) => {
+      e.preventDefault();
+      if (input && s.key !== 'deadline') a[s.key] = input.value.trim();
+      if (s.key === 'deadline' && input?.value) a.deadline = input.value;
+      if (s.extra) a[s.extra.key] = $('#ob-extra').value.trim();
+      const filled = s.key === 'daily_minutes' ? a.daily_minutes : s.key === 'launch_plan' ? a.launch_label : a[s.key];
+      if (s.required && !filled) return toast('Responda para continuar 🙂');
+      if (i < onboardingSteps(a).length - 1) { i++; show(); } else finish();
+    };
+  }
+
+  async function finish() {
+    box.innerHTML = `<div class="empty" style="padding:50px 10px"><span class="loading" style="width:28px;height:28px"></span>
+      <h2 style="margin-top:16px">Montando seu plano, ${esc(a.name.split(' ')[0])}…</h2>
+      <p class="muted">Estou quebrando sua meta em passos pequenos para os próximos 7 dias.</p></div>`;
+    try {
+      await api('/api/onboarding', { method: 'POST', body: {
+        name: a.name, role: a.role, about: a.about, niche: a.niche, goal: a.goal, why: a.why, deadline: a.deadline,
+        daily_minutes: a.daily_minutes, tone: a.tone, launch_plan: !!a.launch_plan,
+        area: /client|fatur|vend|negóc|produto|renda/i.test(a.goal) ? 'negócio' : /seguidor|post|publi|conteúdo/i.test(a.goal) ? 'divulgação' : 'geral',
+      } });
+      state.me = (await api('/api/me')).user;
+      go('#/tutorial');
+    } catch (e) {
+      toast(e.message);
+      show();
+    }
+  }
+  show();
+}
+
+// ---------------- TUTORIAL ----------------
+views.tutorial = async (main) => {
+  const tips = [
+    ['home', 'Hoje é uma conversa', 'Suas tarefas do dia aparecem como cartões. Toque em <b>✓ Feito</b> quando terminar, <b>⏭ Amanhã</b> para adiar ou <b>🗑</b> para excluir.'],
+    ['spark', '🆘 Me ajuda: eu faço junto', 'Em qualquer tarefa, toque em <b>Me ajuda</b>. Eu entrego a solução pronta (texto, roteiro, modelo), o passo a passo e links úteis.'],
+    ['chat', 'Fale do seu jeito', 'Escreva <i>“fiz a primeira”</i>, <i>“hoje não dá tempo”</i> ou <i>“marca dentista sexta às 15h”</i>. Eu atualizo tarefas, agenda e metas sozinho.'],
+    ['target', 'Metas que viram passos', 'Em <b>Metas</b>, cada meta tem um plano. Quando a semana acabar, toque em <b>Planejar próximos 7 dias</b>.'],
+    ['grid', 'Criar: editor, ideias e legendas', 'Escreva textos com IA, transforme ideias soltas em planos e gere legendas prontas para seus posts.'],
+    ['rocket', 'Instale no celular', 'No navegador do celular, toque em <b>Compartilhar</b> ou no <b>menu ⋮</b> e depois em <b>Adicionar à tela inicial</b>. O Rumo vira um app.'],
+  ];
+  main.innerHTML = `
+    <h1>Como o Rumo funciona</h1>
+    <p class="muted">São 30 segundos. Você pode rever isto quando quiser em <b>Perfil</b>.</p>
+    <div class="grid grid-2" style="margin-top:16px">
+      ${tips.map(([i, t, d]) => `<div class="card tip"><span class="tip-icon">${icon(i)}</span><div><h3>${t}</h3><p class="small muted" style="margin:0">${d}</p></div></div>`).join('')}
+    </div>
+    <div class="row" style="justify-content:center;margin-top:24px"><a class="btn primary" href="#/hoje" style="padding:12px 22px">Começar meu dia →</a></div>`;
 };
 
 // ---------------- AGENDA ----------------
@@ -400,13 +709,12 @@ async function goalDetail(main, id) {
 // ---------------- CHAT ----------------
 views.chat = async (main) => {
   const history = await api('/api/chat');
-  const bubble = (m) => `<div class="bubble ${m.role} ${m.role === 'assistant' ? 'md' : ''}">${m.role === 'assistant' ? md(m.content) : esc(m.content)}</div>`;
   main.innerHTML = `
-    <div class="page-head" style="margin-bottom:10px"><div><h1>Conversar com a IA</h1><p class="muted small" style="margin:0">Ela conhece suas metas, tarefas e agenda.</p></div>
+    <div class="page-head" style="margin-bottom:10px"><div><h1>Conversar com a IA</h1><p class="muted small" style="margin:0">Ela conhece suas metas, tarefas e agenda, e pode atualizar tudo.</p></div>
       <button class="btn sm ghost" id="clear-chat">Limpar conversa</button></div>
     <div class="chat">
-      <div class="chat-log" id="log">${history.length ? history.map(bubble).join('') : `<div class="empty">Desabafe, peça ideias, planeje o dia. Estou aqui.</div>`}</div>
-      <div class="suggestions">${['Me ajuda a planejar meu dia', 'Estou travado, o que faço agora?', 'Me dá 5 ideias de post para hoje', 'Agenda uma reunião amanhã às 10h', 'Como eu divulgo meu trabalho?'].map((s) => `<button data-s="${esc(s)}">${esc(s)}</button>`).join('')}</div>
+      <div class="chat-log" id="log">${history.length ? history.map(bubble).join('') : '<div class="empty">Desabafe, peça ideias, planeje o dia. Estou aqui.</div>'}</div>
+      <div class="suggestions">${['Me ajuda a planejar meu dia', 'Estou travado, o que faço agora?', 'Me dá 5 ideias de post para hoje', 'Agenda uma reunião amanhã às 10h', 'Como eu divulgo meu trabalho?'].map((t) => `<button data-s="${esc(t)}">${esc(t)}</button>`).join('')}</div>
       <form class="chat-input" id="chat-form">
         <textarea id="msg" placeholder="Escreva sua mensagem…" rows="1" aria-label="Mensagem"></textarea>
         <button class="btn primary" type="submit" aria-label="Enviar">Enviar</button>
@@ -416,40 +724,11 @@ views.chat = async (main) => {
   log.scrollTop = log.scrollHeight;
   const input = $('#msg');
   let sending = false;
-
-  async function send(text) {
+  const send = async (text) => {
     if (!text || sending) return;
     sending = true;
-    $('.empty', log)?.remove();
-    log.insertAdjacentHTML('beforeend', bubble({ role: 'user', content: text }));
-    log.insertAdjacentHTML('beforeend', '<div class="bubble assistant md"><span class="loading"></span></div>');
-    const out = log.lastElementChild;
-    log.scrollTop = log.scrollHeight;
-    let acc = '';
-    try {
-      const res = await fetch('/api/ai/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text }) });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Erro ao enviar.');
-      const reader = res.body.getReader();
-      const dec = new TextDecoder();
-      let buf = '';
-      for (;;) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buf += dec.decode(value, { stream: true });
-        const parts = buf.split('\n\n');
-        buf = parts.pop();
-        for (const p of parts) {
-          if (!p.startsWith('data: ')) continue;
-          const ev = JSON.parse(p.slice(6));
-          if (ev.t) { acc += ev.t; out.innerHTML = md(acc); log.scrollTop = log.scrollHeight; }
-          if (ev.action) { out.insertAdjacentHTML('afterend', `<div class="chip accent" style="align-self:flex-start">${esc(ev.action)}</div>`); }
-          if (ev.error) throw new Error(ev.error);
-        }
-      }
-    } catch (e) {
-      out.innerHTML = `<span style="color:var(--danger)">${esc(e.message)}</span>`;
-    } finally { sending = false; }
-  }
+    try { await talk(log, { message: text }, text, { scroll: () => { log.scrollTop = log.scrollHeight; } }); } finally { sending = false; }
+  };
   $('#chat-form').onsubmit = (e) => { e.preventDefault(); const t = input.value.trim(); input.value = ''; send(t); };
   input.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#chat-form').requestSubmit(); } };
   $$('[data-s]').forEach((b) => b.onclick = () => send(b.dataset.s));
@@ -609,6 +888,7 @@ views.perfil = async (main, arg) => {
       <div class="field"><label>Nome</label><input type="text" id="p-name" value="${esc(user.name)}"></div>
       <div class="field"><label>Sobre você</label><textarea id="p-about" placeholder="Ex: tenho 28 anos, trabalho como designer e quero viver do meu próprio estúdio. Tenho 1h por dia livre à noite.">${esc(user.about)}</textarea></div>
       <div class="field"><label>Seu nicho / área de atuação</label><input type="text" id="p-niche" value="${esc(user.niche)}" placeholder="Ex: confeitaria artesanal, coaching fitness, desenvolvimento web"></div>
+      <div class="field"><label for="p-min">Minutos por dia para suas metas</label><input type="number" id="p-min" min="5" max="600" value="${user.daily_minutes || 30}"></div>
       <div class="field"><label>Como a IA deve falar com você?</label><select id="p-tone">
         ${['motivador e direto', 'gentil e acolhedor', 'exigente, sem passar a mão na cabeça', 'divertido e leve', 'técnico e objetivo'].map((t) => `<option ${t === user.tone ? 'selected' : ''}>${t}</option>`).join('')}
       </select></div>
@@ -619,6 +899,8 @@ views.perfil = async (main, arg) => {
       <div class="row" style="margin-top:10px">
         <select id="theme" style="width:auto"><option value="">Tema do sistema</option><option value="light">Claro</option><option value="dark">Escuro</option></select>
         <a class="btn" href="/api/export">Baixar meus dados</a>
+        <a class="btn" href="#/tutorial">Ver tutorial</a>
+        <a class="btn" href="#/boas-vindas">Refazer configuração</a>
         <button class="btn" id="logout">Sair</button>
         <button class="btn danger" id="del-acc">Excluir conta</button>
       </div>
@@ -628,7 +910,7 @@ views.perfil = async (main, arg) => {
   $('#theme').onchange = (e) => { setTheme(e.target.value); };
   $('#profile').onsubmit = async (e) => {
     e.preventDefault();
-    await api('/api/me', { method: 'PUT', body: { name: $('#p-name').value, about: $('#p-about').value, niche: $('#p-niche').value, tone: $('#p-tone').value } });
+    await api('/api/me', { method: 'PUT', body: { name: $('#p-name').value, about: $('#p-about').value, niche: $('#p-niche').value, tone: $('#p-tone').value, daily_minutes: Number($('#p-min').value) } });
     state.me.name = $('#p-name').value;
     toast('Perfil salvo!');
     if (arg === 'novo') location.hash = '#/metas';
