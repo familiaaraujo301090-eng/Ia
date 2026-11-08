@@ -555,5 +555,85 @@ ANSIEDADE = _jornada(
 deslocar(ANSIEDADE, (0.6, -0.3, 0.55))
 ANSIEDADE.update({"cenario": "quarto", "clima": "sombria", "gancho": "SE A SUA ANSIEDADE|FOSSE UMA PESSOA"})
 
-HISTORIAS = {"ansiedade-fosse-uma-pessoa": ANSIEDADE, "diogenes-vendo-o-seu-feed": DIOGENES, "homem-mais-rico-da-babilonia": BABILONIA, "a-ultima-carta": CARTA, "a-tempestade": TEMPESTADE, "kintsugi": KINTSUGI, "ouro-no-fogo": OURO_FOGO, "diamante": DIAMANTE,
+ENTREVISTA = _jornada(
+    "Entrevista de emprego com Deus", "criar_entrevista", 0.55, [],
+    ["Imagina uma entrevista de emprego com Deus. A primeira pergunta não é sobre o seu currículo.",
+     "Você chega com a pasta cheia. Diplomas, cargos, troféus. Ele nem abre.",
+     "Ele pergunta: quem você ajudou quando ninguém estava vendo?",
+     "Depois: quem você perdoou, mesmo sem ninguém te pedir desculpa?",
+     "E por último: você foi fiel no pouco?",
+     "Porque essa vaga não exige experiência. Exige um coração disposto.",
+     "*Quem é fiel no pouco, também é fiel no muito.* Está em Lucas, capítulo dezesseis.",
+     "Você passaria nessa entrevista? Comenta. Segue a Lamparina."],
+    ["Gancho: Elias no ceu, a cadeira vazia e o portal de luz.", "A pasta cheia de diplomas e um trofeu na cadeira.",
+     "Tudo sobe e some; fica um pao.", "Um ramo de oliveira.", "Uma moeda pequena, brilhando.",
+     "A luz do portal cobre a cadeira."] + _FECHO)
+deslocar(ENTREVISTA, (0.6, -0.3, 0.46))
+ENTREVISTA.update({"cenario": "ceu", "clima": "piano", "gancho": "ENTREVISTA DE|EMPREGO COM DEUS"})
+
+OITENTA = _jornada(
+    "1 minuto com o seu eu de 80 anos", "criar_oitenta", 0.59, [],
+    ["Você ganhou um minuto com você mesmo aos oitenta anos. E ele só pode dizer cinco frases.",
+     "Primeira: liga pra sua mãe. Hoje. Não deixa pra amanhã.",
+     "Segunda: aquela vergonha que te trava? Ninguém lembra dela. Só você.",
+     "Terceira: cuida do seu corpo. Quem paga a conta sou eu.",
+     "Quarta: o tempo que você deu pro celular não volta. Nunca.",
+     "Quinta: começa. Mesmo com medo. Começa.",
+     "*Ensina-nos a contar os nossos dias, para alcançarmos um coração sábio.* Salmo noventa.",
+     "Qual dessas frases você precisava ouvir hoje? Comenta. Segue a Lamparina."],
+    ["Gancho: Elias na varanda ao por do sol; a ampulheta corre.", "O retrato da mae.",
+     "A bola de papel (a vergonha) encolhe ate sumir.", "Uma maca.", "O celular aceso vira de cara para baixo.",
+     "O vasinho e o broto que cresce."] + _FECHO)
+deslocar(OITENTA, (0.6, -0.3, 0.5))
+OITENTA.update({"cenario": "varanda", "clima": "piano", "gancho": "1 MINUTO COM O SEU|EU DE 80 ANOS"})
+
+IDADES = _jornada(
+    "Cada idade, uma mentira", "criar_idades", 0.59, [],
+    ["Cada idade tem uma mentira que você acreditou. Veja se você reconhece a sua.",
+     "Aos cinco anos: os adultos sabem tudo.",
+     "Aos dezesseis: todo mundo está olhando pra mim.",
+     "Aos vinte e cinco: eu já devia ter tudo resolvido.",
+     "Aos trinta: tenho tempo, faço isso depois.",
+     "Aos cinquenta: agora é tarde demais. Também é mentira.",
+     "*Para tudo há um tempo determinado.* Eclesiastes três. Nunca é cedo nem tarde para recomeçar.",
+     "Qual dessas você ainda acredita? Comenta. Segue a Lamparina."],
+    ["Gancho: Elias no sotao, a luz da janela redonda.", "O ursinho de pelucia.", "O espelho de mao.",
+     "O capelo de formatura.", "O calendario perde as folhas.", "A vela acende."] + _FECHO)
+deslocar(IDADES, (0.6, -0.3, 0.5))
+IDADES["planos"][0]["cam"] = {"de": (0.9, -3.3, 1.35), "ate": (0.6, -2.4, 1.3), "alvo": (0.2, 0.0, 1.25), "lente": 26}
+IDADES.update({"cenario": "sotao", "clima": "piano", "gancho": "CADA IDADE,|UMA MENTIRA"})
+
+JUDAS = _jornada(
+    "Se Judas tivesse um diario", "criar_judas", 0.51, [],
+    ["Se Judas tivesse um diário, a última página seria assim.",
+     "Dia um: ele me chamou. Eu, um homem comum. Larguei tudo.",
+     "Ano dois: vi cegos voltarem a enxergar. Mas eu cuidava da bolsa, e comecei a tirar um pouco.",
+     "Ano três: ele falava de um reino que não é deste mundo. Eu queria um reino agora.",
+     "A última noite: trinta moedas de prata. Um beijo. E as tochas no jardim.",
+     "Pedro também negou naquela mesma noite. A diferença é que Pedro voltou.",
+     "*Não é a queda que define você. É se você volta.*",
+     "Se você caiu, o que te impede de voltar? Comenta. Segue a Lamparina."],
+    ["Gancho: Elias no jardim de noite, as oliveiras e a muralha.", "O diario se escreve; a lamparina acende.",
+     "A bolsa; algumas moedas escapam.", "A lamparina enfraquece.", "Trinta moedas de prata; tochas no jardim.",
+     "A lamparina volta a acender, mais forte."] + _FECHO)
+deslocar(JUDAS, (0.6, -0.3, 0.42))
+JUDAS.update({"cenario": "getsemani", "clima": "sombria", "gancho": "SE JUDAS TIVESSE|UM DIÁRIO"})
+
+SOCRATES_POD = _jornada(
+    "O dia em que Socrates abriu um podcast", "criar_socrates", 0.71, [],
+    ["Sócrates abriu um podcast. Nenhum convidado saiu de lá com a mesma opinião.",
+     "O coach: sucesso é ter dinheiro. Sócrates: e quem tem dinheiro e não consegue dormir?",
+     "O influencer: eu sou autêntico. Sócrates: então por que apagou as fotos que não deram curtida?",
+     "O político: eu sei o que é justo. Sócrates: justo para quem?",
+     "No fim, perguntaram a ele: e você, Sócrates, sabe o quê?",
+     "Ele respondeu: só sei que nada sei. Por isso eu continuo perguntando.",
+     "*Uma vida sem reflexão não vale a pena ser vivida.*",
+     "Que pergunta Sócrates faria pra você? Comenta. Segue a Lamparina."],
+    ["Gancho: Elias no estudio, o letreiro de neon.", "Barras de ouro; uma interrogacao; o ouro some.",
+     "O celular com coracao; a interrogacao; ele some.", "A balanca pende; a interrogacao.",
+     "Uma interrogacao grande vira para a camera.", "A lamparina acende ao lado da interrogacao."] + _FECHO)
+deslocar(SOCRATES_POD, (0.6, -0.3, 0.62))
+SOCRATES_POD.update({"cenario": "estudio", "clima": "pulso", "gancho": "SÓCRATES ABRIU|UM PODCAST"})
+
+HISTORIAS = {"entrevista-com-deus": ENTREVISTA, "eu-de-80-anos": OITENTA, "cada-idade-uma-mentira": IDADES, "diario-de-judas": JUDAS, "socrates-podcast": SOCRATES_POD, "ansiedade-fosse-uma-pessoa": ANSIEDADE, "diogenes-vendo-o-seu-feed": DIOGENES, "homem-mais-rico-da-babilonia": BABILONIA, "a-ultima-carta": CARTA, "a-tempestade": TEMPESTADE, "kintsugi": KINTSUGI, "ouro-no-fogo": OURO_FOGO, "diamante": DIAMANTE,
              "quatro-mil-semanas": AMPULHETA, "anjo-no-marmore": ESCULTURA, "vida-nao-esta-parada": VIDA_PARADA, "lamparina-mais-antiga": LAMPARINA, "codex-leicester": CODEX, "livro-medieval": LIVRO_MEDIEVAL}

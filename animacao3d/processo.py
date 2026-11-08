@@ -1031,3 +1031,447 @@ def criar_ansiedade(col, m, faixas):
     _valor(brilho, 1.0, f1 - 10)
     _energia(bpy.data.objects["luz_objeto"], 0.6, f0)
     _energia(bpy.data.objects["luz_objeto"], 4, f1)
+
+
+# ---------------- pecas comuns dos videos sem mesa ----------------
+def _relink(o, col):
+    for c in o.users_collection:
+        c.objects.unlink(o)
+    col.objects.link(o)
+    return o
+
+
+def _esf(nome, loc, esc, mat, col, seg=24):
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=seg, ring_count=seg // 2, radius=1, location=loc)
+    o = bpy.context.object
+    o.name, o.scale = nome, esc
+    o.data.materials.append(mat)
+    bpy.ops.object.shade_smooth()
+    return _relink(o, col)
+
+
+def _cilindro(nome, loc, r, h, mat, col, rot=(0, 0, 0), v=24):
+    bpy.ops.mesh.primitive_cylinder_add(vertices=v, radius=r, depth=h, location=loc, rotation=rot)
+    o = bpy.context.object
+    o.name = nome
+    o.data.materials.append(mat)
+    bpy.ops.object.shade_smooth()
+    return _relink(o, col)
+
+
+def _cone(nome, loc, r1, r2, h, mat, col, rot=(0, 0, 0), v=24):
+    bpy.ops.mesh.primitive_cone_add(vertices=v, radius1=r1, radius2=r2, depth=h, location=loc, rotation=rot)
+    o = bpy.context.object
+    o.name = nome
+    o.data.materials.append(mat)
+    bpy.ops.object.shade_smooth()
+    return _relink(o, col)
+
+
+def _texto(nome, txt, loc, tam, mat, col, rot=(math.radians(90), 0, 0), ext=0.01):
+    bpy.ops.object.text_add(location=loc, rotation=rot)
+    o = bpy.context.object
+    o.name = nome
+    o.data.body = txt
+    o.data.size, o.data.extrude = tam, ext
+    o.data.align_x, o.data.align_y = "CENTER", "CENTER"
+    from pathlib import Path
+    fonte = Path(__file__).resolve().parent.parent / "shorts" / "fontes" / "Inter-ExtraBold.otf"
+    if fonte.exists():
+        o.data.font = bpy.data.fonts.load(str(fonte), check_existing=True)
+    o.data.materials.append(mat)
+    return _relink(o, col)
+
+
+def _emis(nome, cor, forca):
+    mat = bpy.data.materials.new(nome)
+    mat.use_nodes = True
+    nt = mat.node_tree
+    nt.nodes.remove(nt.nodes["Principled BSDF"])
+    em = nt.nodes.new("ShaderNodeEmission")
+    em.inputs["Color"].default_value = (*cor, 1)
+    em.inputs["Strength"].default_value = forca
+    nt.links.new(em.outputs[0], nt.nodes["Material Output"].inputs["Surface"])
+    return mat
+
+
+def _voar(o, f, dz=0.3, d=16):
+    """Sobe e some (o que perdeu o valor)."""
+    _chave(o, "location", tuple(o.location), f)
+    _chave(o, "scale", tuple(o.scale), f)
+    _chave(o, "location", (o.location.x, o.location.y, o.location.z + dz), f + d)
+    _chave(o, "scale", (0, 0, 0), f + d)
+
+
+def _acender(nome, loc, energia, f, col, cor=(1.0, 0.6, 0.3), d=10):
+    luz = _ponto(nome, loc, cor, col)
+    _energia(luz, 0, f)
+    _energia(luz, energia, f + d)
+    return luz
+
+
+def _lamparina_barro(loc, f, col, m, energia=6):
+    """Lamparina de oleo de barro que acende no quadro f."""
+    import materiais
+    barro = materiais.simples("barro_lp", (0.6, 0.33, 0.18), 0.7, ruido=0.3, escala_ruido=18, bump=0.2)
+    x, y, z = loc
+    lp = _esf("lamparina", (x, y, z + 0.03), (0.075, 0.05, 0.03), barro, col)
+    bico = _caixa("bico", (x + 0.08, y, z + 0.045), (0.06, 0.025, 0.02), barro, col)
+    ch = _esf("chama", (x + 0.105, y, z + 0.08), (0.01, 0.01, 0.03), m["chama"], col, 12)
+    pop(lp, max(0, f - 12))
+    pop(bico, max(0, f - 10))
+    pop(ch, f)
+    return _acender("luz_lamparina", (x + 0.1, y - 0.03, z + 0.15), energia, f, col)
+
+
+def criar_entrevista(col, m, faixas):
+    """Na cadeira do candidato: a pasta cheia de diplomas que voa embora; depois pao (quem voce ajudou),
+    um ramo de oliveira (quem voce perdoou), uma moeda pequena (fiel no pouco) e a luz que vem da porta."""
+    import materiais
+    _preparar(col, 6)
+    z = MESA_Z
+    et = faixas[1:6]
+    couro = materiais.simples("pasta", (0.2, 0.1, 0.05), 0.5, ruido=0.2, escala_ruido=30)
+    ouro = _ouro()
+    f0, f1 = et[0]
+    pasta = _caixa("pasta", (CX, CY + 0.05, z + 0.02), (0.3, 0.22, 0.04), couro, col)
+    pop(pasta, f0)
+    papeis = []
+    for k in range(4):
+        p = _caixa("diploma", (CX - 0.12 + k * 0.08, CY - 0.03 + 0.02 * k, z + 0.05 + 0.004 * k), (0.16, 0.12, 0.003), m["papel"], col)
+        p.rotation_euler = (0, 0, math.radians(-25 + k * 16))
+        pop(p, f0 + 8 + k * 5)
+        selo = _cilindro("selo", (p.location.x + 0.04, p.location.y - 0.03, p.location.z + 0.003), 0.015, 0.003,
+                         materiais.simples("lacre", (0.55, 0.04, 0.03), 0.4), col)
+        pop(selo, f0 + 10 + k * 5)
+        papeis += [p, selo]
+    trofeu = _cilindro("trofeu", (CX + 0.17, CY + 0.08, z + 0.07), 0.025, 0.12, ouro, col)
+    taca = _cone("taca", (CX + 0.17, CY + 0.08, z + 0.15), 0.02, 0.05, 0.06, ouro, col)
+    pop(trofeu, f0 + 30)
+    pop(taca, f0 + 32)
+    # Etapa 2: ele nem abre - tudo sobe e some; aparece um pao
+    f0, f1 = et[1]
+    for k, o in enumerate(papeis + [pasta, trofeu, taca]):
+        _voar(o, f0 + 4 + k * 2, 0.5, 18)
+    casca = materiais.simples("casca_pao", (0.38, 0.19, 0.07), 0.7, ruido=0.4, escala_ruido=20, bump=0.6)
+    pao = _esf("pao", (CX - 0.1, CY, z + 0.04), (0.1, 0.065, 0.045), casca, col)
+    pop(pao, f0 + (f1 - f0) // 2)
+    # Etapa 3: o ramo de oliveira
+    f0, f1 = et[2]
+    folha = materiais.simples("folha_oliva", (0.22, 0.32, 0.15), 0.6)
+    ramo = _cilindro("ramo", (CX + 0.06, CY + 0.02, z + 0.012), 0.005, 0.24, m["madeira"], col,
+                     (0, math.radians(90), math.radians(20)))
+    pop(ramo, f0 + 4)
+    for k in range(8):
+        t = -0.1 + k * 0.028
+        s = 1 if k % 2 else -1
+        fl = _esf("folha", (CX + 0.06 + t * math.cos(math.radians(20)), CY + 0.02 + t * math.sin(math.radians(20)) + s * 0.014,
+                            z + 0.015), (0.022, 0.007, 0.003), folha, col, 12)
+        fl.rotation_euler = (0, 0, math.radians(20 + s * 40))
+        pop(fl, f0 + 8 + k * 3)
+    # Etapa 4: uma moeda pequena, brilhando
+    f0, f1 = et[3]
+    moeda = _cilindro("moeda", (CX, CY - 0.1, z + 0.004), 0.018, 0.004, ouro, col)
+    pop(moeda, f0 + 6)
+    _acender("luz_moeda", (CX, CY - 0.13, z + 0.08), 2.5, f0 + 8, col, (1.0, 0.8, 0.45))
+    # Etapa 5: a luz da porta cobre a cadeira
+    f0, f1 = et[4]
+    _acender("luz_coracao", (CX, CY - 0.2, z + 0.45), 40, f0 + 4, col, (1.0, 0.88, 0.7), 40)
+
+
+def criar_oitenta(col, m, faixas):
+    """No caixote ao lado da cadeira de balanco: a ampulheta de um minuto corre o video todo;
+    o retrato da mae, a bola de papel (a vergonha) que some, a maca, o celular que se desliga e o broto."""
+    import materiais
+    _preparar(col, 6)
+    z = MESA_Z
+    et = faixas[1:6]
+    fim = faixas[-1][1]
+    vidro = _vidro("vidro_amp", 1.45)
+    areia = materiais.simples("areia", (0.85, 0.65, 0.35), 0.9)
+    ax, ay = CX - 0.2, CY + 0.12
+    for dz, r1, r2 in ((0.06, 0.05, 0.008), (0.14, 0.008, 0.05)):
+        _cone("amp_vidro", (ax, ay, z + 0.02 + dz), r1, r2, 0.08, vidro, col)
+    for dz in (0.01, 0.2):
+        _cilindro("amp_tampa", (ax, ay, z + dz), 0.06, 0.02, m["madeira"], col)
+    for a in range(3):
+        aa = a / 3 * math.tau
+        _cilindro("amp_haste", (ax + 0.052 * math.cos(aa), ay + 0.052 * math.sin(aa), z + 0.105), 0.005, 0.19, m["madeira"], col)
+    cima = _cone("areia_cima", (ax, ay, z + 0.15), 0.006, 0.042, 0.06, areia, col)
+    baixo = _cone("areia_baixo", (ax, ay, z + 0.035), 0.044, 0.004, 0.03, areia, col)
+    baixo.scale = (1, 1, 0.01)
+    _chave(cima, "scale", (1, 1, 1), 0)
+    _chave(cima, "scale", (0.4, 0.4, 0.05), fim)
+    _chave(baixo, "scale", (0.3, 0.3, 0.02), 0)
+    _chave(baixo, "scale", (1, 1, 1), fim)
+    # Etapa 1: o retrato da mae (moldura com foto quente)
+    f0, f1 = et[0]
+    mold = _caixa("moldura", (CX + 0.02, CY + 0.12, z + 0.09), (0.15, 0.015, 0.19), m["madeira"], col)
+    mold.rotation_euler = (math.radians(-12), 0, math.radians(-8))
+    from pathlib import Path
+    fm = _emis("foto_mae", (0.75, 0.55, 0.38), 0.9)
+    tx = fm.node_tree.nodes.new("ShaderNodeTexImage")
+    tx.image = bpy.data.images.load(str(Path(__file__).parent / "texturas" / "retrato-mae.png"))
+    fm.node_tree.links.new(tx.outputs["Color"], fm.node_tree.nodes["Emission"].inputs["Color"])
+    bpy.ops.mesh.primitive_plane_add(size=1, location=(CX + 0.02, CY + 0.1, z + 0.09))
+    foto = _relink(bpy.context.object, col)
+    foto.name = "foto"
+    foto.scale = (0.12, 0.16, 1)
+    foto.data.materials.append(fm)
+    foto.rotation_euler = (math.radians(90 - 12), 0, math.radians(-8))
+    pop(mold, f0 + 4)
+    pop(foto, f0 + 6)
+    # Etapa 2: a vergonha: uma bola de papel amassado que encolhe ate sumir
+    f0, f1 = et[1]
+    bola = _esf("vergonha", (CX - 0.05, CY - 0.08, z + 0.04), (0.04, 0.04, 0.04), m["papel"], col, 8)
+    bola.modifiers.new("amassado", "DISPLACE").strength = 0.4
+    bola.modifiers["amassado"].texture = bpy.data.textures.new("amassa", "VORONOI")
+    pop(bola, f0 + 4)
+    _chave(bola, "scale", (0.04, 0.04, 0.04), f0 + (f1 - f0) // 2)
+    _chave(bola, "scale", (0, 0, 0), f1 - 6)
+    # Etapa 3: a maca
+    f0, f1 = et[2]
+    verm = materiais.simples("maca", (0.55, 0.04, 0.03), 0.35, ruido=0.3, escala_ruido=10)
+    maca = _esf("maca", (CX - 0.05, CY - 0.06, z + 0.045), (0.045, 0.045, 0.04), verm, col)
+    cab = _cilindro("cabinho", (CX - 0.05, CY - 0.06, z + 0.095), 0.003, 0.025, m["madeira"], col)
+    pop(maca, f0 + 4)
+    pop(cab, f0 + 8)
+    # Etapa 4: o celular aceso que vira de cara para baixo e apaga
+    f0, f1 = et[3]
+    cel = _caixa("celular", (CX + 0.14, CY - 0.06, z + 0.006), (0.07, 0.14, 0.01),
+                 materiais.simples("cel", (0.02, 0.02, 0.025), 0.25, metal=0.6), col)
+    tela = _caixa("tela", (CX + 0.14, CY - 0.06, z + 0.0115), (0.064, 0.13, 0.001), _emis("tela_cel", (0.5, 0.7, 1.0), 2.5), col)
+    pop(cel, f0 + 4)
+    pop(tela, f0 + 4)
+    vira = f0 + (f1 - f0) // 2
+    _chave(tela, "scale", tuple(tela.scale), vira)
+    _chave(tela, "scale", (0, 0, 0), vira + 4)
+    _chave(cel, "rotation_euler", (0, 0, 0), vira)
+    _chave(cel, "rotation_euler", (0, math.pi, 0), vira + 10)
+    # Etapa 5: comeca - um vasinho e o broto que cresce
+    f0, f1 = et[4]
+    vaso = _cilindro("vasinho", (CX + 0.05, CY + 0.0, z + 0.035), 0.035, 0.07,
+                     materiais.simples("terracota", (0.6, 0.3, 0.17), 0.8), col)
+    pop(vaso, f0 + 2)
+    caule = _cilindro("broto", (CX + 0.05, CY, z + 0.1), 0.003, 0.06, materiais.simples("verde", (0.2, 0.45, 0.1), 0.6), col)
+    caule.location.z = z + 0.07
+    _chave(caule, "scale", (1, 1, 0), 0)
+    _chave(caule, "scale", (1, 1, 0), f0 + 10)
+    _chave(caule, "scale", (1, 1, 2.0), f1)
+    for s in (-1, 1):
+        fo = _esf("folhinha", (CX + 0.05 + s * 0.014, CY, z + 0.135), (0.014, 0.006, 0.003),
+                  materiais.simples("verde2", (0.25, 0.55, 0.12), 0.6), col, 12)
+        fo.rotation_euler = (0, math.radians(-s * 25), 0)
+        pop(fo, f0 + (f1 - f0) // 2 + 6)
+
+
+def criar_idades(col, m, faixas):
+    """Sobre o bau do sotao, um objeto por idade: o ursinho (5), o espelho (16), o capelo (25),
+    o calendario que perde as folhas (30) e a vela que acende (50)."""
+    import materiais
+    _preparar(col, 6)
+    z = MESA_Z
+    et = faixas[1:6]
+    xs = [-0.155, -0.07, 0.01, 0.1, 0.19]
+    # 5 anos: ursinho de pelucia
+    f0, _ = et[0]
+    pel = materiais.simples("pelucia", (0.5, 0.32, 0.17), 0.95, ruido=0.5, escala_ruido=90, bump=0.6)
+    x, y = CX + xs[0], CY + 0.02
+    for nome, d, e in (("urso_corpo", (0, 0, 0.045), (0.04, 0.035, 0.045)), ("urso_cabeca", (0, -0.005, 0.11), (0.033, 0.03, 0.03)),
+                       ("urso_or1", (-0.025, 0, 0.14), (0.012, 0.008, 0.012)), ("urso_or2", (0.025, 0, 0.14), (0.012, 0.008, 0.012)),
+                       ("urso_braco1", (-0.042, -0.01, 0.055), (0.012, 0.012, 0.025)), ("urso_braco2", (0.042, -0.01, 0.055), (0.012, 0.012, 0.025)),
+                       ("urso_fuc", (0, -0.03, 0.105), (0.013, 0.01, 0.01))):
+        pop(_esf(nome, (x + d[0], y + d[1], z + d[2]), e, pel, col, 16), f0 + 4)
+    for s in (-1, 1):
+        pop(_esf("urso_olho", (x + s * 0.011, y - 0.03, z + 0.12), (0.004, 0.004, 0.004),
+                 materiais.simples("botao", (0.01, 0.01, 0.01), 0.2), col, 8), f0 + 8)
+    # 16 anos: o espelho de mao
+    f0, _ = et[1]
+    esp = materiais.simples("espelho", (0.95, 0.95, 0.95), 0.03, metal=1.0)
+    x, y = CX + xs[1], CY + 0.06
+    aro = _cilindro("espelho_aro", (x, y, z + 0.11), 0.05, 0.012, m["latao"], col, (math.radians(75), 0, 0))
+    vid = _cilindro("espelho_vidro", (x, y - 0.007, z + 0.11), 0.044, 0.004, esp, col, (math.radians(75), 0, 0))
+    cabo = _cilindro("espelho_cabo", (x, y + 0.012, z + 0.03), 0.008, 0.07, m["latao"], col, (math.radians(-15), 0, 0))
+    for o in (aro, vid, cabo):
+        pop(o, f0 + 4)
+    # 25 anos: o capelo de formatura
+    f0, _ = et[2]
+    preto = materiais.simples("capelo", (0.02, 0.02, 0.025), 0.6)
+    x, y = CX + xs[2], CY - 0.04
+    base = _cilindro("capelo_base", (x, y, z + 0.025), 0.045, 0.05, preto, col)
+    topo = _caixa("capelo_topo", (x, y, z + 0.052), (0.13, 0.13, 0.006), preto, col)
+    topo.rotation_euler = (0, 0, math.radians(20))
+    borla = _cilindro("borla", (x + 0.05, y - 0.03, z + 0.03), 0.003, 0.05, materiais.simples("borla", (0.8, 0.6, 0.15), 0.5), col)
+    for o in (base, topo, borla):
+        pop(o, f0 + 4)
+    # 30 anos: o calendario que perde as folhas ("ainda tenho tempo")
+    f0, f1 = et[3]
+    x, y = CX + xs[3], CY + 0.06
+    suporte = _caixa("cal_base", (x, y + 0.01, z + 0.06), (0.1, 0.01, 0.12), m["madeira"], col)
+    suporte.rotation_euler = (math.radians(-15), 0, 0)
+    pop(suporte, f0 + 2)
+    verm = materiais.simples("cal_topo", (0.6, 0.06, 0.05), 0.5)
+    for k in range(7):
+        fo = _caixa("cal_folha", (x, y - 0.002 - 0.002 * k, z + 0.06), (0.09, 0.002, 0.1), m["papel"], col)
+        fo.rotation_euler = (math.radians(-15), 0, 0)
+        pop(fo, f0 + 4)
+        if k < 6:
+            fv = f0 + 14 + (6 - k) * 6
+            _chave(fo, "location", tuple(fo.location), fv)
+            _chave(fo, "rotation_euler", tuple(fo.rotation_euler), fv)
+            _chave(fo, "location", (x + 0.15, y - 0.15, z + 0.3), fv + 14)
+            _chave(fo, "rotation_euler", (math.radians(60), math.radians(80), 1), fv + 14)
+            _chave(fo, "scale", tuple(fo.scale), fv + 8)
+            _chave(fo, "scale", (0, 0, 0), fv + 14)
+    pop(_caixa("cal_faixa", (x, y - 0.02, z + 0.115), (0.092, 0.004, 0.022), verm, col), f0 + 4)
+    # 50 anos: a vela que acende ("agora e tarde demais" - nunca e)
+    f0, f1 = et[4]
+    x, y = CX + xs[4], CY - 0.02
+    cera = materiais.simples("cera_v", (0.9, 0.86, 0.75), 0.6, sss=0.3)
+    vela = _cilindro("vela", (x, y, z + 0.05), 0.017, 0.1, cera, col)
+    pop(vela, f0 + 2)
+    ch = _esf("chama", (x, y, z + 0.115), (0.008, 0.008, 0.022), m["chama"], col, 12)
+    pop(ch, f0 + (f1 - f0) // 2)
+    _acender("luz_vela", (x, y - 0.04, z + 0.17), 9, f0 + (f1 - f0) // 2, col)
+
+
+def criar_judas(col, m, faixas):
+    """Sobre a pedra do jardim: o diario que se escreve, a bolsa de onde saem moedas, a lamparina que
+    enfraquece, as trinta moedas de prata que se derramam e, no fim, a lamparina que volta a acender."""
+    import materiais
+    _preparar(col, 4)
+    z = MESA_Z
+    et = faixas[1:6]
+    prata = materiais.simples("prata", (0.85, 0.86, 0.88), 0.25, metal=1.0)
+    tinta = materiais.simples("tinta", (0.05, 0.03, 0.02), 0.6)
+    # Etapa 1: o diario: um pergaminho com linhas que vao surgindo; a lamparina acende
+    f0, f1 = et[0]
+    perg = _caixa("diario", (CX - 0.06, CY - 0.02, z + 0.004), (0.24, 0.17, 0.006), m["papel"], col)
+    perg.rotation_euler = (0, 0, math.radians(-6))
+    pop(perg, f0 + 2)
+    for k in range(7):
+        ln = _caixa("linha", (CX - 0.06 - 0.01 * (k % 2), CY + 0.06 - k * 0.022, z + 0.008), (0.17 - 0.03 * (k % 3), 0.004, 0.001), tinta, col)
+        ln.rotation_euler = perg.rotation_euler
+        pop(ln, f0 + 10 + k * 5)
+    lamp = _lamparina_barro((CX - 0.24, CY + 0.12, z), f0 + 6, col, m, 7)
+    # Etapa 2: a bolsa; algumas moedas escapam (ele tirava um pouco)
+    f0, f1 = et[1]
+    saco = materiais.simples("bolsa", (0.22, 0.13, 0.07), 0.8, ruido=0.5, escala_ruido=60, bump=0.5)
+    bx, by = CX + 0.15, CY + 0.08
+    pop(_esf("bolsa", (bx, by, z + 0.05), (0.06, 0.055, 0.055), saco, col), f0 + 2)
+    pop(_cone("boca_bolsa", (bx, by, z + 0.115), 0.012, 0.035, 0.04, saco, col), f0 + 4)
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.016, minor_radius=0.003, location=(bx, by, z + 0.1))
+    pop(_relink(bpy.context.object, col), f0 + 6)
+    bpy.context.object.data.materials.append(m["madeira"])
+    for k in range(4):
+        pop(_cilindro("moeda", (bx - 0.05 - k * 0.02, by - 0.05 - k * 0.01, z + 0.003), 0.012, 0.003, prata, col), f0 + 14 + k * 8)
+    # Etapa 3: um reino agora - a lamparina enfraquece
+    f0, f1 = et[2]
+    _energia(lamp, 7, f0 + 4)
+    _energia(lamp, 1.5, f1)
+    # Etapa 4: trinta moedas de prata se derramam
+    f0, f1 = et[3]
+    import random
+    rnd = random.Random(30)
+    for k in range(30):
+        a, r = rnd.uniform(0, math.tau), rnd.uniform(0.0, 0.09)
+        mo = _cilindro("prata30", (CX + 0.05 + r * math.cos(a), CY - 0.05 + r * math.sin(a) * 0.7, z + 0.003 + 0.004 * (k % 3)),
+                       0.013, 0.003, prata, col, (rnd.uniform(-0.2, 0.2), rnd.uniform(-0.2, 0.2), 0), 16)
+        pop(mo, f0 + 4 + k)
+    _acender("brilho_prata", (CX + 0.05, CY - 0.2, z + 0.2), 2.0, f0 + 4, col, (0.7, 0.8, 1.0))
+    # Etapa 5: Pedro voltou - a lamparina acende de novo, mais forte
+    f0, f1 = et[4]
+    _energia(lamp, 1.5, f0 + 6)
+    _energia(lamp, 12, f0 + 26)
+
+
+def criar_socrates(col, m, faixas):
+    """Sobre a caixa de som do estudio: cada convidado traz a sua certeza (o ouro, o celular com coracao,
+    a balanca) e uma interrogacao dourada a derruba; no fim, a interrogacao vira para a camera e a lamparina acende."""
+    import materiais
+    _preparar(col, 6)
+    z = MESA_Z
+    et = faixas[1:6]
+    ouro = _ouro()
+    gold = _emis("interrog", (1.0, 0.62, 0.18), 2.2)
+
+    def pergunta(x, f, tam=0.12):
+        q = _texto("interrogacao", "?", (x, CY + 0.05, z + 0.16), tam, gold, col, ext=0.012)
+        pop(q, f)
+        return q
+
+    # Etapa 1: o coach - barras de ouro; a pergunta; o ouro some
+    f0, f1 = et[0]
+    barras = []
+    for k in range(5):
+        b = _caixa("barra_ouro", (CX - 0.1 + (k % 3) * 0.075 - (k // 3) * 0.04, CY - 0.02, z + 0.015 + (k // 3) * 0.03),
+                   (0.07, 0.035, 0.03), ouro, col)
+        pop(b, f0 + 2 + k * 3)
+        barras.append(b)
+    q1 = pergunta(CX - 0.04, f0 + (f1 - f0) // 2)
+    for k, b in enumerate(barras):
+        _voar(b, f1 - 18 + k, 0.0, 10)
+    _voar(q1, f1 - 6, 0.05, 8)
+    # Etapa 2: o influencer - celular com coracao; a pergunta; o coracao apaga
+    f0, f1 = et[1]
+    cel = _caixa("celular", (CX - 0.02, CY + 0.0, z + 0.075), (0.075, 0.01, 0.15),
+                 materiais.simples("cel2", (0.02, 0.02, 0.025), 0.25, metal=0.6), col)
+    cel.rotation_euler = (math.radians(-12), 0, 0)
+    vermelho = _emis("coracao", (1.0, 0.15, 0.3), 4)
+    cor = bpy.data.objects.new("coracao", None)
+    cor.location = (CX - 0.02, CY - 0.014, z + 0.085)
+    col.objects.link(cor)
+    for dx in (-0.011, 0.011):
+        lb = _esf("coracao_l", (0, 0, 0), (0.014, 0.003, 0.014), vermelho, col, 12)
+        lb.parent = cor
+        lb.location = (dx, 0, 0.008)
+    bico = _caixa("coracao_b", (0, 0, 0), (0.024, 0.004, 0.024), vermelho, col)
+    bico.parent = cor
+    bico.location, bico.rotation_euler = (0, 0, -0.004), (0, math.radians(45), 0)
+    tela = _caixa("tela_soc", (CX - 0.02, CY - 0.0065, z + 0.075), (0.068, 0.001, 0.14), _emis("tela_soc", (0.95, 0.95, 1.0), 1.2), col)
+    tela.rotation_euler = cel.rotation_euler
+    cor.rotation_euler = (math.radians(-12), 0, 0)
+    for o in (cel, tela, cor):
+        pop(o, f0 + 3)
+    q2 = pergunta(CX + 0.1, f0 + (f1 - f0) // 2)
+    for o in (cor, tela, cel):
+        _voar(o, f1 - 14, 0.0, 10)
+    _voar(q2, f1 - 6, 0.05, 8)
+    # Etapa 3: o politico - a balanca da justica, que pende para um lado
+    f0, f1 = et[2]
+    bx = CX - 0.02
+    haste = _cilindro("bal_haste", (bx, CY, z + 0.08), 0.005, 0.16, m["latao"], col)
+    base = _cilindro("bal_base", (bx, CY, z + 0.005), 0.04, 0.01, m["latao"], col)
+    trave = bpy.data.objects.new("bal_trave", None)
+    trave.location = (bx, CY, z + 0.16)
+    col.objects.link(trave)
+    for o in (haste, base):
+        pop(o, f0 + 2)
+    pecas = [_cilindro("bal_braco", (0, 0, 0), 0.003, 0.2, m["latao"], col, (0, math.radians(90), 0))]
+    for s in (-1, 1):
+        pecas.append(_cilindro("bal_prato", (s * 0.095, 0, -0.06), 0.035, 0.004, m["latao"], col))
+        pecas.append(_cilindro("bal_fio", (s * 0.095, 0, -0.03), 0.0015, 0.06, m["latao"], col))
+    for p in pecas:
+        loc = tuple(p.location)
+        p.parent = trave
+        p.location = loc
+    pop(trave, f0 + 4)
+    _chave(trave, "rotation_euler", (0, 0, 0), f0 + (f1 - f0) // 2)
+    _chave(trave, "rotation_euler", (0, math.radians(18), 0), f0 + (f1 - f0) // 2 + 14)
+    q3 = pergunta(CX + 0.13, f0 + (f1 - f0) // 2 + 4)
+    for o in (haste, base, trave):
+        _voar(o, f1 - 12, 0.0, 10)
+    _voar(q3, f1 - 6, 0.05, 8)
+    # Etapa 4: "e voce, sabe o que?" - uma interrogacao grande vira para a camera
+    f0, f1 = et[3]
+    qg = _texto("interrogacao_grande", "?", (CX, CY + 0.02, z + 0.12), 0.22, gold, col, (math.radians(90), 0, math.radians(90)), 0.02)
+    pop(qg, f0 + 2)
+    _chave(qg, "rotation_euler", (math.radians(90), 0, math.radians(90)), f0 + 8)
+    _chave(qg, "rotation_euler", (math.radians(90), 0, 0), f0 + 30)
+    # Etapa 5: so sei que nada sei - a interrogacao baixa e a lamparina acende
+    f0, f1 = et[4]
+    _chave(qg, "location", tuple(qg.location), f0 + 2)
+    _chave(qg, "location", (CX + 0.12, CY + 0.06, z + 0.12), f0 + 20)
+    _chave(qg, "scale", tuple(qg.scale), f0 + 2)
+    _chave(qg, "scale", (0.6, 0.6, 0.6), f0 + 20)
+    _lamparina_barro((CX - 0.1, CY - 0.02, z), f0 + 14, col, m, 8)
