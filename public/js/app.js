@@ -1,4 +1,4 @@
-import { $, $$, esc, api, toast, md, fmtDate, addDays, busy, copy, icon, ask } from './util.js';
+import { $, $$, esc, api, toast, md, fmtDate, addDays, busy, copy, icon, ask, confetti, attachMic, shrinkImage } from './util.js';
 
 const state = { me: null, ai: false, today: null };
 const app = $('#app');
@@ -19,12 +19,13 @@ const MOBILE_NAV = [['hoje', 'Hoje', 'home'], ['agenda', 'Agenda', 'cal'], ['met
 const views = {};
 async function route() {
   const [, name = 'hoje', arg] = location.hash.match(/^#\/([^/]*)\/?(.*)$/) || [];
-  if (name === 'entrar') return renderAuth();
+  if (name === 'entrar') return renderAuth(arg);
+  if (name === 'redefinir') return renderReset(arg);
   if (!state.me) {
     try {
       const me = await api('/api/me');
-      Object.assign(state, { me: me.user, ai: me.ai, today: me.today });
-    } catch { return renderAuth(); }
+      Object.assign(state, { me: me.user, ai: me.ai, today: me.today, repeats: me.repeats || {} });
+    } catch { return renderLanding(); }
   }
   if (name === 'boas-vindas') return renderOnboarding();
   if (!state.me.onboarded) { location.hash = '#/boas-vindas'; return; }
@@ -46,7 +47,7 @@ function renderShell(active) {
       <div class="shell">
         <aside class="sidebar">
           <div class="brand"><span class="brand-mark">➜</span> Rumo</div>
-          <nav>${NAV.map(([k, l, i]) => `<a class="nav-link" data-k="${k}" href="#/${k}">${icon(i)} ${l}</a>`).join('')}</nav>
+          <nav>${[...NAV, ...(state.me?.is_admin ? [['admin', 'Painel admin', 'grid']] : [])].map(([k, l, i]) => `<a class="nav-link" data-k="${k}" href="#/${k}">${icon(i)} ${l}</a>`).join('')}</nav>
           <div class="spacer"></div>
           <div class="small muted" style="padding:0 12px">${state.ai ? '● IA conectada' : '○ IA em modo demonstração'}</div>
         </aside>
@@ -59,7 +60,7 @@ function renderShell(active) {
 }
 
 // ---------------- auth ----------------
-function renderAuth() {
+function renderAuth(arg) {
   state.me = null;
   let mode = 'login';
   app.innerHTML = `
@@ -73,7 +74,9 @@ function renderAuth() {
           <div class="field"><label for="a-email">E-mail</label><input id="a-email" type="email" required autocomplete="email"></div>
           <div class="field"><label for="a-pass">Senha</label><input id="a-pass" type="password" required minlength="6" autocomplete="current-password"></div>
           <button class="btn primary" style="width:100%;justify-content:center" type="submit">Entrar</button>
+          <button class="btn ghost sm" type="button" id="forgot" style="margin-top:8px;width:100%;justify-content:center">Esqueci minha senha</button>
         </form>
+        <p class="small muted" style="margin:14px 0 0;text-align:center"><a href="#/" data-home>← Conhecer o Rumo</a></p>
         <ul class="feature-list">
           <li>🎯 Metas quebradas em tarefas diárias pela IA</li>
           <li>📅 Agenda com linguagem natural (“dentista amanhã 15h”)</li>
@@ -89,6 +92,15 @@ function renderAuth() {
     $('#auth-form button[type=submit]').textContent = mode === 'register' ? 'Criar minha conta' : 'Entrar';
     $('#a-pass').autocomplete = mode === 'register' ? 'new-password' : 'current-password';
   });
+  if (arg === 'criar') $('[data-m=register]').click();
+  $('#forgot').onclick = async () => {
+    const email = await ask('Qual o e-mail da sua conta? Vamos enviar um link para criar uma nova senha.', { input: 'email', value: $('#a-email').value, okLabel: 'Enviar link' });
+    if (!email) return;
+    try {
+      await api('/api/auth/forgot', { method: 'POST', body: { email } });
+      toast('Se esse e-mail tiver conta, o link chega em alguns minutos. Veja também o spam.');
+    } catch (err) { toast(err.message); }
+  };
   $('#auth-form').onsubmit = async (e) => {
     e.preventDefault();
     const body = { name: $('#a-name').value, email: $('#a-email').value, password: $('#a-pass').value };
@@ -203,6 +215,7 @@ function taskCard(t, goalName) {
         ${t.detail ? `<div class="task-detail">${esc(t.detail)}</div>` : ''}
         <div class="row small" style="gap:6px;margin-top:6px">
           <span class="chip">⏱ ${t.minutes} min</span>
+          ${t.source === 'habito' ? '<span class="chip accent">🔁 hábito</span>' : ''}
           ${goalName ? `<span class="chip">🎯 ${esc(goalName.length > 34 ? `${goalName.slice(0, 34)}…` : goalName)}</span>` : ''}
         </div>
       </div>
@@ -210,6 +223,7 @@ function taskCard(t, goalName) {
     <div class="task-buttons">
       <button class="btn sm primary" data-act="toggle">✓ Feito</button>
       <button class="btn sm" data-act="help">🆘 Me ajuda</button>
+      <button class="btn sm" data-act="focus">▶ Foco</button>
       <button class="btn sm" data-act="talk">💬 Falar</button>
       <button class="btn sm ghost" data-act="later">⏭ Amanhã</button>
       <button class="btn sm ghost danger" data-act="del" aria-label="Excluir tarefa">${icon('trash')}</button>
@@ -237,6 +251,7 @@ views.hoje = async (main) => {
           </div>
           <div class="row" style="flex-wrap:nowrap;gap:8px">
             <textarea id="say" rows="1" placeholder="Fale com a IA: “fiz a primeira”, “hoje não dá”, “marca dentista sexta 15h”…" aria-label="Mensagem para a IA"></textarea>
+            <button class="btn mic" type="button" id="say-mic" aria-label="Falar por voz">🎤</button>
             <button class="btn primary" type="submit" aria-label="Enviar">Enviar</button>
           </div>
         </form>
@@ -298,6 +313,7 @@ views.hoje = async (main) => {
       ${data.tasks.filter((t) => !t.done).map((t) => taskCard(t, goalNames()[t.goal_id])).join('')}
       ${done ? `<details class="done-list"><summary class="muted small">✅ Feitas hoje (${done})</summary>${data.tasks.filter((t) => t.done).map((t) => taskCard(t)).join('')}</details>` : ''}
       ${data.overdue.length ? `<div class="bubble assistant">Ficaram <b>${data.overdue.length}</b> tarefa${data.overdue.length > 1 ? 's' : ''} de dias anteriores. <div class="row" style="margin-top:8px"><button class="btn sm" data-q="bring">Trazer para hoje</button><button class="btn sm ghost" data-q="clear-overdue">Descartar</button></div></div>` : ''}
+      ${(data.needs_plan || []).slice(0, 2).map((g) => `<div class="bubble assistant">Sua meta <b>${esc(g.title)}</b> está sem tarefas pela frente. Quer que eu planeje os próximos 7 dias?<div style="margin-top:8px"><button class="btn sm primary" data-q="plan-goal" data-goal="${g.id}" data-busy="Planejando…">✨ Planejar 7 dias</button></div></div>`).join('')}
       ${ev.length ? `<div class="bubble assistant">📅 Hoje na agenda: ${ev.map((e) => `<b>${e.start.slice(11)}</b> ${esc(e.title)}`).join(' · ')}</div>` : ''}`;
 
     const weekMap = Object.fromEntries(data.week.map((w) => [w.d, w]));
@@ -316,6 +332,17 @@ views.hoje = async (main) => {
   async function reload() {
     data = await api('/api/today');
     renderBlock();
+  }
+  async function markDone(t, done) {
+    await api(`/api/tasks/${t.id}`, { method: 'PATCH', body: { done } });
+    await reload();
+    if (!done) return;
+    const left = data.tasks.filter((x) => !x.done).length;
+    if (!left) confetti();
+    toast(left ? ['Boa! 🔥', 'Mais um passo! 💪', 'Isso aí! ✅', 'Constância vence talento. 🚀'][Math.floor(Math.random() * 4)] : 'Dia completo! 🎉', {
+      label: 'Desfazer',
+      run: async () => { await api(`/api/tasks/${t.id}`, { method: 'PATCH', body: { done: false } }); await reload(); },
+    });
   }
   renderBlock();
 
@@ -348,6 +375,13 @@ views.hoje = async (main) => {
     const q = e.target.closest('[data-q]');
     if (q) {
       if (q.dataset.q === 'plan') return planDay(q);
+      if (q.dataset.q === 'plan-goal') {
+        return busy(q, async () => {
+          await api(`/api/goals/${q.dataset.goal}/plan`, { method: 'POST', body: { days: 7 } });
+          await reload();
+          toast('Plano criado! As tarefas de hoje já estão na lista.');
+        });
+      }
       if (q.dataset.q === 'msg') return converse({ message: q.dataset.text }, q.dataset.text);
       if (q.dataset.q === 'bring' || q.dataset.q === 'clear-overdue') {
         for (const t of data.overdue) {
@@ -365,12 +399,9 @@ views.hoje = async (main) => {
     if (!t) return;
     const act = btn.dataset.act;
     if (act === 'toggle') {
-      await api(`/api/tasks/${t.id}`, { method: 'PATCH', body: { done: !t.done } });
-      await reload();
-      if (!t.done) {
-        const left = data.tasks.filter((x) => !x.done).length;
-        toast(left ? ['Boa! 🔥', 'Mais um passo! 💪', 'Isso aí! ✅', 'Constância vence talento. 🚀'][Math.floor(Math.random() * 4)] : 'Dia completo! 🎉');
-      }
+      await markDone(t, !t.done);
+    } else if (act === 'focus') {
+      startFocus(t, () => markDone(t, true));
     } else if (act === 'help') {
       converse({ help_task_id: t.id }, `🆘 Me ajuda com: ${t.title}`);
     } else if (act === 'talk') {
@@ -396,6 +427,7 @@ views.hoje = async (main) => {
     converse({ message: text }, text);
   };
   say.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#composer').requestSubmit(); } };
+  attachMic(say, $('#say-mic'));
   $('#review').onclick = (e) => busy(e.currentTarget, async () => {
     const r = await api('/api/ai/review', { method: 'POST', body: {} });
     $('#review-out').innerHTML = md(r.text);
@@ -559,7 +591,7 @@ views.agenda = async (main) => {
     </form>
     <div id="days">${days.length ? days.map((day) => `
       <div class="day-group"><h3>${day === from ? 'Hoje · ' : day === addDays(from, 1) ? 'Amanhã · ' : ''}${fmtDate(day)}</h3>
-        ${byDay[day].events.map((e) => `<div class="event" data-ev="${e.id}"><div class="event-time">${e.start.slice(11)}</div><div style="flex:1"><b>${esc(e.title)}</b>${e.end ? `<div class="small muted">até ${e.end.slice(11)}</div>` : ''}${e.notes ? `<div class="small muted">${esc(e.notes.length > 140 ? `${e.notes.slice(0, 140)}…` : e.notes)}</div>` : ''}</div><button class="btn sm ghost danger" data-del-ev="${e.id}" aria-label="Excluir">${icon('trash')}</button></div>`).join('')}
+        ${byDay[day].events.map((e) => `<div class="event" data-ev="${e.id}"><div class="event-time">${e.start.slice(11)}</div><div style="flex:1"><b>${esc(e.title)}</b>${e.repeat ? ` <span class="chip" title="Repete">🔁 ${esc((state.repeats || {})[e.repeat] || '')}</span>` : ''}${e.end ? `<div class="small muted">até ${e.end.slice(11)}</div>` : ''}${e.notes ? `<div class="small muted">${esc(e.notes.length > 140 ? `${e.notes.slice(0, 140)}…` : e.notes)}</div>` : ''}</div><button class="btn sm ghost danger" data-del-ev="${e.id}" data-series="${e.repeat ? 1 : ''}" aria-label="Excluir">${icon('trash')}</button></div>`).join('')}
         ${byDay[day].tasks.length ? `<div class="small muted">📋 ${byDay[day].tasks.filter((t) => t.done).length}/${byDay[day].tasks.length} tarefas: ${byDay[day].tasks.slice(0, 3).map((t) => esc(t.title)).join(' · ')}${byDay[day].tasks.length > 3 ? '…' : ''}</div>` : ''}
       </div>`).join('') : '<div class="card empty">Agenda livre pelos próximos 30 dias.</div>'}</div>
 
@@ -570,6 +602,7 @@ views.agenda = async (main) => {
         <div class="field"><label>Início</label><input type="datetime-local" id="ev-start" required></div>
         <div class="field"><label>Fim (opcional)</label><input type="datetime-local" id="ev-end"></div>
       </div>
+      <div class="field"><label for="ev-repeat">Repetir</label><select id="ev-repeat">${Object.entries(state.repeats || { '': 'Não repete' }).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
       <div class="field"><label>Notas</label><textarea id="ev-notes"></textarea></div>
       <div class="row" style="justify-content:flex-end"><button class="btn" value="cancel" formnovalidate>Cancelar</button><button class="btn primary" value="ok">Salvar</button></div>
     </form></dialog>`;
@@ -590,13 +623,13 @@ views.agenda = async (main) => {
   $('#ev-form').onsubmit = async (e) => {
     if (e.submitter?.value !== 'ok') return;
     e.preventDefault();
-    await api('/api/events', { method: 'POST', body: { title: $('#ev-title').value, start: $('#ev-start').value, end: $('#ev-end').value || null, notes: $('#ev-notes').value } });
+    await api('/api/events', { method: 'POST', body: { title: $('#ev-title').value, start: $('#ev-start').value, end: $('#ev-end').value || null, notes: $('#ev-notes').value, repeat: $('#ev-repeat').value } });
     dlg.close();
     refresh();
   };
   main.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-del-ev]');
-    if (b && await ask('Excluir este compromisso?', { okLabel: 'Excluir', danger: true })) { await api(`/api/events/${b.dataset.delEv}`, { method: 'DELETE' }); refresh(); }
+    if (b && await ask(b.dataset.series ? 'Excluir este compromisso e todas as repetições?' : 'Excluir este compromisso?', { okLabel: 'Excluir', danger: true })) { await api(`/api/events/${b.dataset.delEv}`, { method: 'DELETE' }); refresh(); }
   });
 };
 
@@ -620,6 +653,7 @@ views.metas = async (main, id) => {
     <div class="page-head"><div><h1>Metas</h1><p class="muted" style="margin:0">Onde você quer chegar? A IA divide em passos pequenos.</p></div>
       <div class="row"><button class="btn" id="import-plan">${icon('rocket')} Plano de divulgação 30 dias</button><button class="btn primary" id="new-goal">${icon('plus')} Nova meta</button></div></div>
     ${active.length ? `<div class="grid grid-2">${active.map(card).join('')}</div>` : `<div class="card empty"><h2>Comece por uma meta</h2><p>Ex: “Ganhar R$ 5 mil/mês com meu negócio”, “Chegar a 10 mil seguidores”, “Correr 10 km”.</p></div>`}
+    <section class="card" id="habits" style="margin-top:20px"></section>
     ${other.length ? `<h2 style="margin-top:28px">Pausadas e concluídas</h2><div class="grid grid-2">${other.map(card).join('')}</div>` : ''}
 
     <dialog id="goal-dialog"><form method="dialog" id="goal-form">
@@ -634,6 +668,7 @@ views.metas = async (main, id) => {
       <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn" value="cancel" formnovalidate>Cancelar</button><button class="btn primary" value="ok" data-busy="Criando plano…">Criar meta</button></div>
     </form></dialog>`;
 
+  renderHabits($('#habits'));
   const dlg = $('#goal-dialog');
   $('#new-goal').onclick = () => dlg.showModal();
   $('#goal-form').onsubmit = (e) => {
@@ -717,6 +752,7 @@ views.chat = async (main) => {
       <div class="suggestions">${['Me ajuda a planejar meu dia', 'Estou travado, o que faço agora?', 'Me dá 5 ideias de post para hoje', 'Agenda uma reunião amanhã às 10h', 'Como eu divulgo meu trabalho?'].map((t) => `<button data-s="${esc(t)}">${esc(t)}</button>`).join('')}</div>
       <form class="chat-input" id="chat-form">
         <textarea id="msg" placeholder="Escreva sua mensagem…" rows="1" aria-label="Mensagem"></textarea>
+        <button class="btn mic" type="button" id="msg-mic" aria-label="Falar por voz">🎤</button>
         <button class="btn primary" type="submit" aria-label="Enviar">Enviar</button>
       </form>
     </div>`;
@@ -732,6 +768,7 @@ views.chat = async (main) => {
   $('#chat-form').onsubmit = (e) => { e.preventDefault(); const t = input.value.trim(); input.value = ''; send(t); };
   input.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#chat-form').requestSubmit(); } };
   $$('[data-s]').forEach((b) => b.onclick = () => send(b.dataset.s));
+  attachMic(input, $('#msg-mic'));
   $('#clear-chat').onclick = async () => { if (await ask('Apagar todo o histórico da conversa?', { okLabel: 'Apagar', danger: true })) { await api('/api/chat', { method: 'DELETE' }); views.chat(main); } };
 };
 
@@ -833,7 +870,9 @@ views.legendas = async (main) => {
   main.innerHTML = `
     <div class="page-head"><div><h1>Legendas</h1><p class="muted" style="margin:0">Legendas prontas para colar, com gancho, CTA e hashtags.</p></div></div>
     <form class="card" id="cap-form">
-      <div class="field"><label>Sobre o que é o post?</label><textarea id="c-topic" placeholder="Ex: foto minha no escritório comemorando o primeiro cliente do mês"></textarea></div>
+      <div class="field"><label for="c-topic">Sobre o que é o post?</label><textarea id="c-topic" placeholder="Ex: foto minha no escritório comemorando o primeiro cliente do mês"></textarea></div>
+      <div class="field"><label for="c-photo">Foto do post (opcional): a IA olha a imagem para escrever</label>
+        <div class="row"><input type="file" id="c-photo" accept="image/*" style="width:auto"><img id="c-prev" class="photo-prev hidden" alt="Prévia da foto"><button type="button" class="btn sm ghost hidden" id="c-clear">Remover foto</button></div></div>
       <div class="grid grid-3" style="gap:10px">
         <div class="field"><label>Plataforma</label><select id="c-platform"><option>Instagram</option><option>TikTok</option><option>LinkedIn</option><option>Facebook</option><option>X (Twitter)</option><option>YouTube Shorts</option><option>WhatsApp Status</option></select></div>
         <div class="field"><label>Estilo</label><select id="c-style"><option>autêntico e humano</option><option>motivacional</option><option>engraçado</option><option>profissional</option><option>vendedor (persuasivo)</option><option>vulnerável e reflexivo</option><option>curto e impactante</option></select></div>
@@ -842,12 +881,24 @@ views.legendas = async (main) => {
       <div class="row" style="justify-content:flex-end"><button class="btn primary" type="submit" data-busy="Escrevendo…">${icon('spark')} Gerar legendas</button></div>
     </form>
     <div id="cap-out" style="margin-top:16px"></div>`;
+  let photo = null;
+  $('#c-photo').onchange = async (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    try {
+      photo = await shrinkImage(f);
+      $('#c-prev').src = photo.preview;
+      $('#c-prev').classList.remove('hidden');
+      $('#c-clear').classList.remove('hidden');
+    } catch (err) { toast(err.message); }
+  };
+  $('#c-clear').onclick = () => { photo = null; $('#c-photo').value = ''; $('#c-prev').classList.add('hidden'); $('#c-clear').classList.add('hidden'); };
   $('#cap-form').onsubmit = (e) => {
     e.preventDefault();
     const topic = $('#c-topic').value.trim();
-    if (!topic) return toast('Sobre o que é o post?');
+    if (!topic && !photo) return toast('Escreva sobre o que é o post ou anexe uma foto.');
     busy(e.submitter, async () => {
-      const r = await api('/api/ai/caption', { method: 'POST', body: { topic, platform: $('#c-platform').value, style: $('#c-style').value, goal: $('#c-goal').value } });
+      const r = await api('/api/ai/caption', { method: 'POST', body: { topic, platform: $('#c-platform').value, style: $('#c-style').value, goal: $('#c-goal').value, image: photo && { media_type: photo.media_type, data: photo.data } } });
       const full = (o) => `${o.caption}\n\n${o.cta}\n\n${o.hashtags.map((h) => (h.startsWith('#') ? h : `#${h}`)).join(' ')}`;
       $('#cap-out').innerHTML = `
         <div class="grid grid-2">${r.options.map((o, i) => `
@@ -878,33 +929,89 @@ views.criar = async (main) => {
 };
 
 // ---------------- PERFIL ----------------
+function b64ToU8(b64) {
+  const pad = '='.repeat((4 - (b64.length % 4)) % 4);
+  const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+}
+const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+
+async function enablePush() {
+  if (!pushSupported()) throw new Error('Este navegador não suporta notificações. No iPhone, primeiro adicione o Rumo à tela inicial (iOS 16.4 ou mais novo).');
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') throw new Error('Permissão negada. Libere as notificações do site nas configurações do navegador.');
+  const reg = await navigator.serviceWorker.ready;
+  const { key } = await api('/api/push/key');
+  const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(key) });
+  await api('/api/push/subscribe', { method: 'POST', body: { subscription: sub.toJSON() } });
+}
+
 views.perfil = async (main, arg) => {
-  const { user } = await api('/api/me');
+  const me = await api('/api/me');
+  const user = me.user;
+  const u = me.usage || { used: 0, limit: 0, plan: 'gratis', plan_name: 'Grátis' };
   state.me = user;
+  const pushState = !pushSupported() ? 'indisponível' : Notification.permission === 'granted' ? 'ativadas' : Notification.permission === 'denied' ? 'bloqueadas' : 'desativadas';
   main.innerHTML = `
     <h1>${arg === 'novo' ? 'Bem-vindo(a)! Conte um pouco sobre você' : 'Perfil'}</h1>
     <p class="muted">Quanto mais a IA souber, mais personalizadas ficam as tarefas e conversas.</p>
-    <form class="card" id="profile">
-      <div class="field"><label>Nome</label><input type="text" id="p-name" value="${esc(user.name)}"></div>
-      <div class="field"><label>Sobre você</label><textarea id="p-about" placeholder="Ex: tenho 28 anos, trabalho como designer e quero viver do meu próprio estúdio. Tenho 1h por dia livre à noite.">${esc(user.about)}</textarea></div>
-      <div class="field"><label>Seu nicho / área de atuação</label><input type="text" id="p-niche" value="${esc(user.niche)}" placeholder="Ex: confeitaria artesanal, coaching fitness, desenvolvimento web"></div>
-      <div class="field"><label for="p-min">Minutos por dia para suas metas</label><input type="number" id="p-min" min="5" max="600" value="${user.daily_minutes || 30}"></div>
-      <div class="field"><label>Como a IA deve falar com você?</label><select id="p-tone">
-        ${['motivador e direto', 'gentil e acolhedor', 'exigente, sem passar a mão na cabeça', 'divertido e leve', 'técnico e objetivo'].map((t) => `<option ${t === user.tone ? 'selected' : ''}>${t}</option>`).join('')}
-      </select></div>
-      <div class="row" style="justify-content:flex-end"><button class="btn primary" type="submit">Salvar</button></div>
-    </form>
+    <div class="grid grid-2">
+      <form class="card" id="profile">
+        <h2>Sobre você</h2>
+        <div class="field"><label for="p-name">Nome</label><input type="text" id="p-name" value="${esc(user.name)}"></div>
+        <div class="field"><label for="p-about">Sobre você</label><textarea id="p-about" placeholder="Ex: tenho 28 anos, trabalho como designer e quero viver do meu próprio estúdio. Tenho 1h por dia livre à noite.">${esc(user.about)}</textarea></div>
+        <div class="field"><label for="p-niche">Seu nicho / área de atuação</label><input type="text" id="p-niche" value="${esc(user.niche)}" placeholder="Ex: confeitaria artesanal, coaching fitness, desenvolvimento web"></div>
+        <div class="field"><label for="p-min">Minutos por dia para suas metas</label><input type="number" id="p-min" min="5" max="600" value="${user.daily_minutes || 30}"></div>
+        <div class="field"><label for="p-tone">Como a IA deve falar com você?</label><select id="p-tone">
+          ${['motivador e direto', 'gentil e acolhedor', 'exigente, sem passar a mão na cabeça', 'divertido e leve', 'técnico e objetivo'].map((t) => `<option ${t === user.tone ? 'selected' : ''}>${t}</option>`).join('')}
+        </select></div>
+        <div class="row" style="justify-content:flex-end"><button class="btn primary" type="submit">Salvar</button></div>
+      </form>
+
+      <div class="stack">
+        <section class="card">
+          <div class="row between"><h2>Seu plano</h2><span class="chip ${u.plan === 'pro' ? 'accent' : ''}">${u.plan === 'pro' ? '⭐ ' : ''}${esc(u.plan_name)}</span></div>
+          <div class="row between small" style="margin-top:6px"><span class="muted">Ações de IA hoje</span><b>${u.used}/${u.limit}</b></div>
+          <div class="progress" style="margin:6px 0 12px"><span style="width:${u.limit ? Math.min(100, (u.used / u.limit) * 100) : 0}%"></span></div>
+          ${u.plan === 'pro' ? '<p class="small muted" style="margin:0">Obrigado por apoiar o Rumo! 💛</p>' : `
+            <p class="small" style="margin-bottom:10px"><b>Pro:</b> 10x mais IA por dia, revisão semanal, legendas com foto sem limite e prioridade nas novidades.</p>
+            ${u.checkout_url ? `<a class="btn primary" href="${esc(u.checkout_url)}" target="_blank" rel="noopener">Assinar o Pro</a>` : '<span class="small muted">Assinatura Pro chegando em breve.</span>'}`}
+        </section>
+
+        <section class="card">
+          <h2>Lembrete diário</h2>
+          <p class="small muted">Uma notificação por dia com as suas tarefas. Notificações neste aparelho: <b id="push-state">${pushState}</b>.</p>
+          <div class="row">
+            <label class="row small" style="gap:8px;margin:0;color:var(--text)"><input type="checkbox" id="rem-on" ${user.reminders ? 'checked' : ''} style="width:auto"> Lembrar às</label>
+            <input type="time" id="rem-time" value="${esc(user.reminder_time || '08:00')}" style="width:auto" aria-label="Horário do lembrete">
+          </div>
+          <div class="row" style="margin-top:10px">
+            <button class="btn primary sm" id="push-on" data-busy="Ativando…">🔔 Ativar neste aparelho</button>
+            <button class="btn sm" id="push-test" data-busy="Enviando…">Enviar teste</button>
+          </div>
+        </section>
+
+        <form class="card" id="pw-form">
+          <h2>Trocar senha</h2>
+          <div class="field"><label for="pw-cur">Senha atual</label><input type="password" id="pw-cur" autocomplete="current-password" required></div>
+          <div class="field"><label for="pw-new">Nova senha</label><input type="password" id="pw-new" autocomplete="new-password" minlength="6" required></div>
+          <button class="btn sm" type="submit">Trocar senha</button>
+        </form>
+      </div>
+    </div>
+
     <div class="card" style="margin-top:16px">
       <h2>Aparência e dados</h2>
       <div class="row" style="margin-top:10px">
-        <select id="theme" style="width:auto"><option value="">Tema do sistema</option><option value="light">Claro</option><option value="dark">Escuro</option></select>
+        <select id="theme" style="width:auto" aria-label="Tema"><option value="">Tema do sistema</option><option value="light">Claro</option><option value="dark">Escuro</option></select>
         <a class="btn" href="/api/export">Baixar meus dados</a>
         <a class="btn" href="#/tutorial">Ver tutorial</a>
         <a class="btn" href="#/boas-vindas">Refazer configuração</a>
+        ${user.is_admin ? '<a class="btn" href="#/admin">Painel admin</a>' : ''}
         <button class="btn" id="logout">Sair</button>
         <button class="btn danger" id="del-acc">Excluir conta</button>
       </div>
-      <p class="small muted" style="margin-top:12px">Dica: no celular, use “Adicionar à tela inicial” para instalar o Rumo como app.</p>
+      <p class="small muted" style="margin-top:12px">Instale no celular: no navegador, toque em Compartilhar (iPhone) ou no menu ⋮ (Android) e depois em “Adicionar à tela inicial”.</p>
     </div>`;
   try { $('#theme').value = localStorage.getItem('theme') || ''; } catch { /* storage blocked */ }
   $('#theme').onchange = (e) => { setTheme(e.target.value); };
@@ -915,6 +1022,26 @@ views.perfil = async (main, arg) => {
     toast('Perfil salvo!');
     if (arg === 'novo') location.hash = '#/metas';
   };
+  const saveRem = () => api('/api/me/reminders', { method: 'PUT', body: { reminders: $('#rem-on').checked, reminder_time: $('#rem-time').value } }).then(() => toast('Lembrete salvo.'));
+  $('#rem-on').onchange = saveRem;
+  $('#rem-time').onchange = saveRem;
+  $('#push-on').onclick = (e) => busy(e.currentTarget, async () => {
+    await enablePush();
+    $('#push-state').textContent = 'ativadas';
+    toast('Notificações ativadas! 🔔');
+  });
+  $('#push-test').onclick = (e) => busy(e.currentTarget, async () => {
+    const r = await api('/api/push/test', { method: 'POST', body: {} });
+    toast(r.sent ? 'Enviado! Confira a notificação.' : 'Nenhum aparelho ativado ainda. Toque em “Ativar neste aparelho”.');
+  });
+  $('#pw-form').onsubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await api('/api/me/password', { method: 'PUT', body: { current: $('#pw-cur').value, password: $('#pw-new').value } });
+      e.target.reset();
+      toast('Senha trocada. Outros aparelhos foram desconectados.');
+    } catch (err) { toast(err.message); }
+  };
   $('#logout').onclick = async () => { await api('/api/auth/logout', { method: 'POST' }); state.me = null; go('#/entrar'); };
   $('#del-acc').onclick = async () => {
     if (await ask('Isso apaga TODOS os seus dados. Digite EXCLUIR para confirmar.', { input: true, okLabel: 'Excluir conta', danger: true }) !== 'EXCLUIR') return;
@@ -923,6 +1050,230 @@ views.perfil = async (main, arg) => {
     location.hash = '#/entrar';
   };
 };
+
+// ---------------- ADMIN ----------------
+views.admin = async (main) => {
+  const s = await api('/api/admin/stats');
+  const bars = (raw, label) => {
+    const byDay = Object.fromEntries(raw.map((r) => [r.day, r.n]));
+    const rows = Array.from({ length: 30 }, (_, i) => { const day = addDays(state.today, i - 29); return { day, n: byDay[day] || 0 }; });
+    const max = Math.max(1, ...rows.map((r) => r.n));
+    return rows.length
+      ? `<div class="bars" role="img" aria-label="${esc(label)}">${rows.map((r) => `<div title="${r.day}: ${r.n}"><span style="height:${(r.n / max) * 100}%"></span></div>`).join('')}</div>
+         <div class="row between small muted"><span>${fmtDate(rows[0].day, { day: 'numeric', month: 'short' })}</span><span>${fmtDate(rows.at(-1).day, { day: 'numeric', month: 'short' })}</span></div>`
+      : '<p class="muted small">Sem dados ainda.</p>';
+  };
+  const tiles = [['Usuários', s.users], ['Novos (7 dias)', s.new7], ['Ativos hoje', s.active1], ['Ativos (7 dias)', s.active7], ['Fizeram o passo a passo', s.onboarded], ['Assinantes Pro', s.pro], ['Com notificações', s.push], ['Tarefas feitas (7 dias)', s.tasks_done7], ['Ações de IA hoje', s.ai_today]];
+  main.innerHTML = `
+    <h1>Painel do Rumo</h1>
+    <p class="muted">Visão geral dos usuários e do uso da IA.</p>
+    <div class="grid grid-3">${tiles.map(([l, v]) => `<div class="card"><div class="small muted">${l}</div><div class="stat">${v}</div></div>`).join('')}</div>
+    <div class="grid grid-2" style="margin-top:16px">
+      <div class="card"><h2>Cadastros (30 dias)</h2>${bars(s.signups30, 'Cadastros por dia')}</div>
+      <div class="card"><h2>Uso da IA (30 dias)</h2>${bars(s.ai30, 'Ações de IA por dia')}</div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h2>Últimos usuários</h2>
+      <div class="table-wrap"><table class="table">
+        <thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Desde</th><th>Último acesso</th><th>Feitas</th><th>Plano</th></tr></thead>
+        <tbody>${s.recent.map((r) => `<tr><td>${esc(r.name)}</td><td>${esc(r.email)}</td><td>${esc(r.role || '—')}</td><td>${esc(r.created_at.slice(0, 10))}</td><td>${esc(r.last_seen || '—')}</td><td class="num">${r.done}</td>
+          <td><select data-plan="${r.id}" aria-label="Plano de ${esc(r.name)}"><option value="gratis" ${r.plan !== 'pro' ? 'selected' : ''}>Grátis</option><option value="pro" ${r.plan === 'pro' ? 'selected' : ''}>Pro</option></select></td></tr>`).join('')}</tbody>
+      </table></div>
+    </div>`;
+  $$('[data-plan]').forEach((sel) => sel.onchange = async () => {
+    await api(`/api/admin/users/${sel.dataset.plan}`, { method: 'PATCH', body: { plan: sel.value } });
+    toast('Plano atualizado.');
+  });
+};
+
+// ---------------- HÁBITOS (dentro de Metas) ----------------
+const DAY_NAMES = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+const daysLabel = (d) => (d === '0123456' ? 'todo dia' : d === '12345' ? 'seg a sex' : d.split('').map((x) => ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'][x]).join(', '));
+
+async function renderHabits(box) {
+  const habits = await api('/api/habits');
+  box.innerHTML = `
+    <div class="row between"><h2>Hábitos</h2><span class="small muted">Viram tarefa sozinhos nos dias escolhidos</span></div>
+    ${habits.length ? habits.map((h) => `
+      <div class="habit ${h.active ? '' : 'paused'}" data-h="${h.id}">
+        <div style="flex:1;min-width:0"><b>${esc(h.title)}</b>
+          <div class="small muted">${daysLabel(h.days)} · ${h.minutes} min${h.streak ? ` · 🔥 ${h.streak}` : ''}${h.active ? '' : ' · pausado'}</div></div>
+        <div class="habit-dots" aria-label="Últimos 7 dias">${Array.from({ length: 7 }, (_, i) => {
+          const day = addDays(state.today, i - 6);
+          const t = h.last7.find((x) => x.d === day);
+          return `<span class="${t ? (t.done ? 'on' : day === state.today ? '' : 'miss') : ''}" title="${day}"></span>`;
+        }).join('')}</div>
+        <button class="btn sm ghost" data-h-toggle="${h.id}">${h.active ? 'Pausar' : 'Retomar'}</button>
+        <button class="btn sm ghost danger" data-h-del="${h.id}" aria-label="Excluir hábito">${icon('trash')}</button>
+      </div>`).join('') : '<p class="small muted">Ex: “Postar 1 story”, “Ler 10 páginas”, “Beber 2L de água”.</p>'}
+    <form id="habit-form" class="stack" style="margin-top:12px">
+      <div class="row" style="flex-wrap:nowrap"><input type="text" id="h-title" placeholder="Novo hábito" aria-label="Novo hábito"><input type="number" id="h-min" value="10" min="1" max="240" style="width:84px" aria-label="Minutos"></div>
+      <div class="row between"><div class="day-pick">${DAY_NAMES.map((n, i) => `<button type="button" class="sel" data-day="${i}" aria-pressed="true" aria-label="${['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'][i]}">${n}</button>`).join('')}</div>
+      <button class="btn sm primary" type="submit">${icon('plus')} Criar hábito</button></div>
+    </form>`;
+  $$('.day-pick button', box).forEach((b) => b.onclick = () => { b.classList.toggle('sel'); b.setAttribute('aria-pressed', b.classList.contains('sel')); });
+  $('#habit-form', box).onsubmit = async (e) => {
+    e.preventDefault();
+    const title = $('#h-title', box).value.trim();
+    const days = $$('.day-pick button.sel', box).map((b) => b.dataset.day).join('');
+    if (!title) return toast('Escreva o hábito.');
+    if (!days) return toast('Escolha pelo menos um dia.');
+    await api('/api/habits', { method: 'POST', body: { title, minutes: Number($('#h-min', box).value), days } });
+    toast('Hábito criado! Ele aparece em Hoje nos dias escolhidos.');
+    renderHabits(box);
+  };
+  box.onclick = async (e) => {
+    const t = e.target.closest('[data-h-toggle]');
+    const d = e.target.closest('[data-h-del]');
+    if (t) {
+      const h = habits.find((x) => String(x.id) === t.dataset.hToggle);
+      await api(`/api/habits/${h.id}`, { method: 'PATCH', body: { active: !h.active } });
+      renderHabits(box);
+    } else if (d && await ask('Excluir este hábito?', { okLabel: 'Excluir', danger: true })) {
+      await api(`/api/habits/${d.dataset.hDel}`, { method: 'DELETE' });
+      renderHabits(box);
+    }
+  };
+}
+
+// ---------------- CRONÔMETRO DE FOCO ----------------
+const focus = { task: null, end: 0, left: 0, paused: false, timer: null, onDone: null };
+function beep() {
+  try {
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    [0, 0.25, 0.5].forEach((t) => { const o = ac.createOscillator(); const g = ac.createGain(); o.frequency.value = 880; o.connect(g); g.connect(ac.destination); g.gain.setValueAtTime(0.15, ac.currentTime + t); o.start(ac.currentTime + t); o.stop(ac.currentTime + t + 0.15); });
+  } catch { /* sem áudio */ }
+}
+function renderFocus() {
+  let el = $('#focus');
+  if (!focus.task) { el?.remove(); document.title = 'Rumo'; return; }
+  if (!el) { el = document.createElement('div'); el.id = 'focus'; el.className = 'focus-pill'; document.body.append(el); }
+  const ms = focus.paused ? focus.left : Math.max(0, focus.end - Date.now());
+  const mm = String(Math.floor(ms / 60000)).padStart(2, '0');
+  const ss = String(Math.floor((ms % 60000) / 1000)).padStart(2, '0');
+  const over = ms <= 0;
+  document.title = over ? '⏰ Tempo! · Rumo' : `${mm}:${ss} · ${focus.task.title}`;
+  el.innerHTML = `<span class="focus-time">${over ? '⏰' : `${mm}:${ss}`}</span>
+    <span class="focus-title">${over ? 'Tempo! Terminou?' : esc(focus.task.title)}</span>
+    ${over ? '' : `<button class="btn sm ghost" data-f="pause" aria-label="${focus.paused ? 'Continuar' : 'Pausar'}">${focus.paused ? '▶' : 'II'}</button>`}
+    <button class="btn sm primary" data-f="done">✓ Feito</button>
+    <button class="btn sm ghost" data-f="stop" aria-label="Fechar cronômetro">✕</button>`;
+  el.onclick = (e) => {
+    const f = e.target.closest('[data-f]')?.dataset.f;
+    if (f === 'pause') {
+      if (focus.paused) { focus.end = Date.now() + focus.left; focus.paused = false; } else { focus.left = focus.end - Date.now(); focus.paused = true; }
+      renderFocus();
+    } else if (f === 'done') { const cb = focus.onDone; stopFocus(); cb?.(); } else if (f === 'stop') stopFocus();
+  };
+}
+function startFocus(task, onDone) {
+  stopFocus();
+  Object.assign(focus, { task, end: Date.now() + task.minutes * 60000, paused: false, onDone });
+  let rang = false;
+  focus.timer = setInterval(() => {
+    if (!focus.paused && Date.now() >= focus.end && !rang) {
+      rang = true;
+      beep();
+      navigator.vibrate?.([200, 100, 200]);
+    }
+    renderFocus();
+  }, 1000);
+  renderFocus();
+  toast(`Foco de ${task.minutes} min começou. Você consegue! 💪`);
+}
+function stopFocus() { clearInterval(focus.timer); focus.task = null; renderFocus(); }
+
+// ---------------- PÁGINA DE APRESENTAÇÃO (visitantes) ----------------
+function renderLanding() {
+  state.me = null;
+  app.innerHTML = `
+    <div class="landing">
+      <header class="lp-top"><div class="brand" style="padding:0"><span class="brand-mark">➜</span> Rumo</div>
+        <div class="row"><a class="btn ghost" href="#/entrar">Entrar</a><a class="btn primary" href="#/entrar/criar">Criar conta grátis</a></div></header>
+
+      <section class="lp-hero">
+        <div class="lp-copy">
+          <span class="chip accent">IA em português, feita para quem quer sair do lugar</span>
+          <h1>Sua meta, um passo pequeno por dia.</h1>
+          <p class="lp-sub">O Rumo conversa com você, transforma seus objetivos em tarefas de 10 a 30 minutos e ajuda a fazer cada uma: entrega o texto pronto, o passo a passo e os links.</p>
+          <div class="row"><a class="btn primary lp-cta" href="#/entrar/criar">Começar grátis</a><button type="button" class="btn ghost" data-scroll="como">Como funciona ↓</button></div>
+          <p class="small muted">Sem cartão. Leva 2 minutos para configurar.</p>
+        </div>
+        <div class="lp-demo" aria-hidden="true">
+          <div class="bubble assistant">Bom dia, Ana! Hoje são <b>3 tarefas</b>, uns <b>40 min</b>. Foco: <i>Conseguir os primeiros 10 clientes</i>. 👇</div>
+          <div class="task-card"><div class="row" style="flex-wrap:nowrap;gap:12px;align-items:flex-start"><span class="check"></span><div><div class="task-title">Mande mensagem para 5 ex-clientes</div><div class="task-detail">Ofereça uma condição especial de retorno.</div></div></div>
+            <div class="task-buttons"><span class="btn sm primary">✓ Feito</span><span class="btn sm">🆘 Me ajuda</span><span class="btn sm">▶ Foco</span></div></div>
+          <div class="bubble user">🆘 Me ajuda com: Mande mensagem para 5 ex-clientes</div>
+          <div class="bubble assistant">Aqui está uma mensagem pronta para copiar: <i>“Oi, Carla! Tudo bem? Lembrei de você…”</i> E o passo a passo em 3 etapas 👇</div>
+        </div>
+      </section>
+
+      <section class="lp-section" id="como">
+        <h2>Como funciona</h2>
+        <div class="grid grid-3">
+          ${[['1', 'Conte onde quer chegar', 'Responda 8 perguntas rápidas: sua meta, o prazo e quanto tempo você tem por dia.'],
+             ['2', 'Receba seu dia pronto', 'A IA monta tarefas pequenas todo dia, no tamanho do seu tempo, e avisa no celular.'],
+             ['3', 'Faça junto com a IA', 'Travou? Toque em “Me ajuda” e receba a solução. Fez? Toque em “Feito” e mantenha a sequência 🔥.']]
+            .map(([n, t, d]) => `<div class="card"><span class="lp-step">${n}</span><h3>${t}</h3><p class="small muted" style="margin:0">${d}</p></div>`).join('')}
+        </div>
+      </section>
+
+      <section class="lp-section">
+        <h2>Tudo num lugar só</h2>
+        <div class="grid grid-3">
+          ${[['home', 'Dia em forma de conversa', 'Fale “fiz a primeira” ou “hoje não dá” e a IA atualiza tudo.'],
+             ['target', 'Metas e hábitos', 'Planos semanais, hábitos diários e sequência de dias.'],
+             ['cal', 'Agenda inteligente', '“Dentista sexta às 15h” vira compromisso. Também aceita repetições.'],
+             ['pen', 'Editor com IA', 'Melhore, resuma, transforme em post ou em roteiro de vídeo.'],
+             ['bulb', 'Amplificador de ideias', 'Uma ideia solta vira público, formas de ganhar dinheiro e próximos passos.'],
+             ['quote', 'Legendas com foto', 'Envie a foto do post e receba 3 legendas prontas, com hashtags.']]
+            .map(([i, t, d]) => `<div class="card tip"><span class="tip-icon">${icon(i)}</span><div><h3>${t}</h3><p class="small muted" style="margin:0">${d}</p></div></div>`).join('')}
+        </div>
+      </section>
+
+      <section class="lp-section">
+        <h2>Planos</h2>
+        <div class="grid grid-2 lp-plans">
+          <div class="card"><h3>Grátis</h3><div class="stat">R$ 0</div><ul class="small"><li>Metas, hábitos e agenda</li><li>30 ações de IA por dia</li><li>Lembrete diário no celular</li></ul><a class="btn" href="#/entrar/criar">Começar grátis</a></div>
+          <div class="card lp-pro"><h3>Pro ⭐</h3><div class="stat">R$ 19,90<span class="small muted">/mês</span></div><ul class="small"><li>Tudo do Grátis</li><li>10x mais IA por dia</li><li>Legendas com foto e revisão semanal sem limite</li><li>Novidades primeiro</li></ul><a class="btn primary" href="#/entrar/criar">Experimentar</a></div>
+        </div>
+      </section>
+
+      <section class="lp-section">
+        <h2>Perguntas frequentes</h2>
+        ${[['Preciso instalar alguma coisa?', 'Não. Funciona no navegador. No celular, você pode adicionar à tela inicial e usar como app.'],
+           ['Meus dados ficam seguros?', 'Cada conta tem os próprios dados, protegidos por senha. Você pode baixar ou apagar tudo quando quiser.'],
+           ['A IA faz as tarefas por mim?', 'Ela faz o máximo possível: escreve textos, mensagens, roteiros e planos, e indica links. A ação final é sua.'],
+           ['Serve para qualquer meta?', 'Sim: negócio, conteúdo, estudos, saúde, finanças. Você conta a meta e o Rumo adapta o plano.']]
+          .map(([q, a]) => `<details class="faq"><summary>${q}</summary><p class="muted">${a}</p></details>`).join('')}
+      </section>
+
+      <section class="lp-final card hero"><h2>Comece hoje. Amanhã você agradece.</h2><a class="btn" href="#/entrar/criar">Criar minha conta grátis →</a></section>
+      <footer class="small muted lp-foot">Rumo · feito no Brasil 🇧🇷</footer>
+    </div>`;
+  $('[data-scroll]')?.addEventListener('click', () => $('#como').scrollIntoView({ behavior: 'smooth' }));
+}
+
+// ---------------- REDEFINIR SENHA ----------------
+function renderReset(token) {
+  app.innerHTML = `
+    <div class="auth"><form class="card auth-card" id="reset-form">
+      <div class="brand" style="padding:0"><span class="brand-mark">➜</span> Rumo</div>
+      <h2 style="margin-top:16px">Criar nova senha</h2>
+      <div class="field"><label for="r1">Nova senha</label><input type="password" id="r1" minlength="6" required autocomplete="new-password"></div>
+      <div class="field"><label for="r2">Repita a senha</label><input type="password" id="r2" minlength="6" required autocomplete="new-password"></div>
+      <button class="btn primary" style="width:100%;justify-content:center" type="submit">Salvar e entrar</button>
+    </form></div>`;
+  $('#reset-form').onsubmit = async (e) => {
+    e.preventDefault();
+    if ($('#r1').value !== $('#r2').value) return toast('As senhas não são iguais.');
+    try {
+      await api('/api/auth/reset', { method: 'POST', body: { token, password: $('#r1').value } });
+      toast('Senha nova salva!');
+      go('#/hoje');
+    } catch (err) { toast(err.message); }
+  };
+}
 
 function setTheme(v) {
   if (v) document.documentElement.dataset.theme = v; else delete document.documentElement.dataset.theme;

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { q } from './db.js';
 import { localDate, localDateTime, addDays, weekday } from './time.js';
 import * as demo from './demo.js';
+import { expandEvents } from './extras.js';
 
 const MODEL = process.env.CLAUDE_MODEL || 'claude-opus-5-5';
 // Server-side fallback: if the main model declines, the API retries on a suitable model in the same call.
@@ -28,10 +29,8 @@ export function userContext(user) {
   const goals = q.all(`SELECT id, title, why, area, deadline FROM goals WHERE user_id = ? AND status = 'ativa' ORDER BY id`, user.id);
   const tasks = q.all(`SELECT id, title, detail, done, minutes, goal_id FROM tasks WHERE user_id = ? AND due_date = ? ORDER BY id`, user.id, today);
   const overdue = q.get(`SELECT COUNT(*) c FROM tasks WHERE user_id = ? AND due_date < ? AND done = 0`, user.id, today).c;
-  const events = q.all(
-    `SELECT title, start FROM events WHERE user_id = ? AND start >= ? ORDER BY start LIMIT 8`,
-    user.id, today
-  );
+  const events = expandEvents(user.id, today, addDays(today, 8)).slice(0, 10);
+  const habits = q.all('SELECT id, title, minutes FROM habits WHERE user_id = ? AND active = 1', user.id);
   const doneWeek = q.get(
     `SELECT COUNT(*) c FROM tasks WHERE user_id = ? AND done = 1 AND due_date >= ?`, user.id, addDays(today, -6)
   ).c;
@@ -47,6 +46,7 @@ export function userContext(user) {
       ? `Tarefas de hoje (use o id nas ferramentas):\n${tasks.map((t) => `- id ${t.id} [${t.done ? 'feita' : 'pendente'}] ${t.title} (${t.minutes} min)${t.goal_id ? ` meta ${t.goal_id}` : ''}${t.detail ? ` — ${t.detail.slice(0, 160)}` : ''}`).join('\n')}`
       : 'Nenhuma tarefa para hoje ainda.',
     overdue ? `Tarefas atrasadas de dias anteriores: ${overdue}.` : '',
+    habits.length ? `Hábitos ativos: ${habits.map((h) => `${h.title} (${h.minutes} min)`).join('; ')}.` : '',
     events.length ? `Próximos compromissos:\n${events.map((e) => `- ${e.start.replace('T', ' ')} ${e.title}`).join('\n')}` : 'Agenda livre.',
     `Tarefas concluídas nos últimos 7 dias: ${doneWeek}.`,
   ];
@@ -152,6 +152,7 @@ const ToolInputs = {
     daily_minutes: z.number().int().min(5).max(600).optional(),
   }),
   salvar_nota: z.object({ title: z.string().min(1).max(200), content: z.string().max(50000) }),
+  criar_habito: z.object({ title: z.string().min(1).max(200), minutes: z.number().int().min(1).max(240).optional(), days: z.string().regex(/^[0-6]{1,7}$/).optional() }),
 };
 
 const obj = (properties, required = []) => ({ type: 'object', properties, required });
@@ -165,6 +166,7 @@ const CHAT_TOOLS = [
   { name: 'criar_meta', description: 'Cria uma meta quando a pessoa declarar um objetivo que quer acompanhar.', input_schema: obj({ title: { type: 'string' }, why: { type: 'string' }, deadline: { type: ['string', 'null'] }, area: { type: 'string' } }, ['title']) },
   { name: 'atualizar_meta', description: 'Pausa, conclui, reativa ou muda prazo/motivo de uma meta.', input_schema: obj({ goal_id: { type: 'integer' }, status: { type: 'string', enum: ['ativa', 'pausada', 'concluida'] }, deadline: { type: ['string', 'null'] }, why: { type: 'string' } }, ['goal_id']) },
   { name: 'atualizar_perfil', description: 'Atualiza o perfil quando a pessoa contar algo novo sobre si, seu nicho, o tom que prefere ou quanto tempo tem por dia.', input_schema: obj({ about: { type: 'string' }, niche: { type: 'string' }, tone: { type: 'string' }, daily_minutes: { type: 'integer' } }) },
+  { name: 'criar_habito', description: 'Cria um hábito que vira tarefa automaticamente nos dias escolhidos (days: dígitos 0-6, 0=domingo; padrão todos os dias). Use para rotinas como "beber água", "ler 10 páginas", "postar todo dia".', input_schema: obj({ title: { type: 'string' }, minutes: { type: 'integer' }, days: { type: 'string' } }, ['title']) },
   { name: 'salvar_nota', description: 'Salva um texto no editor (roteiro, plano, modelo, lista) quando a pessoa pedir para guardar ou quando você entregar um material longo que ela vai reutilizar.', input_schema: obj({ title: { type: 'string' }, content: { type: 'string' } }, ['title', 'content']) },
 ].map((t) => ({ ...t, eager_input_streaming: true }));
 
@@ -173,7 +175,7 @@ const WEB_SEARCH = { type: 'web_search_20260209', name: 'web_search', max_uses: 
 
 const CHAT_EXTRA = `Você está na conversa principal do app (a tela "Hoje" e o chat). Você ajuda em TUDO que a pessoa precisar.
 - Converse de forma curta. Termine com um próximo passo claro quando fizer sentido.
-- Você pode agir no app com as ferramentas: concluir, adiar, editar, criar ou excluir tarefas; criar compromissos e metas; atualizar metas e perfil; salvar notas. Quando a pessoa disser que fez algo, marque como feita. Se disser que não tem tempo, proponha reagendar ou diminuir a tarefa e faça isso. Depois de agir, confirme em uma frase.
+- Você pode agir no app com as ferramentas: concluir, adiar, editar, criar ou excluir tarefas; criar hábitos, compromissos e metas; atualizar metas e perfil; salvar notas. Quando a pessoa disser que fez algo, marque como feita. Se disser que não tem tempo, proponha reagendar ou diminuir a tarefa e faça isso. Depois de agir, confirme em uma frase.
 - Quando pedirem ajuda com uma tarefa, ENTREGUE a solução: o material pronto (texto, modelo, roteiro, lista, conta, mensagem), um passo a passo curto e, se útil, links. Faça o máximo possível pela pessoa.
 - Use web_search quando precisar de links, ferramentas, preços, regras ou informações atuais. Nunca invente links: só cite URLs que vieram da busca ou que você tem certeza que existem (ex: sites oficiais conhecidos). Escreva links em markdown [nome](url).`;
 
@@ -341,17 +343,18 @@ const CaptionSchema = z.object({
   tip: z.string().describe('Dica rápida para o post performar melhor'),
 });
 
-export async function captions(user, { topic, platform, style, goal }) {
+export async function captions(user, { topic, platform, style, goal, image }) {
   if (!aiEnabled) return demo.captions(topic, platform);
-  return structured(
-    user,
-    CaptionSchema,
-    `Escreva legendas para um post.
+  const text = `Escreva legendas para um post.${image ? '\nOlhe a foto anexada: descreva o que importa nela e use detalhes reais da imagem nas legendas.' : ''}
 Plataforma: ${platform || 'Instagram'}
 Sobre o quê: ${topic}
 Estilo desejado: ${style || 'autêntico, humano, sem clichê'}
 Objetivo do post: ${goal || 'engajamento e crescimento'}
-Use quebras de linha, emojis com moderação, e hashtags relevantes (5 a 12, sem #genéricas demais).`,
+Use quebras de linha, emojis com moderação, e hashtags relevantes (5 a 12, sem #genéricas demais).`;
+  return structured(
+    user,
+    CaptionSchema,
+    image ? [{ type: 'image', source: { type: 'base64', media_type: image.media_type, data: image.data } }, { type: 'text', text }] : text,
     { effort: 'low' }
   );
 }

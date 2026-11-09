@@ -8,6 +8,8 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rumo-test-'));
 process.env.DB_PATH = path.join(dir, 'test.db');
 delete process.env.ANTHROPIC_API_KEY;
 delete process.env.ANTHROPIC_AUTH_TOKEN;
+process.env.ADMIN_EMAILS = 'admin@x.com';
+process.env.FREE_AI_PER_DAY = '40';
 
 const { app } = await import('../server/app.js');
 let server, base;
@@ -142,4 +144,91 @@ test('chat acts on tasks: done, postpone, help', async () => {
   const r = await other('/api/ai/chat', 'POST', { help_task_id: t2.id });
   assert.equal(r.status, 400);
   assert.ok(t3.id);
+});
+
+test('habits create daily tasks and track streak', async () => {
+  const c = await client('hab@x.com');
+  const h = await c('/api/habits', 'POST', { title: 'Beber 2L de água', minutes: 5, days: '0123456' });
+  assert.equal(h.status, 201);
+  const today = (await c('/api/today')).body;
+  const t = today.tasks.find((x) => x.habit_id === h.body.id);
+  assert.ok(t);
+  await c('/api/today'); // não duplica
+  assert.equal((await c('/api/today')).body.tasks.filter((x) => x.habit_id === h.body.id).length, 1);
+  await c(`/api/tasks/${t.id}`, 'PATCH', { done: true });
+  const list = (await c('/api/habits')).body;
+  assert.equal(list[0].streak, 1);
+  await c(`/api/habits/${h.body.id}`, 'DELETE');
+  assert.equal((await c('/api/habits')).body.length, 0);
+});
+
+test('repeating events expand over the range', async () => {
+  const c = await client('rep@x.com');
+  const today = (await c('/api/me')).body.today;
+  await c('/api/events', 'POST', { title: 'Academia', start: `${today}T07:00`, repeat: 'diario' });
+  await c('/api/events', 'POST', { title: 'Reunião única', start: `${today}T10:00` });
+  const evs = (await c(`/api/events?from=${today}&to=${today.slice(0, 8)}${String(Number(today.slice(8)) + 0).padStart(2, '0')}`)).body;
+  assert.ok(evs.length >= 2);
+  const week = (await fetchJSON(c, `/api/events?from=${today}`)).filter((e) => e.title === 'Academia');
+  assert.ok(week.length >= 28);
+});
+async function fetchJSON(c, p) { return (await c(p)).body; }
+
+test('password change and reset', async () => {
+  const c = await client('pw@x.com');
+  assert.equal((await c('/api/me/password', 'PUT', { current: 'errada', password: 'nova123' })).status, 400);
+  assert.equal((await c('/api/me/password', 'PUT', { current: 'segredo1', password: 'nova123' })).status, 200);
+  const login = await fetch(`${base}/api/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: 'pw@x.com', password: 'nova123' }) });
+  assert.equal(login.status, 200);
+  const forgot = await fetch(`${base}/api/auth/forgot`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: 'nao-existe@x.com' }) });
+  assert.equal(forgot.status, 200);
+  const badReset = await fetch(`${base}/api/auth/reset`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: 'x', password: 'abcdef' }) });
+  assert.equal(badReset.status, 400);
+});
+
+test('reset token from forgot works once', async () => {
+  await client('rs@x.com');
+  const logs = [];
+  const orig = console.log;
+  console.log = (...a) => logs.push(a.join(' '));
+  await fetch(`${base}/api/auth/forgot`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: 'rs@x.com' }) });
+  console.log = orig;
+  const token = logs.join('\n').match(/redefinir\/([a-f0-9]{64})/)[1];
+  const r1 = await fetch(`${base}/api/auth/reset`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token, password: 'outra123' }) });
+  assert.equal(r1.status, 200);
+  const r2 = await fetch(`${base}/api/auth/reset`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token, password: 'outra123' }) });
+  assert.equal(r2.status, 400);
+});
+
+test('daily AI limit by plan and admin can upgrade', async () => {
+  const c = await client('lim@x.com');
+  process.env.FREE_AI_PER_DAY = '2';
+  assert.equal((await c('/api/ai/amplify', 'POST', { idea: 'a' })).status, 200);
+  assert.equal((await c('/api/ai/amplify', 'POST', { idea: 'a' })).status, 200);
+  const third = await c('/api/ai/amplify', 'POST', { idea: 'a' });
+  assert.equal(third.status, 429);
+  assert.match(third.body.error, /Grátis/);
+  const me = (await c('/api/me')).body;
+  assert.equal(me.usage.used, 2);
+  const adm = await client('admin@x.com');
+  assert.equal((await c('/api/admin/stats')).status, 403);
+  const stats = await adm('/api/admin/stats');
+  assert.equal(stats.status, 200);
+  assert.ok(stats.body.users >= 1);
+  assert.equal((await adm(`/api/admin/users/${me.user.id}`, 'PATCH', { plan: 'pro' })).status, 200);
+  assert.equal((await c('/api/ai/amplify', 'POST', { idea: 'a' })).status, 200);
+  process.env.FREE_AI_PER_DAY = '40';
+});
+
+test('needs_plan lists active goals without upcoming tasks', async () => {
+  const c = await client('np@x.com');
+  const g = (await c('/api/goals', 'POST', { title: 'Meta sem plano' })).body;
+  assert.ok((await c('/api/today')).body.needs_plan.some((x) => x.id === g.id));
+  await c(`/api/goals/${g.id}/plan`, 'POST', { days: 3 });
+  assert.ok(!(await c('/api/today')).body.needs_plan.some((x) => x.id === g.id));
+});
+
+test('reminder loop with no devices sends nothing', async () => {
+  const { sendDueReminders } = await import('../server/extras.js');
+  assert.equal(await sendDueReminders(), 0);
 });

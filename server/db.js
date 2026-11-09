@@ -84,10 +84,58 @@ CREATE TABLE IF NOT EXISTS checkins (
 );
 `);
 
+db.exec(`
+CREATE TABLE IF NOT EXISTS habits (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  goal_id INTEGER REFERENCES goals(id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
+  minutes INTEGER DEFAULT 10,
+  days TEXT DEFAULT '0123456',
+  active INTEGER DEFAULT 1,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS ai_usage (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  day TEXT NOT NULL,
+  count INTEGER DEFAULT 0,
+  PRIMARY KEY (user_id, day)
+);
+CREATE TABLE IF NOT EXISTS password_resets (
+  token_hash TEXT PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at TEXT NOT NULL,
+  used INTEGER DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS push_subs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  endpoint TEXT NOT NULL UNIQUE,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT);
+`);
+
 // Migrações simples: adiciona colunas novas em bancos já existentes.
-const userCols = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
-for (const [col, def] of [['onboarded', 'INTEGER DEFAULT 0'], ['role', "TEXT DEFAULT ''"], ['daily_minutes', 'INTEGER DEFAULT 30']]) {
-  if (!userCols.includes(col)) db.exec(`ALTER TABLE users ADD COLUMN ${col} ${def}`);
+function addColumns(table, cols) {
+  const have = db.prepare(`PRAGMA table_info(${table})`).all().map((c) => c.name);
+  for (const [col, def] of cols) if (!have.includes(col)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${def}`);
+}
+addColumns('users', [
+  ['onboarded', 'INTEGER DEFAULT 0'], ['role', "TEXT DEFAULT ''"], ['daily_minutes', 'INTEGER DEFAULT 30'],
+  ['plan', "TEXT DEFAULT 'gratis'"], ['reminders', 'INTEGER DEFAULT 1'], ['reminder_time', "TEXT DEFAULT '08:00'"],
+  ['last_reminder', 'TEXT'], ['last_seen', 'TEXT'],
+]);
+addColumns('events', [['repeat', "TEXT DEFAULT ''"]]);
+addColumns('tasks', [['habit_id', 'INTEGER']]);
+
+export function getSetting(key) {
+  return db.prepare('SELECT value FROM settings WHERE key = ?').get(key)?.value ?? null;
+}
+export function setSetting(key, value) {
+  db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, value);
 }
 
 export const q = {

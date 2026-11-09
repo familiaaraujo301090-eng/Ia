@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { q } from './db.js';
+import { localDate } from './time.js';
 
 const SESSION_DAYS = 30;
 
@@ -55,11 +56,16 @@ export function clearSessionCookie(res) {
   res.setHeader('Set-Cookie', 'rumo_session=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0');
 }
 
+/** E-mails com acesso ao painel de administração (variável ADMIN_EMAILS, separados por vírgula). */
+export function isAdmin(email) {
+  return (process.env.ADMIN_EMAILS || '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean).includes(String(email).toLowerCase());
+}
+
 export function requireUser(req, res, next) {
   const token = sessionToken(req);
   if (!token) return res.status(401).json({ error: 'Faça login para continuar.' });
   const row = q.get(
-    `SELECT u.id, u.name, u.email, u.about, u.niche, u.tone, u.role, u.daily_minutes, u.onboarded, s.expires_at
+    `SELECT u.id, u.name, u.email, u.about, u.niche, u.tone, u.role, u.daily_minutes, u.onboarded, u.plan, u.reminders, u.reminder_time, u.last_seen, s.expires_at
        FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?`,
     token
   );
@@ -68,6 +74,9 @@ export function requireUser(req, res, next) {
     return res.status(401).json({ error: 'Sessão expirada. Entre novamente.' });
   }
   delete row.expires_at;
+  const today = localDate();
+  if (row.last_seen !== today) q.run('UPDATE users SET last_seen = ? WHERE id = ?', today, row.id);
+  row.is_admin = isAdmin(row.email);
   req.user = row;
   req.token = token;
   next();

@@ -14,7 +14,7 @@ export async function api(path, { method = 'GET', body } = {}) {
   });
   let data = null;
   try { data = await res.json(); } catch { /* empty */ }
-  if (res.status === 401 && !path.startsWith('/api/auth')) {
+  if (res.status === 401 && !path.startsWith('/api/auth') && path !== '/api/me') {
     location.hash = '#/entrar';
   }
   if (!res.ok) throw new Error(data?.error || `Erro ${res.status}`);
@@ -22,12 +22,85 @@ export async function api(path, { method = 'GET', body } = {}) {
 }
 
 let toastTimer;
-export function toast(msg) {
+/** Mensagem rápida no rodapé. Com `action`, mostra um botão (ex: Desfazer) por alguns segundos. */
+export function toast(msg, action) {
   const el = $('#toast');
   el.textContent = msg;
+  if (action) {
+    const b = document.createElement('button');
+    b.className = 'toast-btn';
+    b.textContent = action.label;
+    b.onclick = () => { el.classList.remove('show'); action.run(); };
+    el.append(b);
+  }
+  el.classList.toggle('has-action', !!action);
   el.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+  toastTimer = setTimeout(() => el.classList.remove('show'), action ? 5000 : 2600);
+}
+
+/** Chuva de confete curta (respeita "reduzir movimento"). */
+export function confetti() {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const c = document.createElement('canvas');
+  c.className = 'confetti';
+  document.body.append(c);
+  const ctx = c.getContext('2d');
+  const W = (c.width = innerWidth);
+  const H = (c.height = innerHeight);
+  const colors = ['#ff6a3d', '#ffb703', '#1f9d63', '#3a86ff', '#e85d75'];
+  const bits = Array.from({ length: 140 }, () => ({
+    x: W / 2 + (Math.random() - 0.5) * W * 0.3, y: H * 0.35, vx: (Math.random() - 0.5) * 12, vy: -Math.random() * 14 - 4,
+    s: 4 + Math.random() * 6, r: Math.random() * 6, c: colors[Math.floor(Math.random() * colors.length)],
+  }));
+  let frame = 0;
+  (function draw() {
+    ctx.clearRect(0, 0, W, H);
+    for (const b of bits) {
+      b.vy += 0.35; b.x += b.vx; b.y += b.vy; b.r += 0.1;
+      ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.r); ctx.fillStyle = b.c; ctx.fillRect(-b.s / 2, -b.s / 2, b.s, b.s * 0.6); ctx.restore();
+    }
+    if (++frame < 110) requestAnimationFrame(draw); else c.remove();
+  })();
+}
+
+/** Ditado por voz (pt-BR) num campo de texto. Retorna false se o navegador não suporta. */
+export function attachMic(field, button) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { button.remove(); return false; }
+  let rec = null;
+  button.onclick = () => {
+    if (rec) { rec.stop(); return; }
+    rec = new SR();
+    rec.lang = 'pt-BR';
+    rec.interimResults = true;
+    const base = field.value ? `${field.value.trimEnd()} ` : '';
+    rec.onresult = (e) => { field.value = base + [...e.results].map((r) => r[0].transcript).join(''); field.dispatchEvent(new Event('input')); };
+    rec.onend = () => { rec = null; button.classList.remove('rec'); field.focus(); };
+    rec.onerror = (e) => { if (e.error === 'not-allowed') toast('Permita o microfone para ditar.'); };
+    button.classList.add('rec');
+    rec.start();
+  };
+  return true;
+}
+
+/** Reduz uma foto para enviar à IA (máx. 1280px, JPEG). */
+export function shrinkImage(file, max = 1280) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, max / Math.max(img.width, img.height));
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(img.width * k);
+      cv.height = Math.round(img.height * k);
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      URL.revokeObjectURL(img.src);
+      const url = cv.toDataURL('image/jpeg', 0.85);
+      resolve({ media_type: 'image/jpeg', data: url.split(',')[1], preview: url });
+    };
+    img.onerror = () => reject(new Error('Não consegui abrir essa imagem.'));
+    img.src = URL.createObjectURL(file);
+  });
 }
 
 /** Minimal, safe markdown (escapes HTML first). */

@@ -15,6 +15,12 @@ services:
         value: /var/data/rumo.db
       - key: ANTHROPIC_API_KEY
         sync: false
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: PRO_CHECKOUT_URL
+        sync: false
+      - key: SMTP_URL
+        sync: false
     disk:
       name: rumo-data
       mountPath: /var/data

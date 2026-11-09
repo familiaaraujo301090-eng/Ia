@@ -6,14 +6,19 @@ App web (funciona como app no celular) com uma IA conectada (Claude, da Anthropi
 
 | Área | O que faz |
 |---|---|
-| **Hoje** | Suas tarefas do dia, sequência de dias (🔥), semana, humor, compromissos e metas. O botão **Tarefas do dia com IA** monta 3 a 5 tarefas pequenas a partir das suas metas. |
-| **Metas** | Você cadastra onde quer chegar, com prazo e motivo, e a IA cria o plano com marcos e tarefas diárias de 5 a 45 minutos. Inclui o **Plano de divulgação 30 dias** pronto para importar. |
-| **Agenda** | Escreva do seu jeito (“dentista amanhã às 15h”) e a IA agenda. Também aceita cadastro manual. |
+| **Página inicial** | Para quem ainda não tem conta: apresentação, como funciona, recursos, planos e perguntas frequentes. |
+| **Boas-vindas** | Passo a passo de 8 perguntas (perfil, meta, prazo, tempo por dia, tom da IA) que já cria a meta com plano de 7 dias. Depois, um tutorial rápido. |
+| **Hoje** | O dia em forma de conversa com a IA. Tarefas viram cartões com **✓ Feito** (com Desfazer), **🆘 Me ajuda** (solução pronta, passo a passo e links), **▶ Foco** (cronômetro), **💬 Falar** e **⏭ Amanhã**. Você também pode escrever ou **falar por voz** (“fiz a primeira”, “hoje não dá”) e a IA atualiza o app. Confete quando o dia fecha 🎉. |
+| **Metas** | Você cadastra onde quer chegar, com prazo e motivo, e a IA cria o plano com marcos e tarefas diárias de 5 a 45 minutos. Quando as tarefas de uma meta acabam, o Hoje oferece planejar a próxima semana. Inclui o **Plano de divulgação 30 dias** pronto para importar. |
+| **Hábitos** | Rotinas (ex: “ler 10 páginas”) que viram tarefa sozinhas nos dias escolhidos, com sequência 🔥 e os últimos 7 dias. |
+| **Agenda** | Escreva do seu jeito (“dentista amanhã às 15h”) e a IA agenda. Também aceita cadastro manual e compromissos que se repetem (todo dia, dias úteis, semanal, mensal). |
 | **Conversar** | Chat com a IA, que conhece suas metas, tarefas e agenda. As respostas aparecem em tempo real. |
 | **Editor** | Notas com IA: melhorar, corrigir, resumir, expandir, continuar, virar post, virar roteiro de vídeo, extrair tarefas ou um pedido livre. |
 | **Amplificar ideias** | Uma ideia crua vira ângulos, público, formas de ganhar dinheiro, riscos, ideias de conteúdo e próximos passos. Dá para salvar como nota ou transformar em meta com plano. |
-| **Legendas** | Três legendas prontas por post (gancho, texto, CTA, hashtags), com melhor horário e uma dica. |
-| **Perfil** | Sobre você, nicho e tom da IA (motivador, gentil, exigente…). Também tem tema claro/escuro, exportação dos dados e exclusão da conta. |
+| **Legendas** | Três legendas prontas por post (gancho, texto, CTA, hashtags), com melhor horário e uma dica. Dá para **anexar a foto** e a IA escreve olhando a imagem. |
+| **Perfil** | Sobre você, nicho, tempo por dia e tom da IA. Plano e uso de IA do dia, **lembrete diário no celular** (notificação), troca de senha, tema claro/escuro, exportação dos dados e exclusão da conta. |
+| **Conta** | Recuperação de senha por e-mail (“Esqueci minha senha”). |
+| **Painel admin** | Para os e-mails em `ADMIN_EMAILS`: usuários, ativos, uso da IA, cadastros por dia e troca de plano (Grátis/Pro). |
 
 O plano completo para divulgar o app está em **[docs/PLANO_DE_DIVULGACAO.md](docs/PLANO_DE_DIVULGACAO.md)**: 30 dias com uma tarefa por dia, posicionamento, conteúdo, canais, preços e métricas.
 
@@ -64,6 +69,14 @@ docker run -p 3000:3000 -e ANTHROPIC_API_KEY=sua-chave -v rumo-data:/data rumo
 | `PORT` | `3000` | Porta HTTP |
 | `TZ_APP` | `America/Sao_Paulo` | Fuso usado para definir o “hoje” |
 | `AI_PER_MINUTE` | `20` | Limite de pedidos à IA por usuário por minuto |
+| `FREE_AI_PER_DAY` | `30` | Ações de IA por dia no plano Grátis |
+| `PRO_AI_PER_DAY` | `300` | Ações de IA por dia no plano Pro |
+| `PRO_CHECKOUT_URL` | (vazio) | Link de pagamento do Pro (ex: link do Mercado Pago). Aparece no Perfil. Depois do pagamento, mude o plano no Painel admin |
+| `ADMIN_EMAILS` | (vazio) | E-mails com acesso ao Painel admin, separados por vírgula |
+| `APP_URL` | (endereço do pedido) | Endereço público do app, usado no link de recuperação de senha |
+| `SMTP_URL` | (vazio) | Servidor de e-mail, ex: `smtps://usuario:senha@smtp.provedor.com:465`. Sem ele, o link de recuperação aparece no log |
+| `MAIL_FROM` | `Rumo <no-reply@rumo.app>` | Remetente dos e-mails |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | (gerados sozinhos) | Chaves das notificações. Se não definir, o app gera e guarda no banco |
 | `NODE_ENV` | (vazio) | Use `production` para cookies seguros (HTTPS) |
 
 ## Como funciona por dentro
@@ -81,11 +94,15 @@ server/
   db.js           tabelas SQLite
   auth.js         senha, sessão e cookie
   ai.js           integração com o Claude
+  extras.js       planos, hábitos, repetições, senha, lembretes, admin
+  push.js         notificações (Web Push)
+  mail.js         envio de e-mail
   demo.js         respostas do modo demonstração
   launchPlan.js   plano de 30 dias importável
 public/           interface (PWA)
 test/             testes automatizados (npm test)
 docs/             plano de divulgação
+demo/, scripts/   versão de teste que roda só no navegador (node scripts/build-demo.mjs)
 ```
 
 ## Testes
@@ -98,10 +115,13 @@ Cobrem login, criação de planos, o plano de 30 dias, as ferramentas de IA (mod
 
 ## Próximas melhorias (roadmap)
 
-- [ ] Planos pagos (Pro/Criador) com Mercado Pago, Stripe ou Asaas e limites por plano
-- [ ] Notificações push com lembrete diário das tarefas
-- [ ] Eventos recorrentes na agenda
+- [x] Limites de IA por plano (Grátis/Pro) e link de pagamento
+- [x] Lembrete diário por notificação
+- [x] Eventos que se repetem e hábitos
+- [x] Legenda olhando a foto do post
+- [x] Recuperação e troca de senha
+- [x] Painel de administração
+- [ ] Pagamento automático (webhook do Mercado Pago/Stripe liberando o Pro sozinho)
 - [ ] Login com Google
-- [ ] Calendário de conteúdo (legendas agendadas por dia)
-- [ ] Anexar imagem do post para a IA escrever a legenda olhando a foto
-- [ ] Recuperação de senha por e-mail
+- [ ] Calendário de conteúdo (posts da semana planejados pela IA)
+- [ ] Conversa por áudio com resposta falada

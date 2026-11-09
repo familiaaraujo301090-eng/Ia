@@ -8,10 +8,15 @@ import {
 import * as ai from './ai.js';
 import { localDate, localDateTime, addDays } from './time.js';
 import { LAUNCH_PLAN } from './launchPlan.js';
+import {
+  registerPublicRoutes, registerPrivateRoutes, consumeAi, usage, ensureHabitTasks, expandEvents, goalsNeedingPlan, REPEATS,
+} from './extras.js';
 
 export const app = express();
 app.disable('x-powered-by');
-app.use(express.json({ limit: '1mb' }));
+const jsonSmall = express.json({ limit: '1mb' });
+const jsonLarge = express.json({ limit: '8mb' }); // legendas com foto
+app.use((req, res, next) => (req.path === '/api/ai/caption' ? jsonLarge : jsonSmall)(req, res, next));
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'same-origin');
@@ -34,6 +39,8 @@ function aiLimit(req, res, next) {
   }
   list.push(now);
   hits.set(req.user.id, list);
+  const over = consumeAi(req.user);
+  if (over) return res.status(429).json({ error: over, limit: true });
   next();
 }
 
@@ -77,11 +84,12 @@ app.post('/api/auth/logout', (req, res) => {
 });
 
 app.get('/api/health', (req, res) => res.json({ ok: true, ai: ai.aiEnabled }));
+registerPublicRoutes(app);
 
 // everything below requires login
 app.use('/api', requireUser);
 
-app.get('/api/me', (req, res) => res.json({ user: req.user, ai: ai.aiEnabled, today: localDate() }));
+app.get('/api/me', (req, res) => res.json({ user: req.user, ai: ai.aiEnabled, today: localDate(), usage: usage(req.user), repeats: REPEATS }));
 app.put('/api/me', (req, res) => {
   const name = str(req.body.name, 80) || req.user.name;
   q.run('UPDATE users SET name = ?, about = ?, niche = ?, tone = ?, daily_minutes = ? WHERE id = ?',
@@ -116,11 +124,13 @@ function goalsWithProgress(userId) {
 
 app.get('/api/today', (req, res) => {
   const today = localDate();
+  ensureHabitTasks(req.user.id, today);
   res.json({
+    needs_plan: goalsNeedingPlan(req.user.id, today),
     date: today,
     tasks: q.all('SELECT * FROM tasks WHERE user_id = ? AND due_date = ? ORDER BY done, id', req.user.id, today),
     overdue: q.all('SELECT * FROM tasks WHERE user_id = ? AND due_date < ? AND done = 0 ORDER BY due_date DESC LIMIT 20', req.user.id, today),
-    events: q.all('SELECT * FROM events WHERE user_id = ? AND start >= ? AND start < ? ORDER BY start', req.user.id, today, addDays(today, 2)),
+    events: expandEvents(req.user.id, today, addDays(today, 2)),
     goals: goalsWithProgress(req.user.id).filter((g) => g.status === 'ativa'),
     streak: streak(req.user.id),
     checkin: q.get('SELECT mood, note FROM checkins WHERE user_id = ? AND day = ?', req.user.id, today) || null,
@@ -280,14 +290,14 @@ app.post('/api/ai/daily', aiLimit, wrap(async (req, res) => {
 app.get('/api/events', (req, res) => {
   const from = isDate(req.query.from) ? req.query.from : addDays(localDate(), -1);
   const to = isDate(req.query.to) ? req.query.to : addDays(from, 31);
-  res.json(q.all('SELECT * FROM events WHERE user_id = ? AND start >= ? AND start < ? ORDER BY start', req.user.id, from, addDays(to, 1)));
+  res.json(expandEvents(req.user.id, from, addDays(to, 1)));
 });
 
 function createEvent(userId, b) {
   const title = str(b.title, 300);
   if (!title || !isDateTime(b.start)) return null;
-  const { lastInsertRowid } = q.run('INSERT INTO events (user_id, title, start, end, notes) VALUES (?, ?, ?, ?, ?)',
-    userId, title, b.start, isDateTime(b.end) ? b.end : null, str(b.notes, 2000));
+  const { lastInsertRowid } = q.run('INSERT INTO events (user_id, title, start, end, notes, repeat) VALUES (?, ?, ?, ?, ?, ?)',
+    userId, title, b.start, isDateTime(b.end) ? b.end : null, str(b.notes, 2000), REPEATS[b.repeat] ? b.repeat : '');
   return q.get('SELECT * FROM events WHERE id = ?', lastInsertRowid);
 }
 
@@ -309,6 +319,7 @@ app.post('/api/events/quick', aiLimit, wrap(async (req, res) => {
 app.patch('/api/events/:id', (req, res) => {
   const e = q.get('SELECT * FROM events WHERE id = ? AND user_id = ?', Number(req.params.id), req.user.id);
   if (!e) return res.status(404).json({ error: 'Compromisso não encontrado.' });
+  if (req.body.repeat !== undefined && REPEATS[req.body.repeat] !== undefined) q.run('UPDATE events SET repeat = ? WHERE id = ?', req.body.repeat, e.id);
   q.run('UPDATE events SET title = ?, start = ?, end = ?, notes = ? WHERE id = ?',
     str(req.body.title, 300) || e.title, isDateTime(req.body.start) ? req.body.start : e.start,
     req.body.end === undefined ? e.end : isDateTime(req.body.end) ? req.body.end : null,
@@ -360,10 +371,13 @@ app.post('/api/ai/amplify', aiLimit, wrap(async (req, res) => {
 }));
 
 app.post('/api/ai/caption', aiLimit, wrap(async (req, res) => {
-  const topic = str(req.body.topic, 2000);
-  if (!topic) return bad(res, 'Sobre o que é o post?');
+  const topic = str(req.body.topic, 2000) || (req.body.image ? 'a foto anexada' : '');
+  if (!topic) return bad(res, 'Sobre o que é o post? Escreva ou anexe uma foto.');
+  const img = req.body.image;
+  const image = img && /^image\/(jpeg|png|webp|gif)$/.test(img.media_type) && typeof img.data === 'string' && img.data.length < 7_000_000
+    ? { media_type: img.media_type, data: img.data } : null;
   res.json(await ai.captions(req.user, {
-    topic, platform: str(req.body.platform, 40), style: str(req.body.style, 200), goal: str(req.body.goal, 200),
+    topic, platform: str(req.body.platform, 40), style: str(req.body.style, 200), goal: str(req.body.goal, 200), image,
   }));
 }));
 
@@ -443,6 +457,12 @@ function chatActions(uid) {
       q.run('UPDATE users SET about = ?, niche = ?, tone = ?, daily_minutes = ? WHERE id = ?',
         p.about ?? u.about, p.niche ?? u.niche, p.tone ?? u.tone, p.daily_minutes ?? u.daily_minutes, uid);
       return '👤 Perfil atualizado';
+    },
+    criar_habito: (h) => {
+      const { lastInsertRowid } = q.run('INSERT INTO habits (user_id, title, minutes, days) VALUES (?, ?, ?, ?)',
+        uid, h.title, h.minutes || 10, /^[0-6]{1,7}$/.test(h.days || '') ? h.days : '0123456');
+      ensureHabitTasks(uid);
+      return `🔁 Hábito criado: "${h.title}" (id ${lastInsertRowid})`;
     },
     salvar_nota: (n) => {
       q.run('INSERT INTO notes (user_id, title, content) VALUES (?, ?, ?)', uid, n.title, n.content);
@@ -526,9 +546,12 @@ app.get('/api/export', (req, res) => {
     events: q.all('SELECT * FROM events WHERE user_id = ?', id),
     notes: q.all('SELECT * FROM notes WHERE user_id = ?', id),
     checkins: q.all('SELECT * FROM checkins WHERE user_id = ?', id),
+    habits: q.all('SELECT * FROM habits WHERE user_id = ?', id),
     messages: q.all('SELECT role, content, created_at FROM messages WHERE user_id = ?', id),
   });
 });
+
+registerPrivateRoutes(app);
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'Rota não encontrada.' }));
 

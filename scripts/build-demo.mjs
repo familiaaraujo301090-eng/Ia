@@ -33,6 +33,7 @@ js = mustReplace(js, '<div class="auth-tabs">',
   '<div class="banner" style="margin:14px 0 0">Versão de teste: a conta <b>teste@rumo.app</b> já está preenchida. É só tocar em <b>Entrar</b>. A IA responde com exemplos e seus dados ficam só neste navegador.</div><div class="auth-tabs">');
 js = mustReplace(js, "IA em <b>modo demonstração</b>. Para respostas reais, configure <code>ANTHROPIC_API_KEY</code> no servidor (veja o README).",
   '<b>Versão de teste.</b> A IA responde com exemplos prontos. Na versão publicada com a chave da Anthropic, as respostas são personalizadas para você.');
+js = js.replaceAll('href="#/entrar/criar"', 'href="#/entrar"'); // na versão de teste a conta já existe
 if (js.includes('</script')) throw new Error('O bundle contém </script>');
 
 const css = fs.readFileSync(path.join(root, 'public/css/app.css'), 'utf8');

@@ -5,8 +5,8 @@ import { localDate, localDateTime, addDays } from '../server/time.js';
 import * as demo from '../server/demo.js';
 import { LAUNCH_PLAN } from '../server/launchPlan.js';
 
-const KEY = 'rumo-demo-db-v2';
-const empty = () => ({ seq: 1, session: null, users: [], goals: [], tasks: [], events: [], notes: [], messages: [], checkins: [] });
+const KEY = 'rumo-demo-db-v3';
+const empty = () => ({ seq: 1, session: null, users: [], goals: [], tasks: [], events: [], notes: [], messages: [], checkins: [], habits: [], usage: {} });
 let db;
 try { db = JSON.parse(localStorage.getItem(KEY)) || empty(); } catch { db = empty(); }
 const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch { /* sem storage: só memória */ } };
@@ -41,7 +41,7 @@ function addTask(uid, t, source = 'manual') {
 }
 function addEvent(uid, b) {
   if (!s(b.title) || !isDT(b.start)) return null;
-  const ev = { id: id(), user_id: uid, title: s(b.title, 300), start: b.start, end: isDT(b.end) ? b.end : null, notes: s(b.notes, 2000), created_at: now() };
+  const ev = { id: id(), user_id: uid, title: s(b.title, 300), start: b.start, end: isDT(b.end) ? b.end : null, notes: s(b.notes, 2000), repeat: REPEATS[b.repeat] ? b.repeat : '', created_at: now() };
   db.events.push(ev);
   return ev;
 }
@@ -60,6 +60,46 @@ function streak(uid) {
   return n;
 }
 const byDateId = (a, b) => (a.due_date < b.due_date ? -1 : a.due_date > b.due_date ? 1 : a.done - b.done || a.id - b.id);
+
+
+const REPEATS = { '': 'Não repete', diario: 'Todo dia', dias_uteis: 'Dias úteis (seg-sex)', semanal: 'Toda semana', mensal: 'Todo mês' };
+const wd = (ymd) => new Date(`${ymd}T12:00:00Z`).getUTCDay();
+function occurs(ev, day) {
+  const sd = ev.start.slice(0, 10);
+  if (day < sd) return false;
+  switch (ev.repeat) {
+    case 'diario': return true;
+    case 'dias_uteis': return wd(day) >= 1 && wd(day) <= 5;
+    case 'semanal': return wd(day) === wd(sd);
+    case 'mensal': return day.slice(8) === sd.slice(8);
+    default: return day === sd;
+  }
+}
+function expand(uid, from, to) {
+  const out = [];
+  for (const ev of mine(db.events, uid)) {
+    if (!ev.repeat) { if (ev.start >= from && ev.start < to) out.push(ev); continue; }
+    for (let day = from > ev.start.slice(0, 10) ? from : ev.start.slice(0, 10); day < to; day = addDays(day, 1)) {
+      if (occurs(ev, day)) out.push({ ...ev, start: `${day}T${ev.start.slice(11)}`, end: ev.end ? `${day}T${ev.end.slice(11)}` : null });
+    }
+  }
+  return out.sort((a, b) => (a.start < b.start ? -1 : 1));
+}
+function ensureHabits(uid, day = localDate()) {
+  for (const h of (db.habits ||= []).filter((x) => x.user_id === uid && x.active)) {
+    if (!h.days.includes(String(wd(day)))) continue;
+    if (db.tasks.some((t) => t.habit_id === h.id && t.due_date === day)) continue;
+    const t = addTask(uid, { title: h.title, minutes: h.minutes, due_date: day }, 'habito');
+    t.habit_id = h.id;
+  }
+}
+function useAi(u) {
+  const day = localDate();
+  db.usage ||= {};
+  const key = `${u.id}|${day}`;
+  db.usage[key] = (db.usage[key] || 0) + 1;
+}
+const usageOf = (u) => ({ plan: 'gratis', plan_name: 'Grátis', used: (db.usage || {})[`${u.id}|${localDate()}`] || 0, limit: 30, checkout_url: null });
 
 const routes = [];
 const on = (method, pattern, fn) => routes.push({ method, re: new RegExp(`^${pattern.replace(/:\w+/g, '([^/]+)')}$`), fn });
@@ -82,7 +122,7 @@ on('POST', '/api/auth/login', (b) => {
 });
 on('POST', '/api/auth/logout', () => { db.session = null; return { ok: true }; });
 
-on('GET', '/api/me', () => { const { password, ...user } = me(); return { user, ai: false, today: localDate() }; });
+on('GET', '/api/me', () => { const { password, ...user } = me(); return { user, ai: false, today: localDate(), usage: usageOf(user), repeats: REPEATS }; });
 on('PUT', '/api/me', (b) => { const u = me(); Object.assign(u, { name: s(b.name, 80) || u.name, about: s(b.about, 1000), niche: s(b.niche, 200), tone: s(b.tone, 100) || u.tone, daily_minutes: Number(b.daily_minutes) || u.daily_minutes }); return { ok: true }; });
 on('DELETE', '/api/me', () => {
   const u = me();
@@ -95,6 +135,7 @@ on('DELETE', '/api/me', () => {
 on('GET', '/api/today', () => {
   const u = me();
   const today = localDate();
+  ensureHabits(u.id, today);
   const ts = mine(db.tasks, u.id);
   const week = {};
   for (const t of ts.filter((t) => t.due_date >= addDays(today, -6) && t.due_date <= today)) {
@@ -105,7 +146,8 @@ on('GET', '/api/today', () => {
     date: today,
     tasks: ts.filter((t) => t.due_date === today).sort(byDateId),
     overdue: ts.filter((t) => t.due_date < today && !t.done).sort((a, b) => (a.due_date < b.due_date ? 1 : -1)).slice(0, 20),
-    events: mine(db.events, u.id).filter((e) => e.start >= today && e.start < addDays(today, 2)).sort((a, b) => (a.start < b.start ? -1 : 1)),
+    events: expand(u.id, today, addDays(today, 2)),
+    needs_plan: mine(db.goals, u.id).filter((g) => g.status === 'ativa' && !db.tasks.some((t) => t.goal_id === g.id && !t.done && t.due_date >= today)).map((g) => ({ id: g.id, title: g.title })),
     goals: progress(u.id).filter((g) => g.status === 'ativa'),
     streak: streak(u.id),
     checkin: mine(db.checkins, u.id).find((c) => c.day === today) || null,
@@ -212,7 +254,7 @@ on('POST', '/api/ai/daily', async () => {
 on('GET', '/api/events', (b, q) => {
   const from = isDate(q.get('from')) ? q.get('from') : addDays(localDate(), -1);
   const to = isDate(q.get('to')) ? q.get('to') : addDays(from, 31);
-  return mine(db.events, me().id).filter((e) => e.start >= from && e.start < addDays(to, 1)).sort((a, b) => (a.start < b.start ? -1 : 1));
+  return expand(me().id, from, addDays(to, 1));
 });
 on('POST', '/api/events', (b) => addEvent(me().id, b) || fail(400, 'Informe título e data/hora.'));
 on('POST', '/api/events/quick', async (b) => {
@@ -238,7 +280,7 @@ on('DELETE', '/api/notes/:id', (b, q, rid) => { const uid = me().id; db.notes = 
 
 on('POST', '/api/ai/edit', async (b) => { me(); if (!s(b.text)) fail(400, 'Escreva algum texto primeiro.'); await wait(500); return { text: demo.edit(s(b.action), s(b.text, 50000)) }; });
 on('POST', '/api/ai/amplify', async (b) => { me(); if (!s(b.idea)) fail(400, 'Descreva sua ideia.'); await wait(800); return demo.amplify(s(b.idea, 4000)); });
-on('POST', '/api/ai/caption', async (b) => { me(); if (!s(b.topic)) fail(400, 'Sobre o que é o post?'); await wait(700); return demo.captions(s(b.topic), s(b.platform)); });
+on('POST', '/api/ai/caption', async (b) => { me(); if (!s(b.topic) && !b.image) fail(400, 'Escreva sobre o que é o post ou anexe uma foto.'); await wait(700); return demo.captions(s(b.topic) || 'a foto do post', s(b.platform)); });
 on('POST', '/api/ai/review', async () => {
   const u = me();
   await wait(600);
@@ -246,6 +288,52 @@ on('POST', '/api/ai/review', async () => {
   const rows = mine(db.tasks, u.id).filter((t) => t.due_date >= addDays(today, -6) && t.due_date <= today);
   return { text: demo.review(`Tarefas: ${rows.filter((r) => r.done).length}/${rows.length} concluídas.`) };
 });
+
+
+// hábitos
+on('GET', '/api/habits', () => {
+  const u = me();
+  const today = localDate();
+  return (db.habits || []).filter((h) => h.user_id === u.id).map((h) => {
+    const ts = db.tasks.filter((t) => t.habit_id === h.id);
+    const done = new Set(ts.filter((t) => t.done).map((t) => t.due_date));
+    let day = done.has(today) ? today : addDays(today, -1);
+    let streak = 0;
+    while (done.has(day)) { streak++; day = addDays(day, -1); }
+    return { ...h, streak, last7: ts.filter((t) => t.due_date >= addDays(today, -6)).map((t) => ({ d: t.due_date, done: t.done })) };
+  });
+});
+on('POST', '/api/habits', (b) => {
+  const u = me();
+  if (!s(b.title)) fail(400, 'Escreva o hábito.');
+  const h = { id: id(), user_id: u.id, title: s(b.title, 200), minutes: Number(b.minutes) || 10, days: /^[0-6]{1,7}$/.test(b.days || '') ? b.days : '0123456', active: 1 };
+  (db.habits ||= []).push(h);
+  ensureHabits(u.id);
+  return h;
+});
+on('PATCH', '/api/habits/:id', (b, q, rid) => {
+  const h = (db.habits || []).find((x) => x.user_id === me().id && x.id === Number(rid)) || fail(404, 'Hábito não encontrado.');
+  if (b.active !== undefined) h.active = b.active ? 1 : 0;
+  return h;
+});
+on('DELETE', '/api/habits/:id', (b, q, rid) => {
+  const uid = me().id;
+  db.habits = (db.habits || []).filter((h) => !(h.user_id === uid && h.id === Number(rid)));
+  db.tasks = db.tasks.filter((t) => !(t.habit_id === Number(rid) && !t.done));
+  return { ok: true };
+});
+// conta
+on('PUT', '/api/me/password', (b) => {
+  const u = me();
+  if (u.password !== b.current) fail(400, 'Senha atual incorreta.');
+  if (String(b.password || '').length < 6) fail(400, 'A nova senha precisa ter pelo menos 6 caracteres.');
+  u.password = b.password;
+  return { ok: true };
+});
+on('PUT', '/api/me/reminders', (b) => { const u = me(); u.reminders = b.reminders ? 1 : 0; u.reminder_time = b.reminder_time || '08:00'; return { ok: true }; });
+on('POST', '/api/auth/forgot', () => ({ ok: true }));
+on('GET', '/api/push/key', () => fail(400, 'Notificações funcionam na versão publicada do app.'));
+on('POST', '/api/push/test', () => ({ sent: 0 }));
 
 on('GET', '/api/chat', (b, q) => { const all = mine(db.messages, me().id); return q.get('today') ? all.filter((m) => m.created_at >= localDate()).slice(-60) : all.slice(-100); });
 on('DELETE', '/api/chat', () => { const uid = me().id; db.messages = db.messages.filter((m) => m.user_id !== uid); return { ok: true }; });
@@ -285,6 +373,7 @@ function chatStream(b) {
   return new Response(body, { headers: { 'content-type': 'text/event-stream' } });
 }
 
+const AI_PATHS = /^\/api\/(ai\/|goals\/\d+\/plan|events\/quick|onboarding$)/;
 const realFetch = window.fetch.bind(window);
 window.fetch = async (input, init = {}) => {
   const url = new URL(typeof input === 'string' ? input : input.url, location.href);
@@ -293,6 +382,7 @@ window.fetch = async (input, init = {}) => {
   let body = {};
   try { body = init.body ? JSON.parse(init.body) : {}; } catch { /* corpo vazio */ }
   try {
+    if (method === 'POST' && AI_PATHS.test(url.pathname) && db.session) { const u = db.users.find((x) => x.id === db.session); if (u) useAi(u); }
     if (method === 'POST' && url.pathname === '/api/ai/chat') return chatStream(body);
     for (const r of routes) {
       const m = r.method === method && url.pathname.match(r.re);
@@ -310,6 +400,6 @@ window.fetch = async (input, init = {}) => {
 
 // Conta de teste pronta (ainda não configurada, para passar pelo passo a passo).
 if (!db.users.length) {
-  db.users.push({ id: id(), name: 'Visitante', email: 'teste@rumo.app', password: 'rumo123', about: '', niche: '', tone: 'motivador e direto', role: '', daily_minutes: 30, onboarded: 0 });
+  db.users.push({ id: id(), name: 'Visitante', email: 'teste@rumo.app', password: 'rumo123', about: '', niche: '', tone: 'motivador e direto', role: '', daily_minutes: 30, onboarded: 0, reminders: 1, reminder_time: '08:00' });
   persist();
 }
