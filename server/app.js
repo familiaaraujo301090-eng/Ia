@@ -7,10 +7,10 @@ import {
 } from './auth.js';
 import { securityHeaders, forceHttps, sameOrigin, limitByIp, hit, clearHits, quotaGuard, underQuota } from './security.js';
 import * as ai from './ai.js';
-import { localDate, localDateTime, addDays } from './time.js';
+import { localDate, localDateTime, addDays, isValidDate, isValidDateTime, daysBetween } from './time.js';
 import { LAUNCH_PLAN } from './launchPlan.js';
 import {
-  registerPublicRoutes, registerPrivateRoutes, consumeAi, usage, ensureHabitTasks, expandEvents, goalsNeedingPlan, REPEATS,
+  registerPublicRoutes, registerPrivateRoutes, consumeAi, refundAi, usage, ensureHabitTasks, expandEvents, goalsNeedingPlan, REPEATS,
 } from './extras.js';
 
 export const app = express();
@@ -29,8 +29,9 @@ purgeExpiredSessions();
 
 const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 const str = (v, max = 5000) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
-const isDate = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
-const isDateTime = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v);
+const isDate = isValidDate; // valida datas reais (recusa 31/02, mês 13…)
+const isDateTime = isValidDateTime;
+const raw = (v, max) => (typeof v === 'string' ? v.slice(0, max) : ''); // texto sem cortar espaços (notas)
 const bad = (res, msg) => res.status(400).json({ error: msg });
 
 // ---------- simple per-user AI rate limit ----------
@@ -45,6 +46,8 @@ function aiLimit(req, res, next) {
   hits.set(req.user.id, list);
   const over = consumeAi(req.user);
   if (over) return res.status(429).json({ error: over, limit: true });
+  // se o pedido falhar (dado inválido ou IA fora do ar), devolve a cota
+  res.on('finish', () => { if (res.statusCode >= 400 && res.statusCode !== 429) refundAi(req.user); });
   next();
 }
 
@@ -140,7 +143,7 @@ app.get('/api/today', (req, res) => {
     needs_plan: goalsNeedingPlan(req.user.id, today),
     date: today,
     tasks: q.all('SELECT * FROM tasks WHERE user_id = ? AND due_date = ? ORDER BY done, id', req.user.id, today),
-    overdue: q.all('SELECT * FROM tasks WHERE user_id = ? AND due_date < ? AND done = 0 ORDER BY due_date DESC LIMIT 20', req.user.id, today),
+    overdue: q.all('SELECT * FROM tasks WHERE user_id = ? AND due_date < ? AND done = 0 AND habit_id IS NULL ORDER BY due_date DESC LIMIT 20', req.user.id, today),
     events: expandEvents(req.user.id, today, addDays(today, 2)),
     goals: goalsWithProgress(req.user.id).filter((g) => g.status === 'ativa'),
     streak: streak(req.user.id),
@@ -179,6 +182,7 @@ function ownGoal(userId, goalId) {
 app.post('/api/tasks', quotaGuard('tasks'), (req, res) => {
   const title = str(req.body.title, 300);
   if (!title) return bad(res, 'Escreva a tarefa.');
+  if (req.body.due_date && !isDate(req.body.due_date)) return bad(res, 'Data inválida.');
   const due = isDate(req.body.due_date) ? req.body.due_date : localDate();
   const { lastInsertRowid } = q.run(
     'INSERT INTO tasks (user_id, goal_id, title, detail, due_date, minutes, source) VALUES (?, ?, ?, ?, ?, ?, ?)',
@@ -219,6 +223,7 @@ app.get('/api/goals/:id', (req, res) => {
 app.post('/api/goals', quotaGuard('goals'), (req, res) => {
   const title = str(req.body.title, 300);
   if (!title) return bad(res, 'Descreva a meta.');
+  if (req.body.deadline && !isDate(req.body.deadline)) return bad(res, 'Prazo inválido.');
   const { lastInsertRowid } = q.run('INSERT INTO goals (user_id, title, why, area, deadline) VALUES (?, ?, ?, ?, ?)',
     req.user.id, title, str(req.body.why, 2000), str(req.body.area, 60) || 'geral', isDate(req.body.deadline) ? req.body.deadline : null);
   res.status(201).json(q.get('SELECT * FROM goals WHERE id = ?', lastInsertRowid));
@@ -300,15 +305,18 @@ app.post('/api/ai/daily', aiLimit, wrap(async (req, res) => {
 // ---------- events / agenda ----------
 app.get('/api/events', (req, res) => {
   const from = isDate(req.query.from) ? req.query.from : addDays(localDate(), -1);
-  const to = isDate(req.query.to) ? req.query.to : addDays(from, 31);
+  let to = isDate(req.query.to) ? req.query.to : addDays(from, 31);
+  if (to < from) to = from;
+  if (daysBetween(from, to) > 366) to = addDays(from, 366); // no máximo 1 ano por consulta
   res.json(expandEvents(req.user.id, from, addDays(to, 1)));
 });
 
 function createEvent(userId, b) {
   const title = str(b.title, 300);
   if (!title || !isDateTime(b.start)) return null;
+  const end = isDateTime(b.end) && b.end > b.start ? b.end : null; // fim antes do início é ignorado
   const { lastInsertRowid } = q.run('INSERT INTO events (user_id, title, start, end, notes, repeat) VALUES (?, ?, ?, ?, ?, ?)',
-    userId, title, b.start, isDateTime(b.end) ? b.end : null, str(b.notes, 2000), Object.hasOwn(REPEATS, b.repeat) ? b.repeat : '');
+    userId, title, b.start, end, str(b.notes, 2000), Object.hasOwn(REPEATS, b.repeat) ? b.repeat : '');
   return q.get('SELECT * FROM events WHERE id = ?', lastInsertRowid);
 }
 
@@ -331,9 +339,11 @@ app.patch('/api/events/:id', (req, res) => {
   const e = q.get('SELECT * FROM events WHERE id = ? AND user_id = ?', Number(req.params.id), req.user.id);
   if (!e) return res.status(404).json({ error: 'Compromisso não encontrado.' });
   if (Object.hasOwn(REPEATS, req.body.repeat ?? '\u0000')) q.run('UPDATE events SET repeat = ? WHERE id = ?', req.body.repeat, e.id);
+  const start = isDateTime(req.body.start) ? req.body.start : e.start;
+  let end = req.body.end === undefined ? e.end : isDateTime(req.body.end) ? req.body.end : null;
+  if (end && end <= start) end = null; // fim antes do início é ignorado
   q.run('UPDATE events SET title = ?, start = ?, end = ?, notes = ? WHERE id = ?',
-    str(req.body.title, 300) || e.title, isDateTime(req.body.start) ? req.body.start : e.start,
-    req.body.end === undefined ? e.end : isDateTime(req.body.end) ? req.body.end : null,
+    str(req.body.title, 300) || e.title, start, end,
     req.body.notes === undefined ? e.notes : str(req.body.notes, 2000), e.id);
   res.json(q.get('SELECT * FROM events WHERE id = ?', e.id));
 });
@@ -354,12 +364,12 @@ app.get('/api/notes/:id', (req, res) => {
 });
 app.post('/api/notes', quotaGuard('notes'), (req, res) => {
   const { lastInsertRowid } = q.run('INSERT INTO notes (user_id, title, content, kind) VALUES (?, ?, ?, ?)',
-    req.user.id, str(req.body.title, 200) || 'Sem título', str(req.body.content, 200_000), str(req.body.kind, 20) || 'nota');
+    req.user.id, str(req.body.title, 200) || 'Sem título', raw(req.body.content, 200_000), str(req.body.kind, 20) || 'nota');
   res.status(201).json(q.get('SELECT * FROM notes WHERE id = ?', lastInsertRowid));
 });
 app.put('/api/notes/:id', (req, res) => {
   const r = q.run(`UPDATE notes SET title = ?, content = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?`,
-    str(req.body.title, 200) || 'Sem título', str(req.body.content, 200_000), Number(req.params.id), req.user.id);
+    str(req.body.title, 200) || 'Sem título', raw(req.body.content, 200_000), Number(req.params.id), req.user.id);
   if (!r.changes) return res.status(404).json({ error: 'Nota não encontrada.' });
   res.json({ ok: true });
 });
@@ -517,6 +527,7 @@ app.post('/api/ai/chat', quotaGuard('messages'), aiLimit, async (req, res) => {
     if (full) addMessage(uid, 'assistant', full);
     send({ done: true });
   } catch (err) {
+    refundAi(req.user); // a resposta falhou: não conta como uso
     if (!abort.signal.aborted) {
       if (!err.expose) console.error(err);
       send({ error: err.expose ? err.message : 'Erro na IA. Tente de novo.' });
@@ -540,11 +551,16 @@ app.post('/api/onboarding', aiLimit, wrap(async (req, res) => {
       uid, title, str(b.why, 2000), str(b.area, 60) || 'geral', isDate(b.deadline) ? b.deadline : null);
     goalId = Number(lastInsertRowid);
     const g = q.get('SELECT * FROM goals WHERE id = ?', goalId);
-    const plan = await ai.goalPlan(user, g, 7);
-    insertTasks(uid, goalId, plan.tasks, localDate(), 'ai');
-    q.run('UPDATE goals SET plan = ? WHERE id = ?',
-      `${plan.summary}\n\n**Marcos**\n${plan.milestones.map((m) => `- ${m.title} — ${m.by}`).join('\n')}\n\n**Primeiro passo agora:** ${plan.first_step}`, goalId);
-    addMessage(uid, 'assistant', `Prontinho, ${user.name.split(' ')[0]}! 🎉 Criei sua meta **${title}** com um plano de 7 dias.\n\n**Seu primeiro passo agora:** ${plan.first_step}\n\nAs tarefas de hoje estão logo acima. Toque em **✓ Feito** quando terminar, ou em **🆘 Me ajuda** que eu te entrego a solução.`);
+    let plan = null;
+    try { plan = await ai.goalPlan(user, g, 7); } catch (e) { console.error('Plano do onboarding falhou:', e.message); }
+    if (plan) {
+      insertTasks(uid, goalId, plan.tasks, localDate(), 'ai');
+      q.run('UPDATE goals SET plan = ? WHERE id = ?',
+        `${plan.summary}\n\n**Marcos**\n${plan.milestones.map((m) => `- ${m.title} — ${m.by}`).join('\n')}\n\n**Primeiro passo agora:** ${plan.first_step}`, goalId);
+      addMessage(uid, 'assistant', `Prontinho, ${user.name.split(' ')[0]}! 🎉 Criei sua meta **${title}** com um plano de 7 dias.\n\n**Seu primeiro passo agora:** ${plan.first_step}\n\nAs tarefas de hoje estão logo acima. Toque em **✓ Feito** quando terminar, ou em **🆘 Me ajuda** que eu te entrego a solução.`);
+    } else {
+      addMessage(uid, 'assistant', `Prontinho, ${user.name.split(' ')[0]}! Criei sua meta **${title}**. A IA não conseguiu montar o plano agora, mas é só tocar em **✨ Planejar 7 dias** aqui em cima para tentar de novo.`);
+    }
   }
   if (b.launch_plan) importLaunchPlan(uid);
   q.run('UPDATE users SET onboarded = 1 WHERE id = ?', uid);

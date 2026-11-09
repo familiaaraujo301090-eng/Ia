@@ -333,7 +333,7 @@ views.hoje = async (main) => {
 
   async function reload() {
     data = await api('/api/today');
-    renderBlock();
+    if (document.body.contains(main)) renderBlock(); // a pessoa pode ter mudado de tela
   }
   async function markDone(t, done) {
     await api(`/api/tasks/${t.id}`, { method: 'PATCH', body: { done } });
@@ -400,10 +400,20 @@ views.hoje = async (main) => {
     const t = data.tasks.find((x) => String(x.id) === card.dataset.id);
     if (!t) return;
     const act = btn.dataset.act;
+    if (busyTasks.has(t.id) && act !== 'help' && act !== 'talk') return; // evita toque duplo
+    busyTasks.add(t.id);
+    try { await taskAction(act, t, btn); } finally { busyTasks.delete(t.id); }
+  });
+  const busyTasks = new Set();
+  async function taskAction(act, t) {
     if (act === 'toggle') {
       await markDone(t, !t.done);
     } else if (act === 'focus') {
-      startFocus(t, () => markDone(t, true));
+      startFocus(t, async () => {
+        if (document.body.contains(main)) return markDone(t, true);
+        await api(`/api/tasks/${t.id}`, { method: 'PATCH', body: { done: true } }); // saiu da tela Hoje
+        toast(`✅ Feito: ${t.title}`);
+      });
     } else if (act === 'help') {
       converse({ help_task_id: t.id }, `🆘 Me ajuda com: ${t.title}`);
     } else if (act === 'talk') {
@@ -419,7 +429,7 @@ views.hoje = async (main) => {
       await api(`/api/tasks/${t.id}`, { method: 'DELETE' });
       await reload();
     }
-  });
+  }
 
   $('#composer').onsubmit = (e) => {
     e.preventDefault();
@@ -432,6 +442,7 @@ views.hoje = async (main) => {
   attachMic(say, $('#say-mic'));
   $('#review').onclick = (e) => busy(e.currentTarget, async () => {
     const r = await api('/api/ai/review', { method: 'POST', body: {} });
+    if (!document.body.contains(main)) return; // a pessoa saiu da tela enquanto a IA respondia
     $('#review-out').innerHTML = md(r.text);
   });
   $$('[data-mood]').forEach((b) => b.onclick = async () => {
@@ -678,8 +689,11 @@ views.metas = async (main, id) => {
     e.preventDefault();
     busy(e.submitter, async () => {
       const g = await api('/api/goals', { method: 'POST', body: { title: $('#g-title').value, why: $('#g-why').value, area: $('#g-area').value, deadline: $('#g-deadline').value || null } });
-      if ($('#g-plan').checked) await api(`/api/goals/${g.id}/plan`, { method: 'POST', body: { days: 7 } });
-      dlg.close();
+      dlg.close(); // a meta já existe: fecha antes do plano, para um erro da IA não gerar meta repetida
+      if ($('#g-plan').checked) {
+        await api(`/api/goals/${g.id}/plan`, { method: 'POST', body: { days: 7 } })
+          .catch((err) => toast(`Meta criada, mas o plano falhou: ${err.message} Toque em “Gerar plano com IA” para tentar de novo.`));
+      }
       location.hash = `#/metas/${g.id}`;
     });
   };
@@ -805,7 +819,20 @@ views.editor = async (main, id) => {
   const title = $('#n-title');
   const body = $('#n-body');
   let timer;
-  const save = () => { $('#save-state').textContent = 'Salvando…'; clearTimeout(timer); timer = setTimeout(async () => { await api(`/api/notes/${note.id}`, { method: 'PUT', body: { title: title.value, content: body.value } }); $('#save-state').textContent = 'Salvo'; }, 600); };
+  const saveState = $('#save-state'); // referência guardada: continua válida mesmo se a pessoa sair da tela
+  const save = () => {
+    saveState.textContent = 'Salvando…';
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      try {
+        await api(`/api/notes/${note.id}`, { method: 'PUT', body: { title: title.value, content: body.value } });
+        saveState.textContent = 'Salvo';
+      } catch (err) {
+        saveState.textContent = 'Não salvo';
+        toast(`A nota não foi salva: ${err.message}`);
+      }
+    }, 600);
+  };
   title.oninput = save;
   body.oninput = save;
   const autosize = () => { body.style.height = 'auto'; body.style.height = `${Math.max(body.scrollHeight, 300)}px`; };
@@ -813,22 +840,29 @@ views.editor = async (main, id) => {
   autosize();
 
   let result = '';
+  let range = null; // trecho selecionado quando a IA foi chamada (null = texto inteiro)
   const run = (btn, action, instruction) => busy(btn, async () => {
-    const sel = body.value.slice(body.selectionStart, body.selectionEnd);
-    const text = sel || body.value;
+    const { selectionStart: a, selectionEnd: b } = body;
+    const sel = body.value.slice(a, b);
+    range = sel.trim() ? [a, b] : null;
+    const text = sel.trim() ? sel : body.value;
     if (!text.trim()) throw new Error('Escreva algo primeiro.');
     const r = await api('/api/ai/edit', { method: 'POST', body: { action, text, instruction } });
+    if (!document.body.contains(main)) return; // a pessoa saiu da tela enquanto a IA respondia
     result = r.text;
     $('#ai-text').innerHTML = md(result);
     $('#ai-result').classList.remove('hidden');
   });
   $$('[data-ai]').forEach((b) => b.onclick = () => run(b, b.dataset.ai));
   $('#custom-ai').onclick = async (e) => { const btn = e.currentTarget; const ins = await ask('O que a IA deve fazer com o texto?', { input: true, placeholder: 'Ex: deixe mais curto e engraçado', okLabel: 'Pedir' }); if (ins) run(btn, 'custom', ins); };
-  $('#ai-replace').onclick = () => { body.value = result; save(); autosize(); $('#ai-result').classList.add('hidden'); };
+  $('#ai-replace').onclick = () => {
+    body.value = range ? body.value.slice(0, range[0]) + result + body.value.slice(range[1]) : result;
+    save(); autosize(); $('#ai-result').classList.add('hidden');
+  };
   $('#ai-append').onclick = () => { body.value = `${body.value}\n\n${result}`; save(); autosize(); $('#ai-result').classList.add('hidden'); };
   $('#ai-copy').onclick = () => copy(result);
   $('#ai-close').onclick = () => $('#ai-result').classList.add('hidden');
-  $('#del-note').onclick = async () => { if (await ask('Excluir esta nota?', { okLabel: 'Excluir', danger: true })) { await api(`/api/notes/${note.id}`, { method: 'DELETE' }); go('#/editor'); } };
+  $('#del-note').onclick = async () => { if (await ask('Excluir esta nota?', { okLabel: 'Excluir', danger: true })) { clearTimeout(timer); await api(`/api/notes/${note.id}`, { method: 'DELETE' }); go('#/editor'); } };
 };
 
 // ---------------- IDEIAS ----------------
@@ -848,6 +882,7 @@ views.ideias = async (main) => {
       const r = await api('/api/ai/amplify', { method: 'POST', body: { idea } });
       const list = (arr) => `<ul>${arr.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
       const asText = `# ${r.headline}\n\nIdeia original: ${idea}\n\n## Ângulos\n${r.angles.map((a) => `- **${a.title}**: ${a.description}`).join('\n')}\n\n## Público\n${r.audience}\n\n## Como ganhar dinheiro\n${r.monetization.map((x) => `- ${x}`).join('\n')}\n\n## Riscos\n${r.risks.map((x) => `- ${x}`).join('\n')}\n\n## Ideias de conteúdo\n${r.content_ideas.map((x) => `- ${x}`).join('\n')}\n\n## Próximos passos\n${r.next_steps.map((x) => `- [ ] ${x}`).join('\n')}`;
+      if (!document.body.contains(main)) return; // a pessoa saiu da tela enquanto a IA respondia
       $('#idea-out').innerHTML = `
         <div class="card hero" style="margin-bottom:16px"><h2>${esc(r.headline)}</h2>
           <div class="row" style="margin-top:10px"><button class="btn" id="save-idea">Salvar no editor</button><button class="btn" id="goal-idea">Transformar em meta</button></div></div>
@@ -860,7 +895,8 @@ views.ideias = async (main) => {
       $('#save-idea').onclick = async () => { const n = await api('/api/notes', { method: 'POST', body: { title: r.headline.slice(0, 120), content: asText, kind: 'ideia' } }); location.hash = `#/editor/${n.id}`; };
       $('#goal-idea').onclick = async (ev) => busy(ev.currentTarget, async () => {
         const g = await api('/api/goals', { method: 'POST', body: { title: r.headline.slice(0, 200), why: idea, area: 'negócio' } });
-        await api(`/api/goals/${g.id}/plan`, { method: 'POST', body: { days: 7 } });
+        await api(`/api/goals/${g.id}/plan`, { method: 'POST', body: { days: 7 } })
+          .catch((err) => toast(`Meta criada, mas o plano falhou: ${err.message}`));
         location.hash = `#/metas/${g.id}`;
       });
     });
@@ -900,8 +936,10 @@ views.legendas = async (main) => {
     const topic = $('#c-topic').value.trim();
     if (!topic && !photo) return toast('Escreva sobre o que é o post ou anexe uma foto.');
     busy(e.submitter, async () => {
-      const r = await api('/api/ai/caption', { method: 'POST', body: { topic, platform: $('#c-platform').value, style: $('#c-style').value, goal: $('#c-goal').value, image: photo && { media_type: photo.media_type, data: photo.data } } });
+      const platform = $('#c-platform').value;
+      const r = await api('/api/ai/caption', { method: 'POST', body: { topic, platform, style: $('#c-style').value, goal: $('#c-goal').value, image: photo && { media_type: photo.media_type, data: photo.data } } });
       const full = (o) => `${o.caption}\n\n${o.cta}\n\n${o.hashtags.map((h) => (h.startsWith('#') ? h : `#${h}`)).join(' ')}`;
+      if (!document.body.contains(main)) return; // a pessoa saiu da tela enquanto a IA respondia
       $('#cap-out').innerHTML = `
         <div class="grid grid-2">${r.options.map((o, i) => `
           <div class="card stack"><div class="row between"><b>Opção ${i + 1}</b><div class="row" style="gap:6px"><button class="btn sm" data-sched="${i}">📅 Agendar post</button><button class="btn sm" data-copy="${i}">Copiar</button></div></div>
@@ -914,7 +952,7 @@ views.legendas = async (main) => {
         const start = when.trim().replace(' ', 'T');
         const o = r.options[Number(b.dataset.sched)];
         try {
-          await api('/api/events', { method: 'POST', body: { title: `Postar no ${$('#c-platform').value}: ${o.hook}`.slice(0, 300), start, notes: full(o) } });
+          await api('/api/events', { method: 'POST', body: { title: `Postar no ${platform}: ${o.hook}`.slice(0, 300), start, notes: full(o) } });
           toast('Post agendado na Agenda! A legenda fica nas notas do compromisso.');
         } catch (e) { toast(e.message); }
       });
@@ -1029,7 +1067,7 @@ views.perfil = async (main, arg) => {
   $('#rem-time').onchange = saveRem;
   $('#push-on').onclick = (e) => busy(e.currentTarget, async () => {
     await enablePush();
-    $('#push-state').textContent = 'ativadas';
+    if ($('#push-state')) $('#push-state').textContent = 'ativadas';
     toast('Notificações ativadas! 🔔');
   });
   $('#push-test').onclick = (e) => busy(e.currentTarget, async () => {

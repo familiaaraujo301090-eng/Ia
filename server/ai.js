@@ -28,7 +28,7 @@ export function userContext(user) {
   const today = localDate();
   const goals = q.all(`SELECT id, title, why, area, deadline FROM goals WHERE user_id = ? AND status = 'ativa' ORDER BY id`, user.id);
   const tasks = q.all(`SELECT id, title, detail, done, minutes, goal_id FROM tasks WHERE user_id = ? AND due_date = ? ORDER BY id`, user.id, today);
-  const overdue = q.get(`SELECT COUNT(*) c FROM tasks WHERE user_id = ? AND due_date < ? AND done = 0`, user.id, today).c;
+  const overdue = q.get(`SELECT COUNT(*) c FROM tasks WHERE user_id = ? AND due_date < ? AND done = 0 AND habit_id IS NULL`, user.id, today).c;
   const events = expandEvents(user.id, today, addDays(today, 8)).slice(0, 10);
   const habits = q.all('SELECT id, title, minutes FROM habits WHERE user_id = ? AND active = 1', user.id);
   const doneWeek = q.get(

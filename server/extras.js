@@ -7,12 +7,12 @@ import {
   PASSWORD_MIN, PASSWORD_MAX,
 } from './auth.js';
 import { appUrl, hit, limitByIp, isAllowedPushEndpoint, underQuota, quotaGuard } from './security.js';
-import { localDate, localDateTime, addDays } from './time.js';
+import { localDate, localDateTime, addDays, isValidDate } from './time.js';
 import { vapidPublicKey, saveSubscription, removeSubscription, pushToUser } from './push.js';
 import { sendMail } from './mail.js';
 
 const str = (v, max = 5000) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
-const isDate = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+const isDate = isValidDate;
 const bad = (res, msg) => res.status(400).json({ error: msg });
 const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
@@ -28,6 +28,11 @@ export function usage(user) {
   const p = plan(user.plan);
   const checkout = /^https:\/\/[^\s"'<>]+$/.test(process.env.PRO_CHECKOUT_URL || '') ? process.env.PRO_CHECKOUT_URL : null;
   return { plan: user.plan || 'gratis', plan_name: p.name, used, limit: p.ai_per_day(), checkout_url: checkout };
+}
+
+/** Devolve um uso de IA (pedido inválido ou falha da IA). */
+export function refundAi(user) {
+  q.run('UPDATE ai_usage SET count = MAX(count - 1, 0) WHERE user_id = ? AND day = ?', user.id, localDate());
 }
 
 /** Conta um uso de IA. Retorna mensagem de erro se o limite do dia acabou. */

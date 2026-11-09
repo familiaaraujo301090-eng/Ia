@@ -6,12 +6,17 @@ export function esc(s) {
 }
 
 export async function api(path, { method = 'GET', body } = {}) {
-  const res = await fetch(path, {
-    method,
-    headers: body ? { 'Content-Type': 'application/json' } : {},
-    body: body ? JSON.stringify(body) : undefined,
-    credentials: 'same-origin',
-  });
+  let res;
+  try {
+    res = await fetch(path, {
+      method,
+      headers: body ? { 'Content-Type': 'application/json' } : {},
+      body: body ? JSON.stringify(body) : undefined,
+      credentials: 'same-origin',
+    });
+  } catch {
+    throw new Error(navigator.onLine === false ? 'Você está sem internet. Tente de novo quando a conexão voltar.' : 'Não consegui falar com o servidor. Tente de novo.');
+  }
   let data = null;
   try { data = await res.json(); } catch { /* empty */ }
   if (res.status === 401 && !path.startsWith('/api/auth') && path !== '/api/me') {
@@ -160,7 +165,7 @@ export async function busy(btn, fn) {
   const label = btn.innerHTML;
   btn.disabled = true;
   btn.innerHTML = `<span class="loading"></span> ${btn.dataset.busy || 'Pensando…'}`;
-  try { return await fn(); } catch (e) { toast(e.message); throw e; } finally { btn.disabled = false; btn.innerHTML = label; }
+  try { return await fn(); } catch (e) { toast(e.message); return undefined; } finally { btn.disabled = false; btn.innerHTML = label; }
 }
 
 export async function copy(text) {
@@ -209,3 +214,11 @@ export function ask(message, { input = false, value = '', placeholder = '', okLa
     d.querySelector(input ? 'input' : 'button[value=ok]').focus();
   });
 }
+
+// Qualquer erro não tratado vira um aviso amigável, em vez de falhar em silêncio.
+window.addEventListener('unhandledrejection', (e) => {
+  const msg = e.reason?.message;
+  toast(msg && !/^[A-Z][a-z]+Error\b/.test(msg) ? msg : 'Algo deu errado. Tente de novo.');
+});
+window.addEventListener('offline', () => toast('Você está sem internet. Suas ações vão falhar até a conexão voltar.'));
+window.addEventListener('online', () => toast('Conexão de volta! ✅'));

@@ -330,3 +330,45 @@ test('repeat and plan values reject prototype keys', async () => {
   const ev = await c('/api/events', 'POST', { title: 'x', start: `${today}T10:00`, repeat: 'constructor' });
   assert.equal(ev.body.repeat, '');
 });
+
+// ---------------- correções de bugs ----------------
+test('missed habits are not listed as overdue tasks', async () => {
+  const c = await client('bug-hab@x.com');
+  const today = (await c('/api/me')).body.today;
+  const h = (await c('/api/habits', 'POST', { title: 'Água' })).body;
+  const { db } = await import('../server/db.js');
+  const uid = (await c('/api/me')).body.user.id;
+  const y = new Date(Date.parse(today) - 864e5).toISOString().slice(0, 10);
+  db.prepare("INSERT INTO tasks (user_id, habit_id, title, due_date, source) VALUES (?, ?, 'Água', ?, 'habito')").run(uid, h.id, y);
+  assert.equal((await c('/api/today')).body.overdue.length, 0);
+});
+
+test('agenda range is capped (no huge expansions)', async () => {
+  const c = await client('bug-range@x.com');
+  const today = (await c('/api/me')).body.today;
+  await c('/api/events', 'POST', { title: 'Diário', start: `${today}T07:00`, repeat: 'diario' });
+  const r = await c(`/api/events?from=${today}&to=2099-12-31`);
+  assert.ok(r.body.length <= 367);
+});
+
+test('notes keep leading spaces and line breaks', async () => {
+  const c = await client('bug-note@x.com');
+  const n = (await c('/api/notes', 'POST', { title: 'n', content: '    recuo\n' })).body;
+  assert.equal((await c(`/api/notes/${n.id}`)).body.content, '    recuo\n');
+});
+
+test('invalid AI requests do not spend the daily quota', async () => {
+  const c = await client('bug-quota@x.com');
+  await c('/api/ai/amplify', 'POST', { idea: '' });
+  assert.equal((await c('/api/me')).body.usage.used, 0);
+});
+
+test('dates are validated for real', async () => {
+  const c = await client('bug-date@x.com');
+  const today = (await c('/api/me')).body.today;
+  assert.equal((await c('/api/tasks', 'POST', { title: 'x', due_date: '2026-02-31' })).status, 400);
+  assert.equal((await c('/api/goals', 'POST', { title: 'g', deadline: '2026-13-45' })).status, 400);
+  const ev = await c('/api/events', 'POST', { title: 'e', start: `${today}T10:00`, end: `${today}T09:00` });
+  assert.equal(ev.body.end, null);
+  assert.equal((await c('/api/events', 'POST', { title: 'e', start: `${today}T25:00` })).status, 400);
+});
