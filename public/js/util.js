@@ -117,7 +117,7 @@ export function md(src) {
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>')
     .replace(/(^|\s)_([^_\n]+)_/g, '$1<em>$2</em>')
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer nofollow">$1</a>')
     .replace(/\u0000(\d+)\u0000/g, (_, i) => `<code>${codes[i]}</code>`);
   };
   const closeList = () => { if (list) { out.push(`</${list}>`); list = null; } };

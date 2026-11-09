@@ -28,7 +28,7 @@ let js = `const process = { env: {} };\nconst __m = {};\n${modules.map(bundle).j
 js = mustReplace(js, "if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});", '');
 js = mustReplace(js, '<a class="btn" href="/api/export">Baixar meus dados</a>', '');
 js = mustReplace(js, '<input id="a-email" type="email" required autocomplete="email">', '<input id="a-email" type="email" required autocomplete="email" value="teste@rumo.app">');
-js = mustReplace(js, '<input id="a-pass" type="password" required minlength="6" autocomplete="current-password">', '<input id="a-pass" type="password" required minlength="6" autocomplete="current-password" value="rumo123">');
+js = mustReplace(js, '<input id="a-pass" type="password" required maxlength="200" autocomplete="current-password">', '<input id="a-pass" type="password" required maxlength="200" autocomplete="current-password" value="rumo123">');
 js = mustReplace(js, '<div class="auth-tabs">',
   '<div class="banner" style="margin:14px 0 0">Versão de teste: a conta <b>teste@rumo.app</b> já está preenchida. É só tocar em <b>Entrar</b>. A IA responde com exemplos e seus dados ficam só neste navegador.</div><div class="auth-tabs">');
 js = mustReplace(js, "IA em <b>modo demonstração</b>. Para respostas reais, configure <code>ANTHROPIC_API_KEY</code> no servidor (veja o README).",

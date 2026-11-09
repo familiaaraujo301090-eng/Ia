@@ -2,9 +2,10 @@ import express from 'express';
 import path from 'node:path';
 import { q, db } from './db.js';
 import {
-  hashPassword, verifyPassword, createSession, destroySession,
-  setSessionCookie, clearSessionCookie, requireUser,
+  hashPassword, verifyPassword, verifyDummy, needsRehash, validPassword, PASSWORD_MIN, PASSWORD_MAX,
+  createSession, destroySession, sessionToken, setSessionCookie, clearSessionCookie, requireUser, purgeExpiredSessions,
 } from './auth.js';
+import { securityHeaders, forceHttps, sameOrigin, limitByIp, hit, clearHits, quotaGuard, underQuota } from './security.js';
 import * as ai from './ai.js';
 import { localDate, localDateTime, addDays } from './time.js';
 import { LAUNCH_PLAN } from './launchPlan.js';
@@ -14,14 +15,17 @@ import {
 
 export const app = express();
 app.disable('x-powered-by');
-const jsonSmall = express.json({ limit: '1mb' });
-const jsonLarge = express.json({ limit: '8mb' }); // legendas com foto
-app.use((req, res, next) => (req.path === '/api/ai/caption' ? jsonLarge : jsonSmall)(req, res, next));
-app.use((req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('Referrer-Policy', 'same-origin');
-  next();
-});
+// Atrás do proxy do Render/Railway: confia no 1º proxy para saber o IP real e o HTTPS.
+app.set('trust proxy', process.env.TRUST_PROXY ?? (process.env.NODE_ENV === 'production' ? 1 : false));
+app.use(securityHeaders);
+app.use(forceHttps);
+app.use(limitByIp('api', 600, 60_000)); // teto geral por IP
+app.use(sameOrigin);
+const jsonSmall = express.json({ limit: '1mb', strict: true });
+const jsonLarge = express.json({ limit: '8mb', strict: true }); // legendas com foto (só depois do login)
+app.use((req, res, next) => (req.path === '/api/ai/caption' ? next() : jsonSmall(req, res, next)));
+setInterval(purgeExpiredSessions, 3600_000).unref();
+purgeExpiredSessions();
 
 const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 const str = (v, max = 5000) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
@@ -45,13 +49,13 @@ function aiLimit(req, res, next) {
 }
 
 // ---------- auth ----------
-const loginTries = new Map();
-app.post('/api/auth/register', (req, res) => {
+const PW_MSG = `A senha precisa ter de ${PASSWORD_MIN} a ${PASSWORD_MAX} caracteres.`;
+app.post('/api/auth/register', limitByIp('register', Number(process.env.REGISTER_PER_HOUR || 10), 3600_000, 'Muitos cadastros deste endereço. Tente mais tarde.'), (req, res) => {
   const name = str(req.body.name, 80);
   const email = str(req.body.email, 160).toLowerCase();
-  const password = typeof req.body.password === 'string' ? req.body.password : '';
-  if (!name || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return bad(res, 'Informe nome e e-mail válidos.');
-  if (password.length < 6) return bad(res, 'A senha precisa ter pelo menos 6 caracteres.');
+  const password = req.body.password;
+  if (!name || !/^[^@\s<>"']+@[^@\s<>"']+\.[^@\s<>"']+$/.test(email)) return bad(res, 'Informe nome e e-mail válidos.');
+  if (!validPassword(password)) return bad(res, PW_MSG);
   if (q.get('SELECT id FROM users WHERE email = ?', email)) return res.status(409).json({ error: 'E-mail já cadastrado.' });
   const { lastInsertRowid } = q.run('INSERT INTO users (name, email, pass_hash) VALUES (?, ?, ?)', name, email, hashPassword(password));
   const s = createSession(Number(lastInsertRowid));
@@ -61,24 +65,26 @@ app.post('/api/auth/register', (req, res) => {
 
 app.post('/api/auth/login', (req, res) => {
   const email = str(req.body.email, 160).toLowerCase();
-  const key = `${req.ip}|${email}`;
-  const tries = (loginTries.get(key) || []).filter((t) => Date.now() - t < 15 * 60_000);
-  if (tries.length >= 10) return res.status(429).json({ error: 'Muitas tentativas. Tente em 15 minutos.' });
+  const password = typeof req.body.password === 'string' ? req.body.password : '';
+  // limites: por IP (ataque em massa) e por e-mail (ataque distribuído a uma conta)
+  const WAIT = 'Muitas tentativas. Tente de novo em 15 minutos.';
+  if (!hit(`login-ip|${req.ip}`, 30, 15 * 60_000) || !hit(`login-email|${email}`, 10, 15 * 60_000)) {
+    return res.status(429).json({ error: WAIT });
+  }
   const user = q.get('SELECT id, pass_hash FROM users WHERE email = ?', email);
-  if (!user || !verifyPassword(String(req.body.password || ''), user.pass_hash)) {
-    tries.push(Date.now());
-    loginTries.set(key, tries);
+  if (!user) verifyDummy(password); // mesmo tempo de resposta quando o e-mail não existe
+  if (!user || !verifyPassword(password, user.pass_hash)) {
     return res.status(401).json({ error: 'E-mail ou senha incorretos.' });
   }
-  loginTries.delete(key);
+  clearHits(`login-email|${email}`);
+  if (needsRehash(user.pass_hash)) q.run('UPDATE users SET pass_hash = ? WHERE id = ?', hashPassword(password), user.id);
   const s = createSession(user.id);
   setSessionCookie(res, s.token, s.expires);
   res.json({ ok: true });
 });
 
 app.post('/api/auth/logout', (req, res) => {
-  const m = (req.headers.cookie || '').match(/rumo_session=([^;]+)/);
-  destroySession(m && m[1]);
+  destroySession(sessionToken(req));
   clearSessionCookie(res);
   res.json({ ok: true });
 });
@@ -98,6 +104,11 @@ app.put('/api/me', (req, res) => {
   res.json({ ok: true });
 });
 app.delete('/api/me', (req, res) => {
+  const row = q.get('SELECT pass_hash FROM users WHERE id = ?', req.user.id);
+  if (!hit(`delete|${req.user.id}`, 5, 15 * 60_000)) return res.status(429).json({ error: 'Muitas tentativas. Tente mais tarde.' });
+  if (!verifyPassword(typeof req.body?.password === 'string' ? req.body.password : '', row.pass_hash)) {
+    return res.status(403).json({ error: 'Senha incorreta. Para excluir a conta, confirme sua senha.' });
+  }
   q.run('DELETE FROM users WHERE id = ?', req.user.id);
   clearSessionCookie(res);
   res.json({ ok: true });
@@ -165,7 +176,7 @@ function ownGoal(userId, goalId) {
   return g ? g.id : null;
 }
 
-app.post('/api/tasks', (req, res) => {
+app.post('/api/tasks', quotaGuard('tasks'), (req, res) => {
   const title = str(req.body.title, 300);
   if (!title) return bad(res, 'Escreva a tarefa.');
   const due = isDate(req.body.due_date) ? req.body.due_date : localDate();
@@ -205,7 +216,7 @@ app.get('/api/goals/:id', (req, res) => {
   res.json(g);
 });
 
-app.post('/api/goals', (req, res) => {
+app.post('/api/goals', quotaGuard('goals'), (req, res) => {
   const title = str(req.body.title, 300);
   if (!title) return bad(res, 'Descreva a meta.');
   const { lastInsertRowid } = q.run('INSERT INTO goals (user_id, title, why, area, deadline) VALUES (?, ?, ?, ?, ?)',
@@ -268,7 +279,7 @@ function importLaunchPlan(uid, start = localDate()) {
   return Number(lastInsertRowid);
 }
 
-app.post('/api/goals/import-launch-plan', (req, res) => {
+app.post('/api/goals/import-launch-plan', quotaGuard('goals'), (req, res) => {
   res.status(201).json({ id: importLaunchPlan(req.user.id, isDate(req.body.start) ? req.body.start : localDate()) });
 });
 
@@ -297,17 +308,17 @@ function createEvent(userId, b) {
   const title = str(b.title, 300);
   if (!title || !isDateTime(b.start)) return null;
   const { lastInsertRowid } = q.run('INSERT INTO events (user_id, title, start, end, notes, repeat) VALUES (?, ?, ?, ?, ?, ?)',
-    userId, title, b.start, isDateTime(b.end) ? b.end : null, str(b.notes, 2000), REPEATS[b.repeat] ? b.repeat : '');
+    userId, title, b.start, isDateTime(b.end) ? b.end : null, str(b.notes, 2000), Object.hasOwn(REPEATS, b.repeat) ? b.repeat : '');
   return q.get('SELECT * FROM events WHERE id = ?', lastInsertRowid);
 }
 
-app.post('/api/events', (req, res) => {
+app.post('/api/events', quotaGuard('events'), (req, res) => {
   const ev = createEvent(req.user.id, req.body);
   if (!ev) return bad(res, 'Informe título e data/hora (AAAA-MM-DDTHH:MM).');
   res.status(201).json(ev);
 });
 
-app.post('/api/events/quick', aiLimit, wrap(async (req, res) => {
+app.post('/api/events/quick', quotaGuard('events'), aiLimit, wrap(async (req, res) => {
   const sentence = str(req.body.text, 500);
   if (!sentence) return bad(res, 'Escreva o compromisso.');
   const parsed = await ai.parseEvent(req.user, sentence);
@@ -319,7 +330,7 @@ app.post('/api/events/quick', aiLimit, wrap(async (req, res) => {
 app.patch('/api/events/:id', (req, res) => {
   const e = q.get('SELECT * FROM events WHERE id = ? AND user_id = ?', Number(req.params.id), req.user.id);
   if (!e) return res.status(404).json({ error: 'Compromisso não encontrado.' });
-  if (req.body.repeat !== undefined && REPEATS[req.body.repeat] !== undefined) q.run('UPDATE events SET repeat = ? WHERE id = ?', req.body.repeat, e.id);
+  if (Object.hasOwn(REPEATS, req.body.repeat ?? '\u0000')) q.run('UPDATE events SET repeat = ? WHERE id = ?', req.body.repeat, e.id);
   q.run('UPDATE events SET title = ?, start = ?, end = ?, notes = ? WHERE id = ?',
     str(req.body.title, 300) || e.title, isDateTime(req.body.start) ? req.body.start : e.start,
     req.body.end === undefined ? e.end : isDateTime(req.body.end) ? req.body.end : null,
@@ -341,7 +352,7 @@ app.get('/api/notes/:id', (req, res) => {
   if (!n) return res.status(404).json({ error: 'Nota não encontrada.' });
   res.json(n);
 });
-app.post('/api/notes', (req, res) => {
+app.post('/api/notes', quotaGuard('notes'), (req, res) => {
   const { lastInsertRowid } = q.run('INSERT INTO notes (user_id, title, content, kind) VALUES (?, ?, ?, ?)',
     req.user.id, str(req.body.title, 200) || 'Sem título', str(req.body.content, 200_000), str(req.body.kind, 20) || 'nota');
   res.status(201).json(q.get('SELECT * FROM notes WHERE id = ?', lastInsertRowid));
@@ -370,7 +381,7 @@ app.post('/api/ai/amplify', aiLimit, wrap(async (req, res) => {
   res.json(await ai.amplify(req.user, idea));
 }));
 
-app.post('/api/ai/caption', aiLimit, wrap(async (req, res) => {
+app.post('/api/ai/caption', jsonLarge, aiLimit, wrap(async (req, res) => {
   const topic = str(req.body.topic, 2000) || (req.body.image ? 'a foto anexada' : '');
   if (!topic) return bad(res, 'Sobre o que é o post? Escreva ou anexe uma foto.');
   const img = req.body.image;
@@ -411,6 +422,7 @@ function chatActions(uid) {
   const task = (id) => q.get('SELECT * FROM tasks WHERE id = ? AND user_id = ?', id, uid) || (() => { throw new Error(`Tarefa ${id} não encontrada.`); })();
   return {
     criar_tarefa: (t) => {
+      if (!underQuota('tasks', uid)) throw new Error('Limite de tarefas atingido.');
       const due = isDate(t.due_date) ? t.due_date : localDate();
       q.run('INSERT INTO tasks (user_id, goal_id, title, detail, due_date, minutes, source) VALUES (?, ?, ?, ?, ?, ?, ?)',
         uid, ownGoal(uid, t.goal_id), t.title, t.detail || '', due, t.minutes || 15, 'ai');
@@ -437,11 +449,13 @@ function chatActions(uid) {
       return `🗑️ Tarefa removida: "${t.title}"`;
     },
     criar_compromisso: (e) => {
+      if (!underQuota('events', uid)) throw new Error('Limite de compromissos atingido.');
       const ev = createEvent(uid, e);
       if (!ev) throw new Error('Data/hora inválida.');
       return `📅 Agendado: "${ev.title}" em ${ev.start.slice(8, 10)}/${ev.start.slice(5, 7)} às ${ev.start.slice(11)}`;
     },
     criar_meta: (g) => {
+      if (!underQuota('goals', uid)) throw new Error('Limite de metas atingido.');
       const { lastInsertRowid } = q.run('INSERT INTO goals (user_id, title, why, area, deadline) VALUES (?, ?, ?, ?, ?)',
         uid, g.title, g.why || '', g.area || 'geral', isDate(g.deadline) ? g.deadline : null);
       return `🎯 Meta criada: "${g.title}" (id ${lastInsertRowid}). Abra em Metas para gerar o plano.`;
@@ -459,19 +473,21 @@ function chatActions(uid) {
       return '👤 Perfil atualizado';
     },
     criar_habito: (h) => {
+      if (!underQuota('habits', uid)) throw new Error('Limite de hábitos atingido.');
       const { lastInsertRowid } = q.run('INSERT INTO habits (user_id, title, minutes, days) VALUES (?, ?, ?, ?)',
         uid, h.title, h.minutes || 10, /^[0-6]{1,7}$/.test(h.days || '') ? h.days : '0123456');
       ensureHabitTasks(uid);
       return `🔁 Hábito criado: "${h.title}" (id ${lastInsertRowid})`;
     },
     salvar_nota: (n) => {
+      if (!underQuota('notes', uid)) throw new Error('Limite de notas atingido.');
       q.run('INSERT INTO notes (user_id, title, content) VALUES (?, ?, ?)', uid, n.title, n.content);
       return `📝 Nota salva: "${n.title}"`;
     },
   };
 }
 
-app.post('/api/ai/chat', aiLimit, async (req, res) => {
+app.post('/api/ai/chat', quotaGuard('messages'), aiLimit, async (req, res) => {
   const uid = req.user.id;
   const helpTask = req.body.help_task_id
     ? q.get('SELECT * FROM tasks WHERE id = ? AND user_id = ?', Number(req.body.help_task_id), uid)
@@ -486,9 +502,12 @@ app.post('/api/ai/chat', aiLimit, async (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders();
-  const send = (obj) => res.write(`data: ${JSON.stringify(obj)}\n\n`);
+  const abort = new AbortController();
+  res.on('close', () => { if (!res.writableEnded) abort.abort(); }); // usuário saiu: para de gastar IA
+  const send = (obj) => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(obj)}\n\n`); };
   try {
     const full = await ai.chatStream(req.user, history, {
+      signal: abort.signal,
       onText: (t) => send({ t }),
       onAction: (a) => send({ action: a }),
       actions: chatActions(uid),
@@ -498,7 +517,10 @@ app.post('/api/ai/chat', aiLimit, async (req, res) => {
     if (full) addMessage(uid, 'assistant', full);
     send({ done: true });
   } catch (err) {
-    send({ error: err.message || 'Erro na IA.' });
+    if (!abort.signal.aborted) {
+      if (!err.expose) console.error(err);
+      send({ error: err.expose ? err.message : 'Erro na IA. Tente de novo.' });
+    }
   }
   res.end();
 });
@@ -557,11 +579,15 @@ app.use('/api', (req, res) => res.status(404).json({ error: 'Rota não encontrad
 
 // ---------- static frontend ----------
 const pub = path.resolve('public');
-app.use(express.static(pub, { maxAge: '1h', setHeaders: (res, p) => { if (p.endsWith('sw.js') || p.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache'); } }));
+app.use(express.static(pub, { maxAge: '1h', dotfiles: 'ignore', index: 'index.html', setHeaders: (res, p) => { if (p.endsWith('sw.js') || p.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache'); } }));
 app.get(/^\/(?!api).*/, (req, res) => res.sendFile(path.join(pub, 'index.html')));
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
-  console.error(err);
-  res.status(500).json({ error: err.message || 'Erro interno.' });
+  const status = err.status || err.statusCode || 500;
+  if (status >= 500) console.error(err);
+  // só mostra a mensagem quando ela foi feita para o usuário (err.expose); nunca detalhes internos
+  // erros do leitor de JSON (err.type) têm detalhes técnicos: nunca são repassados
+  const own = err.expose && !err.type;
+  res.status(status).json({ error: own ? err.message : status === 413 ? 'Conteúdo grande demais.' : status < 500 ? 'Requisição inválida.' : 'Erro interno. Tente de novo.' });
 });

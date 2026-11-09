@@ -72,7 +72,7 @@ function renderAuth(arg) {
         <form id="auth-form">
           <div class="field hidden" id="name-field"><label for="a-name">Seu nome</label><input id="a-name" type="text" autocomplete="name"></div>
           <div class="field"><label for="a-email">E-mail</label><input id="a-email" type="email" required autocomplete="email"></div>
-          <div class="field"><label for="a-pass">Senha</label><input id="a-pass" type="password" required minlength="6" autocomplete="current-password"></div>
+          <div class="field"><label for="a-pass">Senha</label><input id="a-pass" type="password" required maxlength="200" autocomplete="current-password"></div>
           <button class="btn primary" style="width:100%;justify-content:center" type="submit">Entrar</button>
           <button class="btn ghost sm" type="button" id="forgot" style="margin-top:8px;width:100%;justify-content:center">Esqueci minha senha</button>
         </form>
@@ -91,6 +91,8 @@ function renderAuth(arg) {
     $('#name-field').classList.toggle('hidden', mode !== 'register');
     $('#auth-form button[type=submit]').textContent = mode === 'register' ? 'Criar minha conta' : 'Entrar';
     $('#a-pass').autocomplete = mode === 'register' ? 'new-password' : 'current-password';
+    $('#a-pass').minLength = mode === 'register' ? 8 : 1;
+    $('#a-pass').placeholder = mode === 'register' ? 'Mínimo de 8 caracteres' : '';
   });
   if (arg === 'criar') $('[data-m=register]').click();
   $('#forgot').onclick = async () => {
@@ -975,7 +977,7 @@ views.perfil = async (main, arg) => {
           <div class="progress" style="margin:6px 0 12px"><span style="width:${u.limit ? Math.min(100, (u.used / u.limit) * 100) : 0}%"></span></div>
           ${u.plan === 'pro' ? '<p class="small muted" style="margin:0">Obrigado por apoiar o Rumo! 💛</p>' : `
             <p class="small" style="margin-bottom:10px"><b>Pro:</b> 10x mais IA por dia, revisão semanal, legendas com foto sem limite e prioridade nas novidades.</p>
-            ${u.checkout_url ? `<a class="btn primary" href="${esc(u.checkout_url)}" target="_blank" rel="noopener">Assinar o Pro</a>` : '<span class="small muted">Assinatura Pro chegando em breve.</span>'}`}
+            ${u.checkout_url ? `<a class="btn primary" href="${esc(u.checkout_url)}" target="_blank" rel="noopener noreferrer">Assinar o Pro</a>` : '<span class="small muted">Assinatura Pro chegando em breve.</span>'}`}
         </section>
 
         <section class="card">
@@ -994,7 +996,7 @@ views.perfil = async (main, arg) => {
         <form class="card" id="pw-form">
           <h2>Trocar senha</h2>
           <div class="field"><label for="pw-cur">Senha atual</label><input type="password" id="pw-cur" autocomplete="current-password" required></div>
-          <div class="field"><label for="pw-new">Nova senha</label><input type="password" id="pw-new" autocomplete="new-password" minlength="6" required></div>
+          <div class="field"><label for="pw-new">Nova senha</label><input type="password" id="pw-new" autocomplete="new-password" minlength="8" maxlength="200" required placeholder="Mínimo de 8 caracteres"></div>
           <button class="btn sm" type="submit">Trocar senha</button>
         </form>
       </div>
@@ -1044,15 +1046,39 @@ views.perfil = async (main, arg) => {
   };
   $('#logout').onclick = async () => { await api('/api/auth/logout', { method: 'POST' }); state.me = null; go('#/entrar'); };
   $('#del-acc').onclick = async () => {
-    if (await ask('Isso apaga TODOS os seus dados. Digite EXCLUIR para confirmar.', { input: true, okLabel: 'Excluir conta', danger: true }) !== 'EXCLUIR') return;
-    await api('/api/me', { method: 'DELETE' });
-    state.me = null;
-    location.hash = '#/entrar';
+    if (await ask('Isso apaga TODOS os seus dados. Digite EXCLUIR para confirmar.', { input: true, okLabel: 'Continuar', danger: true }) !== 'EXCLUIR') return;
+    const password = await ask('Por segurança, confirme sua senha.', { input: 'password', okLabel: 'Excluir minha conta', danger: true });
+    if (!password) return;
+    try {
+      await api('/api/me', { method: 'DELETE', body: { password } });
+      state.me = null;
+      toast('Conta excluída. Sentiremos sua falta.');
+      go('#/');
+    } catch (err) { toast(err.message); }
   };
 };
 
 // ---------------- ADMIN ----------------
 views.admin = async (main) => {
+  if (!state.me.is_admin) {
+    main.innerHTML = `
+      <form class="card auth-card" id="claim" style="margin:20px auto">
+        <h2>Área do administrador</h2>
+        <p class="small muted">Digite o código de administrador definido no servidor (variável ADMIN_SECRET).</p>
+        <div class="field"><label for="claim-secret">Código</label><input type="password" id="claim-secret" autocomplete="off" required maxlength="200"></div>
+        <button class="btn primary" type="submit">Entrar como admin</button>
+      </form>`;
+    $('#claim').onsubmit = async (e) => {
+      e.preventDefault();
+      try {
+        await api('/api/admin/claim', { method: 'POST', body: { secret: $('#claim-secret').value } });
+        state.me.is_admin = true;
+        $('.shell')?.remove();
+        go('#/admin');
+      } catch (err) { toast(err.message); }
+    };
+    return;
+  }
   const s = await api('/api/admin/stats');
   const bars = (raw, label) => {
     const byDay = Object.fromEntries(raw.map((r) => [r.day, r.n]));
@@ -1260,8 +1286,8 @@ function renderReset(token) {
     <div class="auth"><form class="card auth-card" id="reset-form">
       <div class="brand" style="padding:0"><span class="brand-mark">➜</span> Rumo</div>
       <h2 style="margin-top:16px">Criar nova senha</h2>
-      <div class="field"><label for="r1">Nova senha</label><input type="password" id="r1" minlength="6" required autocomplete="new-password"></div>
-      <div class="field"><label for="r2">Repita a senha</label><input type="password" id="r2" minlength="6" required autocomplete="new-password"></div>
+      <div class="field"><label for="r1">Nova senha</label><input type="password" id="r1" minlength="8" maxlength="200" required autocomplete="new-password" placeholder="Mínimo de 8 caracteres"></div>
+      <div class="field"><label for="r2">Repita a senha</label><input type="password" id="r2" minlength="8" maxlength="200" required autocomplete="new-password"></div>
       <button class="btn primary" style="width:100%;justify-content:center" type="submit">Salvar e entrar</button>
     </form></div>`;
   $('#reset-form').onsubmit = async (e) => {

@@ -2,7 +2,11 @@
 // senha (troca e recuperação), lembretes por notificação e painel de administração.
 import crypto from 'node:crypto';
 import { q } from './db.js';
-import { hashPassword, verifyPassword, createSession, setSessionCookie, isAdmin } from './auth.js';
+import {
+  hashPassword, verifyPassword, createSession, setSessionCookie, destroyOtherSessions, validPassword, adminSecretMatches,
+  PASSWORD_MIN, PASSWORD_MAX,
+} from './auth.js';
+import { appUrl, hit, limitByIp, isAllowedPushEndpoint, underQuota, quotaGuard } from './security.js';
 import { localDate, localDateTime, addDays } from './time.js';
 import { vapidPublicKey, saveSubscription, removeSubscription, pushToUser } from './push.js';
 import { sendMail } from './mail.js';
@@ -17,12 +21,13 @@ export const PLANS = {
   gratis: { name: 'Grátis', ai_per_day: () => Number(process.env.FREE_AI_PER_DAY || 30) },
   pro: { name: 'Pro', ai_per_day: () => Number(process.env.PRO_AI_PER_DAY || 300) },
 };
-const plan = (p) => PLANS[p] || PLANS.gratis;
+const plan = (p) => (Object.hasOwn(PLANS, p) ? PLANS[p] : PLANS.gratis);
 
 export function usage(user) {
   const used = q.get('SELECT count FROM ai_usage WHERE user_id = ? AND day = ?', user.id, localDate())?.count || 0;
   const p = plan(user.plan);
-  return { plan: user.plan || 'gratis', plan_name: p.name, used, limit: p.ai_per_day(), checkout_url: process.env.PRO_CHECKOUT_URL || null };
+  const checkout = /^https:\/\/[^\s"'<>]+$/.test(process.env.PRO_CHECKOUT_URL || '') ? process.env.PRO_CHECKOUT_URL : null;
+  return { plan: user.plan || 'gratis', plan_name: p.name, used, limit: p.ai_per_day(), checkout_url: checkout };
 }
 
 /** Conta um uso de IA. Retorna mensagem de erro se o limite do dia acabou. */
@@ -109,40 +114,39 @@ export function goalsNeedingPlan(userId, today = localDate()) {
 
 // ---------- rotas públicas (antes do login) ----------
 export function registerPublicRoutes(app) {
-  const forgotHits = new Map();
-  app.post('/api/auth/forgot', wrap(async (req, res) => {
+  app.post('/api/auth/forgot', limitByIp('forgot', 5, 3600_000, 'Muitos pedidos. Tente de novo em 1 hora.'), wrap(async (req, res) => {
     const email = str(req.body.email, 160).toLowerCase();
-    const recent = (forgotHits.get(req.ip) || []).filter((t) => Date.now() - t < 3600_000);
-    if (recent.length >= 5) return res.status(429).json({ error: 'Muitos pedidos. Tente de novo em 1 hora.' });
-    forgotHits.set(req.ip, [...recent, Date.now()]);
     const user = q.get('SELECT id, name FROM users WHERE email = ?', email);
-    if (user) {
+    const base = appUrl(req);
+    if (!base) console.error('APP_URL não configurada: link de recuperação não enviado.');
+    // no máximo 3 e-mails por conta por hora (evita usar o app para lotar a caixa de alguém)
+    if (user && base && hit(`forgot-email|${email}`, 3, 3600_000)) {
+      q.run('UPDATE password_resets SET used = 1 WHERE user_id = ?', user.id); // invalida links anteriores
       const token = crypto.randomBytes(32).toString('hex');
       const hash = crypto.createHash('sha256').update(token).digest('hex');
       q.run('INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES (?, ?, ?)', hash, user.id, new Date(Date.now() + 3600_000).toISOString());
-      const base = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
       const link = `${base}/#/redefinir/${token}`;
       await sendMail({
         to: email,
         subject: 'Rumo: redefinir sua senha',
         text: `Oi, ${user.name}!\n\nPara criar uma nova senha, abra este link (vale por 1 hora):\n${link}\n\nSe não foi você que pediu, ignore este e-mail.`,
-        html: `<p>Oi, ${user.name.replace(/[<>&]/g, '')}!</p><p>Para criar uma nova senha, clique no link abaixo (vale por 1 hora):</p><p><a href="${link}">Criar nova senha</a></p><p>Se não foi você que pediu, ignore este e-mail.</p>`,
+        html: `<p>Oi, ${user.name.replace(/[<>&"']/g, '')}!</p><p>Para criar uma nova senha, clique no link abaixo (vale por 1 hora):</p><p><a href="${link}">Criar nova senha</a></p><p>Se não foi você que pediu, ignore este e-mail.</p>`,
       }).catch((e) => console.error('Falha ao enviar e-mail:', e.message));
     }
     // mesma resposta sempre, para não revelar quais e-mails têm conta
     res.json({ ok: true });
   }));
 
-  app.post('/api/auth/reset', (req, res) => {
+  app.post('/api/auth/reset', limitByIp('reset', 20, 3600_000), (req, res) => {
     const token = str(req.body.token, 200);
-    const password = typeof req.body.password === 'string' ? req.body.password : '';
-    if (password.length < 6) return bad(res, 'A senha precisa ter pelo menos 6 caracteres.');
+    const password = req.body.password;
+    if (!validPassword(password)) return bad(res, `A senha precisa ter de ${PASSWORD_MIN} a ${PASSWORD_MAX} caracteres.`);
     const hash = crypto.createHash('sha256').update(token).digest('hex');
     const row = q.get('SELECT * FROM password_resets WHERE token_hash = ?', hash);
     if (!row || row.used || new Date(row.expires_at) < new Date()) return bad(res, 'Link inválido ou expirado. Peça um novo.');
     q.run('UPDATE password_resets SET used = 1 WHERE token_hash = ?', hash);
     q.run('UPDATE users SET pass_hash = ? WHERE id = ?', hashPassword(password), row.user_id);
-    q.run('DELETE FROM sessions WHERE user_id = ?', row.user_id);
+    destroyOtherSessions(row.user_id); // desconecta todos os aparelhos
     const s = createSession(row.user_id);
     setSessionCookie(res, s.token, s.expires);
     res.json({ ok: true });
@@ -153,12 +157,13 @@ export function registerPublicRoutes(app) {
 export function registerPrivateRoutes(app) {
   // senha
   app.put('/api/me/password', (req, res) => {
+    if (!hit(`pw|${req.user.id}`, 10, 15 * 60_000)) return res.status(429).json({ error: 'Muitas tentativas. Tente mais tarde.' });
     const row = q.get('SELECT pass_hash FROM users WHERE id = ?', req.user.id);
-    if (!verifyPassword(String(req.body.current || ''), row.pass_hash)) return bad(res, 'Senha atual incorreta.');
-    const password = typeof req.body.password === 'string' ? req.body.password : '';
-    if (password.length < 6) return bad(res, 'A nova senha precisa ter pelo menos 6 caracteres.');
+    if (!verifyPassword(typeof req.body.current === 'string' ? req.body.current : '', row.pass_hash)) return bad(res, 'Senha atual incorreta.');
+    const password = req.body.password;
+    if (!validPassword(password)) return bad(res, `A nova senha precisa ter de ${PASSWORD_MIN} a ${PASSWORD_MAX} caracteres.`);
     q.run('UPDATE users SET pass_hash = ? WHERE id = ?', hashPassword(password), req.user.id);
-    q.run('DELETE FROM sessions WHERE user_id = ? AND token != ?', req.user.id, req.token);
+    destroyOtherSessions(req.user.id, req.token); // desconecta os outros aparelhos
     res.json({ ok: true });
   });
 
@@ -170,14 +175,18 @@ export function registerPrivateRoutes(app) {
   });
   app.get('/api/push/key', (req, res) => res.json({ key: vapidPublicKey() }));
   app.post('/api/push/subscribe', (req, res) => {
-    try { saveSubscription(req.user.id, req.body.subscription); } catch (e) { return bad(res, e.message); }
+    const sub = req.body.subscription;
+    if (!isAllowedPushEndpoint(sub?.endpoint)) return bad(res, 'Serviço de notificação não reconhecido.');
+    const exists = q.get('SELECT id FROM push_subs WHERE endpoint = ?', sub.endpoint);
+    if (!exists && !underQuota('push_subs', req.user.id)) return bad(res, 'Limite de aparelhos atingido. Desative um antes.');
+    try { saveSubscription(req.user.id, sub); } catch (e) { return bad(res, e.message); }
     res.json({ ok: true });
   });
   app.post('/api/push/unsubscribe', (req, res) => {
     removeSubscription(req.user.id, str(req.body.endpoint, 1000));
     res.json({ ok: true });
   });
-  app.post('/api/push/test', wrap(async (req, res) => {
+  app.post('/api/push/test', limitByIp('push-test', 10, 3600_000), wrap(async (req, res) => {
     const sent = await pushToUser(req.user.id, { title: 'Rumo', body: 'Notificações funcionando! Vou te lembrar das tarefas todo dia. 🔔', url: '/#/hoje' });
     res.json({ sent });
   }));
@@ -192,7 +201,7 @@ export function registerPrivateRoutes(app) {
       last7: q.all('SELECT due_date d, done FROM tasks WHERE habit_id = ? AND due_date >= ? ORDER BY due_date', h.id, addDays(localDate(), -6)),
     })));
   });
-  app.post('/api/habits', (req, res) => {
+  app.post('/api/habits', quotaGuard('habits'), (req, res) => {
     const title = str(req.body.title, 200);
     if (!title) return bad(res, 'Escreva o hábito.');
     const { lastInsertRowid } = q.run('INSERT INTO habits (user_id, goal_id, title, minutes, days) VALUES (?, ?, ?, ?, ?)',
@@ -218,7 +227,14 @@ export function registerPrivateRoutes(app) {
   });
 
   // administração
-  const admin = (req, res, next) => (isAdmin(req.user.email) ? next() : res.status(403).json({ error: 'Acesso restrito.' }));
+  const admin = (req, res, next) => (req.user.is_admin ? next() : res.status(403).json({ error: 'Acesso restrito.' }));
+  // Vira admin quem informa ADMIN_SECRET (variável do servidor, mínimo 20 caracteres).
+  app.post('/api/admin/claim', limitByIp('admin-claim', 5, 3600_000, 'Muitas tentativas. Tente em 1 hora.'), (req, res) => {
+    if (!hit(`admin-claim-user|${req.user.id}`, 5, 3600_000)) return res.status(429).json({ error: 'Muitas tentativas. Tente em 1 hora.' });
+    if (!adminSecretMatches(req.body.secret)) return res.status(403).json({ error: 'Código incorreto.' });
+    q.run('UPDATE users SET is_admin = 1 WHERE id = ?', req.user.id);
+    res.json({ ok: true });
+  });
   app.get('/api/admin/stats', admin, (req, res) => {
     const today = localDate();
     const d7 = addDays(today, -6);
@@ -235,13 +251,13 @@ export function registerPrivateRoutes(app) {
       ai_today: q.get('SELECT COALESCE(SUM(count), 0) c FROM ai_usage WHERE day = ?', today).c,
       ai30: q.all('SELECT day, SUM(count) n FROM ai_usage WHERE day >= ? GROUP BY day ORDER BY day', d30),
       signups30: q.all('SELECT substr(created_at, 1, 10) day, COUNT(*) n FROM users WHERE created_at >= ? GROUP BY day ORDER BY day', d30),
-      recent: q.all(`SELECT u.id, u.name, u.email, u.plan, u.created_at, u.last_seen, u.role,
+      recent: q.all(`SELECT u.id, u.name, u.email, u.plan, u.created_at, u.last_seen, u.role, u.is_admin,
                        (SELECT COUNT(*) FROM tasks t WHERE t.user_id = u.id AND t.done = 1) done
                      FROM users u ORDER BY u.id DESC LIMIT 50`),
     });
   });
   app.patch('/api/admin/users/:id', admin, (req, res) => {
-    if (!PLANS[req.body.plan]) return bad(res, 'Plano inválido.');
+    if (!Object.hasOwn(PLANS, req.body.plan)) return bad(res, 'Plano inválido.');
     q.run('UPDATE users SET plan = ? WHERE id = ?', req.body.plan, Number(req.params.id));
     res.json({ ok: true });
   });

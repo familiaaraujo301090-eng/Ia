@@ -15,8 +15,12 @@ services:
         value: /var/data/rumo.db
       - key: ANTHROPIC_API_KEY
         sync: false
-      - key: ADMIN_EMAILS
+      - key: ADMIN_SECRET
+        generateValue: true
+      - key: APP_URL
         sync: false
+      - key: TRUST_PROXY
+        value: "1"
       - key: PRO_CHECKOUT_URL
         sync: false
       - key: SMTP_URL

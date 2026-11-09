@@ -126,7 +126,7 @@ function addColumns(table, cols) {
 addColumns('users', [
   ['onboarded', 'INTEGER DEFAULT 0'], ['role', "TEXT DEFAULT ''"], ['daily_minutes', 'INTEGER DEFAULT 30'],
   ['plan', "TEXT DEFAULT 'gratis'"], ['reminders', 'INTEGER DEFAULT 1'], ['reminder_time', "TEXT DEFAULT '08:00'"],
-  ['last_reminder', 'TEXT'], ['last_seen', 'TEXT'],
+  ['last_reminder', 'TEXT'], ['last_seen', 'TEXT'], ['is_admin', 'INTEGER DEFAULT 0'],
 ]);
 addColumns('events', [['repeat', "TEXT DEFAULT ''"]]);
 addColumns('tasks', [['habit_id', 'INTEGER']]);

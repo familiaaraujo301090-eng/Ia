@@ -8,7 +8,8 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rumo-test-'));
 process.env.DB_PATH = path.join(dir, 'test.db');
 delete process.env.ANTHROPIC_API_KEY;
 delete process.env.ANTHROPIC_AUTH_TOKEN;
-process.env.ADMIN_EMAILS = 'admin@x.com';
+process.env.ADMIN_SECRET = 'segredo-de-admin-bem-longo-123';
+process.env.REGISTER_PER_HOUR = '1000';
 process.env.FREE_AI_PER_DAY = '40';
 
 const { app } = await import('../server/app.js');
@@ -26,6 +27,7 @@ async function client(email) {
     return { status: res.status, body: ct.includes('json') ? await res.json() : await res.text() };
   };
   const r = await call('/api/auth/register', 'POST', { name: 'U', email, password: 'segredo1' });
+  call.cookie = () => cookie;
   assert.equal(r.status, 201);
   return call;
 }
@@ -39,7 +41,7 @@ test('register validation and duplicate email', async () => {
   await client('dup@x.com');
   const res = await fetch(`${base}/api/auth/register`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'A', email: 'dup@x.com', password: 'segredo1' }) });
   assert.equal(res.status, 409);
-  const weak = await fetch(`${base}/api/auth/register`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'A', email: 'w@x.com', password: '1' }) });
+  const weak = await fetch(`${base}/api/auth/register`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'A', email: 'w@x.com', password: '1234567' }) });
   assert.equal(weak.status, 400);
 });
 
@@ -176,13 +178,13 @@ async function fetchJSON(c, p) { return (await c(p)).body; }
 
 test('password change and reset', async () => {
   const c = await client('pw@x.com');
-  assert.equal((await c('/api/me/password', 'PUT', { current: 'errada', password: 'nova123' })).status, 400);
-  assert.equal((await c('/api/me/password', 'PUT', { current: 'segredo1', password: 'nova123' })).status, 200);
-  const login = await fetch(`${base}/api/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: 'pw@x.com', password: 'nova123' }) });
+  assert.equal((await c('/api/me/password', 'PUT', { current: 'errada', password: 'nova1234' })).status, 400);
+  assert.equal((await c('/api/me/password', 'PUT', { current: 'segredo1', password: 'nova1234' })).status, 200);
+  const login = await fetch(`${base}/api/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: 'pw@x.com', password: 'nova1234' }) });
   assert.equal(login.status, 200);
   const forgot = await fetch(`${base}/api/auth/forgot`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: 'nao-existe@x.com' }) });
   assert.equal(forgot.status, 200);
-  const badReset = await fetch(`${base}/api/auth/reset`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: 'x', password: 'abcdef' }) });
+  const badReset = await fetch(`${base}/api/auth/reset`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: 'x', password: 'abcdefgh' }) });
   assert.equal(badReset.status, 400);
 });
 
@@ -212,6 +214,9 @@ test('daily AI limit by plan and admin can upgrade', async () => {
   assert.equal(me.usage.used, 2);
   const adm = await client('admin@x.com');
   assert.equal((await c('/api/admin/stats')).status, 403);
+  assert.equal((await adm('/api/admin/stats')).status, 403); // e-mail não dá acesso
+  assert.equal((await adm('/api/admin/claim', 'POST', { secret: 'errado' })).status, 403);
+  assert.equal((await adm('/api/admin/claim', 'POST', { secret: 'segredo-de-admin-bem-longo-123' })).status, 200);
   const stats = await adm('/api/admin/stats');
   assert.equal(stats.status, 200);
   assert.ok(stats.body.users >= 1);
@@ -231,4 +236,97 @@ test('needs_plan lists active goals without upcoming tasks', async () => {
 test('reminder loop with no devices sends nothing', async () => {
   const { sendDueReminders } = await import('../server/extras.js');
   assert.equal(await sendDueReminders(), 0);
+});
+
+// ---------------- segurança ----------------
+const post = (p, body, headers = {}) => fetch(`${base}${p}`, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) });
+
+test('security headers are present', async () => {
+  const res = await fetch(`${base}/`);
+  assert.match(res.headers.get('content-security-policy'), /frame-ancestors 'none'/);
+  assert.match(res.headers.get('content-security-policy'), /script-src 'self'/);
+  assert.equal(res.headers.get('x-frame-options'), 'DENY');
+  assert.equal(res.headers.get('x-content-type-options'), 'nosniff');
+  assert.equal(res.headers.get('x-powered-by'), null);
+  const api = await fetch(`${base}/api/health`);
+  assert.equal(api.headers.get('cache-control'), 'no-store');
+});
+
+test('cross-site requests are blocked (CSRF)', async () => {
+  const c = await client('csrf@x.com');
+  const evil = await fetch(`${base}/api/goals`, { method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://evil.example', cookie: c.cookie() }, body: JSON.stringify({ title: 'x' }) });
+  assert.equal(evil.status, 403);
+  const form = await fetch(`${base}/api/goals`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', cookie: c.cookie() }, body: 'title=x' });
+  assert.equal(form.status, 415);
+  const site = await fetch(`${base}/api/goals`, { method: 'POST', headers: { 'content-type': 'application/json', 'sec-fetch-site': 'cross-site', cookie: c.cookie() }, body: JSON.stringify({ title: 'x' }) });
+  assert.equal(site.status, 403);
+  assert.equal((await c('/api/goals')).body.length, 0);
+});
+
+test('sessions are stored hashed and passwords use strong scrypt', async () => {
+  const c = await client('hash@x.com');
+  const { db } = await import('../server/db.js');
+  const token = decodeURIComponent(c.cookie().split('=')[1]);
+  assert.equal(db.prepare('SELECT COUNT(*) c FROM sessions WHERE token = ?').get(token).c, 0);
+  const u = db.prepare('SELECT pass_hash FROM users WHERE email = ?').get('hash@x.com');
+  assert.match(u.pass_hash, /^scrypt\$32768\$8\$1\$/);
+});
+
+test('legacy password hashes still log in and get upgraded', async () => {
+  const crypto = await import('node:crypto');
+  const { db } = await import('../server/db.js');
+  const salt = 'abcd';
+  const legacy = `${salt}:${crypto.scryptSync('antiga12', salt, 64).toString('hex')}`;
+  db.prepare('INSERT INTO users (name, email, pass_hash) VALUES (?, ?, ?)').run('Old', 'old@x.com', legacy);
+  assert.equal((await post('/api/auth/login', { email: 'old@x.com', password: 'antiga12' })).status, 200);
+  assert.match(db.prepare('SELECT pass_hash FROM users WHERE email = ?').get('old@x.com').pass_hash, /^scrypt\$/);
+});
+
+test('password rules and brute force limits', async () => {
+  assert.equal((await post('/api/auth/register', { name: 'A', email: 'long@x.com', password: 'x'.repeat(201) })).status, 400);
+  await client('brute@x.com');
+  let last;
+  for (let i = 0; i < 11; i++) last = await post('/api/auth/login', { email: 'brute@x.com', password: `errada${i}` });
+  assert.equal(last.status, 429);
+  const nobody = await post('/api/auth/login', { email: 'ninguem@x.com', password: 'qualquer1' });
+  assert.equal(nobody.status, 401);
+  assert.match((await nobody.json()).error, /E-mail ou senha incorretos/);
+});
+
+test('push only accepts real push services (no SSRF)', async () => {
+  const c = await client('push@x.com');
+  const keys = { p256dh: 'BOr8x', auth: 'abc' };
+  for (const endpoint of ['http://169.254.169.254/latest/meta-data', 'https://localhost/x', 'https://evil.example/push', 'https://fcm.googleapis.com:8443/x', 'file:///etc/passwd']) {
+    assert.equal((await c('/api/push/subscribe', 'POST', { subscription: { endpoint, keys } })).status, 400, endpoint);
+  }
+  assert.equal((await c('/api/push/subscribe', 'POST', { subscription: { endpoint: 'https://fcm.googleapis.com/fcm/send/abc', keys } })).status, 200);
+});
+
+test('password reset link needs a trusted APP_URL in production', async () => {
+  const { appUrl } = await import('../server/security.js');
+  const fakeReq = { protocol: 'https', get: () => 'evil.example' };
+  process.env.APP_URL = 'https://rumo.app/';
+  assert.equal(appUrl(fakeReq), 'https://rumo.app');
+  delete process.env.APP_URL;
+});
+
+test('account deletion requires the password', async () => {
+  const c = await client('del@x.com');
+  assert.equal((await c('/api/me', 'DELETE', { password: 'errada' })).status, 403);
+  assert.equal((await c('/api/me', 'DELETE', { password: 'segredo1' })).status, 200);
+  assert.equal((await c('/api/me')).status, 401);
+});
+
+test('internal errors are not leaked', async () => {
+  const res = await fetch(`${base}/api/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"broken json' });
+  assert.equal(res.status, 400);
+  const body = await res.json();
+  assert.doesNotMatch(body.error, /JSON|position|Unexpected/i);
+});
+
+test('repeat and plan values reject prototype keys', async () => {
+  const c = await client('proto@x.com');
+  const today = (await c('/api/me')).body.today;
+  const ev = await c('/api/events', 'POST', { title: 'x', start: `${today}T10:00`, repeat: 'constructor' });
+  assert.equal(ev.body.repeat, '');
 });
