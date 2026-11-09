@@ -610,13 +610,13 @@ views.agenda = async (main) => {
 
     <dialog id="ev-dialog"><form method="dialog" id="ev-form">
       <h2>Novo compromisso</h2>
-      <div class="field"><label>Título</label><input type="text" id="ev-title" required></div>
+      <div class="field"><label for="ev-title">Título</label><input type="text" id="ev-title" required></div>
       <div class="grid grid-2" style="gap:10px">
-        <div class="field"><label>Início</label><input type="datetime-local" id="ev-start" required></div>
-        <div class="field"><label>Fim (opcional)</label><input type="datetime-local" id="ev-end"></div>
+        <div class="field"><label for="ev-start">Início</label><input type="datetime-local" id="ev-start" required></div>
+        <div class="field"><label for="ev-end">Fim (opcional)</label><input type="datetime-local" id="ev-end"></div>
       </div>
       <div class="field"><label for="ev-repeat">Repetir</label><select id="ev-repeat">${Object.entries(state.repeats || { '': 'Não repete' }).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
-      <div class="field"><label>Notas</label><textarea id="ev-notes"></textarea></div>
+      <div class="field"><label for="ev-notes">Notas</label><textarea id="ev-notes"></textarea></div>
       <div class="row" style="justify-content:flex-end"><button class="btn" value="cancel" formnovalidate>Cancelar</button><button class="btn primary" value="ok">Salvar</button></div>
     </form></dialog>`;
 
@@ -671,11 +671,11 @@ views.metas = async (main, id) => {
 
     <dialog id="goal-dialog"><form method="dialog" id="goal-form">
       <h2>Nova meta</h2>
-      <div class="field"><label>Onde você quer chegar?</label><input type="text" id="g-title" required placeholder="Ex: Faturar R$ 10 mil em vendas online"></div>
-      <div class="field"><label>Por que isso importa para você?</label><textarea id="g-why" placeholder="Seu motivo é o combustível nos dias difíceis."></textarea></div>
+      <div class="field"><label for="g-title">Onde você quer chegar?</label><input type="text" id="g-title" required placeholder="Ex: Faturar R$ 10 mil em vendas online"></div>
+      <div class="field"><label for="g-why">Por que isso importa para você?</label><textarea id="g-why" placeholder="Seu motivo é o combustível nos dias difíceis."></textarea></div>
       <div class="grid grid-2" style="gap:10px">
-        <div class="field"><label>Área</label><select id="g-area"><option>negócio</option><option>divulgação</option><option>finanças</option><option>saúde</option><option>estudos</option><option>carreira</option><option>pessoal</option><option>geral</option></select></div>
-        <div class="field"><label>Prazo</label><input type="date" id="g-deadline"></div>
+        <div class="field"><label for="g-area">Área</label><select id="g-area"><option>negócio</option><option>divulgação</option><option>finanças</option><option>saúde</option><option>estudos</option><option>carreira</option><option>pessoal</option><option>geral</option></select></div>
+        <div class="field"><label for="g-deadline">Prazo</label><input type="date" id="g-deadline"></div>
       </div>
       <label class="row small" style="gap:8px;color:var(--text)"><input type="checkbox" id="g-plan" checked style="width:auto"> Gerar plano e tarefas com IA</label>
       <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn" value="cancel" formnovalidate>Cancelar</button><button class="btn primary" value="ok" data-busy="Criando plano…">Criar meta</button></div>
@@ -912,9 +912,9 @@ views.legendas = async (main) => {
       <div class="field"><label for="c-photo">Foto do post (opcional): a IA olha a imagem para escrever</label>
         <div class="row"><input type="file" id="c-photo" accept="image/*" style="width:auto"><img id="c-prev" class="photo-prev hidden" alt="Prévia da foto"><button type="button" class="btn sm ghost hidden" id="c-clear">Remover foto</button></div></div>
       <div class="grid grid-3" style="gap:10px">
-        <div class="field"><label>Plataforma</label><select id="c-platform"><option>Instagram</option><option>TikTok</option><option>LinkedIn</option><option>Facebook</option><option>X (Twitter)</option><option>YouTube Shorts</option><option>WhatsApp Status</option></select></div>
-        <div class="field"><label>Estilo</label><select id="c-style"><option>autêntico e humano</option><option>motivacional</option><option>engraçado</option><option>profissional</option><option>vendedor (persuasivo)</option><option>vulnerável e reflexivo</option><option>curto e impactante</option></select></div>
-        <div class="field"><label>Objetivo</label><select id="c-goal"><option>engajamento</option><option>ganhar seguidores</option><option>vender</option><option>gerar conversa nos comentários</option><option>levar para o link da bio</option></select></div>
+        <div class="field"><label for="c-platform">Plataforma</label><select id="c-platform"><option>Instagram</option><option>TikTok</option><option>LinkedIn</option><option>Facebook</option><option>X (Twitter)</option><option>YouTube Shorts</option><option>WhatsApp Status</option></select></div>
+        <div class="field"><label for="c-style">Estilo</label><select id="c-style"><option>autêntico e humano</option><option>motivacional</option><option>engraçado</option><option>profissional</option><option>vendedor (persuasivo)</option><option>vulnerável e reflexivo</option><option>curto e impactante</option></select></div>
+        <div class="field"><label for="c-goal">Objetivo</label><select id="c-goal"><option>engajamento</option><option>ganhar seguidores</option><option>vender</option><option>gerar conversa nos comentários</option><option>levar para o link da bio</option></select></div>
       </div>
       <div class="row" style="justify-content:flex-end"><button class="btn primary" type="submit" data-busy="Escrevendo…">${icon('spark')} Gerar legendas</button></div>
     </form>
