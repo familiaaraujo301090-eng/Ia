@@ -1,0 +1,19 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+WrapStyle: 0
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Idade,Inter ExtraBold,120,&H0060C8F0,&H0060C8F0,&H00101010,&H96000000,0,0,0,0,100,100,4,0,1,6,4,8,60,60,335,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:08.37,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}5 ANOS
+Dialogue: 0,0:00:08.37,0:00:17.02,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}10 ANOS
+Dialogue: 0,0:00:17.02,0:00:24.90,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}16 ANOS
+Dialogue: 0,0:00:24.90,0:00:31.16,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}22 ANOS
+Dialogue: 0,0:00:31.16,0:00:37.64,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}35 ANOS
+Dialogue: 0,0:00:37.64,0:00:44.81,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}40 ANOS
+Dialogue: 0,0:00:44.81,0:00:50.61,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}50 ANOS
