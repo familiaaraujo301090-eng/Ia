@@ -1,5 +1,5 @@
 {
- "titulo": "E se o Levi te criasse?",
+ "titulo": "E se você ficasse 7 dias sem celular?",
  "narracao": "narracao.wav",
  "tempos": "tempos.json",
  "imagens": [
@@ -32,12 +32,12 @@
  "musica": "musica.wav",
  "volume_musica": 0.14,
  "idades": {
-  "1": "5 ANOS",
-  "2": "10 ANOS",
-  "3": "16 ANOS",
-  "4": "22 ANOS",
-  "5": "35 ANOS",
-  "6": "40 ANOS",
-  "7": "50 ANOS"
+  "1": "DIA 1",
+  "2": "DIA 2",
+  "3": "DIA 3",
+  "4": "DIA 4",
+  "5": "DIA 5",
+  "6": "DIA 6",
+  "7": "DIA 7"
  }
 }
