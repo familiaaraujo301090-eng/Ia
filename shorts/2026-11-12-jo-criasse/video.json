@@ -1,0 +1,45 @@
+{
+ "titulo": "",
+ "gancho": "SE VOCÊ [PERDEU TUDO]|ESTA SEMANA, VEJA ISSO",
+ "fade_in": 0,
+ "narracao": "narracao.wav",
+ "tempos": "tempos.json",
+ "imagens": [
+  "1.jpg",
+  "2.jpg",
+  "3.jpg",
+  "4.jpg",
+  "5.jpg",
+  "6.jpg",
+  "7.jpg"
+ ],
+ "cenas": [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7
+ ],
+ "focos": [
+  0.35,
+  0.35,
+  0.4,
+  0.35,
+  0.4,
+  0.35,
+  0.3
+ ],
+ "musica": "musica.wav",
+ "volume_musica": 0.14,
+ "idades": {
+  "1": "MANHÃ",
+  "2": "TARDE",
+  "3": "NOITE",
+  "4": "7 DIAS",
+  "5": "SEMANAS",
+  "6": "MESES",
+  "7": "O FIM"
+ }
+}

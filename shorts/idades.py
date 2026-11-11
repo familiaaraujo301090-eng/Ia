@@ -26,8 +26,17 @@ dourado = modelos.ass_cor("#F0C860")
 leg = modelos.cabecalho([
     f"Style: Idade,Inter ExtraBold,120,{dourado},{dourado},&H00101010,&H96000000,0,0,0,0,100,100,4,0,1,6,4,8,60,60,335,1",
 ])
+# Gancho: texto grande lido sem som no primeiro meio segundo (sem fade de entrada)
+fim_gancho = 0.0
+if cfg.get("gancho"):
+    fim_gancho = cfg.get("gancho_dur", 3.2)
+    amarelo = modelos.ass_cor("#FFD84A")
+    leg.insert(next(i for i, l in enumerate(leg) if l.startswith("Style: Idade")) + 1,
+               f"Style: Gancho,Inter ExtraBold,82,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,3,18,0,8,70,70,260,1")
+    txt = cfg["gancho"].replace("|", "\\N").replace("[", "{\\c" + amarelo + "}").replace("]", "{\\c&H00FFFFFF&}")
+    leg.append(modelos.dialogo(1, 0.0, fim_gancho, "Gancho", "{\\fad(0,200)}" + txt))
 for k, (par, rotulo) in enumerate(marcas):
-    a = 0.0 if k == 0 else max(0.0, comeco[par] - base.TRANSICAO)
+    a = fim_gancho if k == 0 else max(fim_gancho, comeco[par] - base.TRANSICAO)
     b = comeco[marcas[k + 1][0]] - base.TRANSICAO if k + 1 < len(marcas) else total
     pop = "\\fscx140\\fscy140\\t(0,160,\\fscx100\\fscy100)"
     leg.append(modelos.dialogo(0, a, b, "Idade", f"{{{pop}}}{rotulo}"))

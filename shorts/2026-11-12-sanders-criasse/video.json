@@ -1,0 +1,45 @@
+{
+ "titulo": "",
+ "gancho": "AOS [65 ANOS] ELE|ESTAVA FALIDO.|OLHA O QUE ELE FEZ",
+ "fade_in": 0,
+ "narracao": "narracao.wav",
+ "tempos": "tempos.json",
+ "imagens": [
+  "1.jpg",
+  "2.jpg",
+  "3.jpg",
+  "4.jpg",
+  "5.jpg",
+  "6.jpg",
+  "7.jpg"
+ ],
+ "cenas": [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7
+ ],
+ "focos": [
+  0.35,
+  0.35,
+  0.4,
+  0.35,
+  0.4,
+  0.35,
+  0.3
+ ],
+ "musica": "musica.wav",
+ "volume_musica": 0.14,
+ "idades": {
+  "1": "65 ANOS",
+  "2": "6 ANOS",
+  "3": "16 ANOS",
+  "4": "40 ANOS",
+  "5": "65 ANOS",
+  "6": "1.009 NÃOS",
+  "7": "88 ANOS"
+ }
+}

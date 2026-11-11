@@ -264,7 +264,7 @@ def montar(pasta, arquivo_cfg="video.json"):
     filtros.append(
         f"[escurecido]trim=duration={duracao_total:.3f},eq=contrast=1.06:saturation=0.92,"
         f"vignette=PI/4.5,subtitles=legendas.ass:fontsdir='{fontes}',"
-        f"fade=t=in:st=0:d=0.4,fade=t=out:st={duracao_total - 0.5:.3f}:d=0.5[video]"
+        f"fade=t=in:st=0:d={cfg.get('fade_in', 0.4)},fade=t=out:st={duracao_total - 0.5:.3f}:d=0.5[video]"
     )
 
     audio = []
