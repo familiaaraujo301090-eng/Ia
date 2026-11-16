@@ -26,9 +26,10 @@ SR = 22050
 
 TEMAS = {
     # rotação de estilos pra linhas normais + ajustes visuais
-    "noite":    {"rot": ["revelar", "flash", "revelar", "pilha"], "pilha": {"cores": ["#ffffff", "#ff5a1f", "#ff2a2a"], "bg2": "#5a0000"}},
-    "vermelho": {"rot": ["pilha", "revelar", "pilha", "flash"], "pilha": {"cores": ["#ffffff", "#ff5a1f", "#ff2a2a"], "bg2": "#5a0000"}},
-    "rosa":     {"rot": ["revelar", "pilha", "flash", "pilha"], "pilha": {"cores": ["#ffd1e8", "#ff4fa3", "#ff006e"], "bg": "#0a0006", "bg2": "#3d0020"}},
+    "noite":    {"rot": ["revelar", "flash", "revelar", "pilha"], "pilha": {"paleta": "sangue"}},
+    "vermelho": {"rot": ["pilha", "revelar", "pilha", "flash"], "pilha": {"paleta": "sangue"},
+                 "revelar": {"paleta": "sangue", "cor_apagada": "#5c1200"}, "gigante": {"bg": "#9a0000", "cor": "#ff8418"}},
+    "rosa":     {"rot": ["revelar", "pilha", "flash", "pilha"], "pilha": {"paleta": "rosa"}},
     "bordo":    {"rot": ["serifa", "cursiva", "serifa", "revelar"], "gigante": {"fonte": "playfair", "bg": "#5e0b1c", "cor": "#cbc2b1"}},
     "cursiva":  {"rot": ["cursiva", "revelar", "cursiva", "flash"]},
 }

@@ -76,13 +76,23 @@ python3 sincronizar.py musica.mp3 letra.txt --inicio 47 --fim 62 --tema vermelho
 Dica: pra postar, você pode subir o vídeo **com** o áudio ou mudo e escolher o som oficial no TikTok
 (o vídeo continua sincronizado se você escolher o mesmo trecho).
 
-## Projetos prontos (`projetos/`)
-- `sm_rihanna.json`: Rihanna, *S&M* (círculo → flash → gigante → pilha vermelha)
-- `poderosas_anitta.json`: Anitta, *Show das Poderosas* (gigante → revelar → pilha rosa → flash)
-- `earned_it_weeknd.json`: The Weeknd, *Earned It* (cursiva → serifa bordô → gigante sangrando)
-- `dangerous_woman_ariana.json`: Ariana Grande, *Dangerous Woman* (máquina → gigantes → revelar)
+## Acabamento "sem cara de IA" (automático em todo vídeo)
+- **Entrada com foco de lente:** a palavra nasce desfocada e um pouco maior e assenta no lugar. Sem listras nem glitch por cima da letra.
+- **Câmera viva:** push-in lento em cada cena, deriva de mão que nunca repete e um leve giro. Soco de zoom nas batidas.
+- **Gigante** entra com desfoque de movimento, não com tremedeira.
+- **Brilho de lente (halation)**, **grão de filme** que não repete padrão e **flicker** sutil de exposição.
+- Branco e preto nunca puros (`#eeebe5` / `#0a0a0a`), como em filme.
+- Ajuste por projeto: `"zoom"`, `"deriva"`, `"giro"`, `"brilho"`, `"grao"` (0 desliga).
 
-Os tempos são aproximados: ajuste ao trecho exato que você usar.
+## Paletas (`"paleta"` em qualquer cena)
+- `sangue`: vermelho puro tirado pixel a pixel do vídeo de referência (centro `#a30000` → bordas `#3a0000`), texto laranja queimado `#ff8418`
+- `sangue_preto`: o mesmo vermelho com texto quase preto
+- `bordo` e `rosa`
+
+## Demos (`projetos/`, textos originais)
+- `demo_noite.json`: círculo → revelar no vermelho → DEVAGAR gigante → flash → pilha sangue → pilha preta no vermelho
+- `demo_bordo.json`: cursiva → serifa bordô → gigante sangrando
+- `demo_rosa.json`: máquina por sílaba → pilha rosa → gigante → revelar
 
 ### Mais músicas pra fazer no mesmo estilo
 **Inglês:** The Weeknd – *Often*, *Wicked Games*; Zayn – *Pillowtalk*; Jason Derulo – *Talk Dirty*;

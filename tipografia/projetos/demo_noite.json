@@ -1,0 +1,57 @@
+{
+  "titulo": "demo original - noite (PT)",
+  "batidas": [
+    2.4,
+    4.6,
+    7.4,
+    9.6
+  ],
+  "cenas": [
+    {
+      "estilo": "circulo",
+      "inicio": 0.0,
+      "fim": 2.4,
+      "texto": "fecha a porta"
+    },
+    {
+      "estilo": "revelar",
+      "inicio": 2.4,
+      "fim": 4.6,
+      "texto": "e apaga a luz do quarto",
+      "tamanho": 104,
+      "paleta": "sangue",
+      "cor_apagada": "#5c1200"
+    },
+    {
+      "estilo": "gigante",
+      "inicio": 4.6,
+      "fim": 5.8,
+      "texto": "DEVAGAR",
+      "altura": 0.32,
+      "bg": "#9a0000",
+      "cor": "#ff8418"
+    },
+    {
+      "estilo": "flash",
+      "inicio": 5.8,
+      "fim": 7.4,
+      "texto": "do jeito que você gosta"
+    },
+    {
+      "estilo": "pilha",
+      "inicio": 7.4,
+      "fim": 9.6,
+      "texto": "HOJE / VOCÊ / É MINHA",
+      "tamanho": 160,
+      "paleta": "sangue"
+    },
+    {
+      "estilo": "pilha",
+      "inicio": 9.6,
+      "fim": 12.4,
+      "texto": "NEM PRECISA / PEDIR",
+      "paleta": "sangue_preto",
+      "tamanho": 150
+    }
+  ]
+}

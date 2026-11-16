@@ -1,0 +1,10 @@
+{
+  "titulo": "demo original - rosa (PT)",
+  "batidas": [0.0, 2.6, 5.2],
+  "cenas": [
+    {"estilo": "maquina", "inicio": 0.0, "fim": 2.6, "texto": "sa-be que eu sou pe-ri-go", "tom": 3},
+    {"estilo": "pilha",   "inicio": 2.6, "fim": 5.2, "texto": "E MESMO / ASSIM / VOCÊ VEM", "cores": ["#ffd1e8", "#ff4fa3", "#ff006e"], "bg": "#0a0006", "bg2": "#3d0020", "tamanho": 130},
+    {"estilo": "gigante", "inicio": 5.2, "fim": 6.8, "texto": "VEM", "fonte": "bebas", "inverter": true, "altura": 0.45},
+    {"estilo": "revelar", "inicio": 6.8, "fim": 9.6, "texto": "que hoje a noite é nossa", "fonte": "medium", "tamanho": 80}
+  ]
+}

@@ -68,8 +68,8 @@ class Fundos:
     def __init__(s, W, H):
         s.W, s.H = W, H
         rng = np.random.default_rng(7)
-        s.graos = [Image.fromarray(rng.normal(0, 1, (H // 2, W // 2)).clip(-3, 3).__mul__(40).__add__(128)
-                                   .astype(np.uint8), "L").resize((W, H)) for _ in range(6)]
+        s.rng = rng
+        s.grao_base = Image.fromarray((rng.normal(0, 1, (H + 256, W + 256)).clip(-3, 3) * 34 + 128).astype(np.uint8), "L")
         y, x = np.mgrid[0:H, 0:W]
         d = np.sqrt(((x - W / 2) / (W * .75)) ** 2 + ((y - H / 2) / (H * .62)) ** 2)
         s.vinheta = Image.fromarray((np.clip(d, 0, 1) ** 1.8 * 255).astype(np.uint8), "L")
@@ -83,8 +83,62 @@ class Fundos:
         return Image.composite(escuro, img, m)
 
     def grao(s, img, frame, forca=0.08):
-        g = s.graos[frame % len(s.graos)].convert("RGB")
-        return Image.blend(img, ImageChops.overlay(img, g), forca * 4) if forca else img
+        if not forca:
+            return img
+        r = random.Random(frame)
+        ox, oy = r.randrange(256), r.randrange(256)
+        g = s.grao_base.crop((ox, oy, ox + s.W, oy + s.H)).convert("RGB")
+        return Image.blend(img, ImageChops.overlay(img, g), forca * 4)
+
+    def acabamento(s, img, tempo, t_cena, dur_cena, frame, proj):
+        """Camera viva + brilho de lente + flicker de filme. É o que tira a cara de 'gerado'."""
+        W, H = s.W, s.H
+        # 1) push-in lento na cena + deriva de mão (ruído suave, nunca periódico perfeito)
+        z = 1 + proj.get("zoom", 0.035) * ease_out(t_cena / max(0.1, dur_cena))
+        amp = proj.get("deriva", 4.0)
+        dx = amp * (math.sin(tempo * 0.83) + 0.6 * math.sin(tempo * 2.17 + 1.3) + 0.3 * math.sin(tempo * 5.3))
+        dy = amp * (math.sin(tempo * 0.71 + 2.0) + 0.6 * math.sin(tempo * 1.93) + 0.3 * math.sin(tempo * 4.7 + .5))
+        rot = proj.get("giro", 0.25) * math.sin(tempo * 0.6)
+        for b in proj.get("batidas", []):  # soco de zoom na batida
+            if 0 <= tempo - b < 0.22:
+                z += 0.045 * (1 - (tempo - b) / 0.22) ** 2
+        if z != 1 or dx or dy or rot:
+            img = img.rotate(rot, resample=Image.BICUBIC, center=(W / 2 + dx, H / 2 + dy),
+                             translate=(-dx, -dy), fillcolor=img.getpixel((2, 2)))
+            w, h = int(W * z), int(H * z)
+            img = img.resize((w, h), Image.BICUBIC).crop(((w - W) // 2, (h - H) // 2, (w - W) // 2 + W, (h - H) // 2 + H))
+        # 2) brilho de lente (halation) suave nas partes claras
+        gl = proj.get("brilho", 0.22)
+        if gl:
+            pequeno = img.resize((W // 6, H // 6), Image.BILINEAR).filter(ImageFilter.GaussianBlur(5))
+            img = Image.blend(img, ImageChops.screen(img, pequeno.resize((W, H), Image.BILINEAR)), gl)
+        # 3) flicker de exposição bem sutil
+        fl = 1 + 0.018 * math.sin(frame * 1.7) * math.sin(frame * 0.37)
+        img = img.point(lambda v: min(255, int(v * fl)))
+        return img
+
+
+# paletas tiradas dos vídeos de referência (pixel a pixel)
+PALETAS = {
+    # vermelho-sangue puro (sem verde/azul), centro aceso -> bordas fundas; texto laranja queimado
+    "sangue": {"bg": "#3a0000", "bg2": "#a30000", "cores": ["#f1ede6", "#ff8418", "#ff8418"], "cor": "#ff8418"},
+    # mesma base, texto quase preto (igual ao "VOCÊ SABE QUE NEM..." da referência)
+    "sangue_preto": {"bg": "#3a0000", "bg2": "#a30000", "cores": ["#120000"], "cor": "#120000", "cor_apagada": "#6e0000"},
+    "bordo":  {"bg": "#5e0b1c", "cor": "#cbc2b1"},
+    "rosa":   {"bg": "#0a0006", "bg2": "#3d0020", "cores": ["#ffd1e8", "#ff4fa3", "#ff006e"]},
+}
+
+
+def com_paleta(cena):
+    pal = PALETAS.get(cena.get("paleta"), {})
+    return {**pal, **cena}
+
+
+def fundo(ctx, cena, padrao="#0b0b0b", vinheta=0.7):
+    img = ctx.fx.solido(cena.get("bg", padrao))
+    if cena.get("bg2"):
+        return Image.composite(img, ctx.fx.solido(cena["bg2"]), ctx.fx.vinheta)
+    return ctx.fx.vinheta_sobre(img, vinheta)
 
 
 # ----------------------------------------------------------------- texto
@@ -127,52 +181,84 @@ def tempos_palavras(cena, n):
     return [janela * i / max(1, n) for i in range(n)]
 
 
+# ----------------------------------------------------------------- entrada com foco
+FOCO = 0.38  # segundos que a palavra leva pra "assentar"
+
+
+def camada_texto(txt, f, c, pad=40):
+    w, h, b = medir(f, txt)
+    im = Image.new("RGBA", (w + pad * 2, h + pad * 2), (0, 0, 0, 0))
+    ImageDraw.Draw(im).text((pad - b[0], pad - b[1]), txt, font=f, fill=cor(c) + (255,))
+    return im, b
+
+
+def colar_foco(img, txt, f, c, x, y, k, anchor="lm", blur_max=16, escala=0.10, subir=14):
+    """Desenha txt em (x,y). k: 0 = começando a entrar, 1 = assentado.
+    Desfoque -> nítido, levemente maior -> tamanho real, opacidade 0 -> 1.  Sem listras, sem glitch."""
+    if k >= 1:
+        ImageDraw.Draw(img).text((x, y), txt, font=f, fill=cor(c), anchor=anchor)
+        return
+    e = ease_out(k)
+    im, b = camada_texto(txt, f, c)
+    z = 1 + escala * (1 - e)
+    if z != 1:
+        im = im.resize((max(1, int(im.width * z)), max(1, int(im.height * z))), Image.BICUBIC)
+    r = blur_max * (1 - e) ** 1.5
+    if r > 0.4:
+        im = im.filter(ImageFilter.GaussianBlur(r))
+    a = im.getchannel("A").point(lambda v: int(v * min(1, e * 1.6)))
+    im.putalpha(a)
+    # posiciona pelo mesmo ponto de ancoragem do texto nítido
+    w_txt, h_txt = b[2] - b[0], b[3] - b[1]
+    cx = x + (w_txt / 2 if anchor[0] == "l" else 0) + b[0]
+    asc, desc = f.getmetrics()
+    cy = y + (b[1] + h_txt / 2 - (asc + desc) / 2 if anchor[1] == "m" else 0) + subir * (1 - e)
+    img.paste(im, (int(cx - im.width / 2), int(cy - im.height / 2)), im)
+
+
+def frase_em_foco(img, palavras, ts, t, f, cor_fn, W, cy, largura_max, lh, recentrar=True):
+    """Layout de frase palavra a palavra; a palavra nova entra com foco."""
+    linhas = quebrar(palavras, f, largura_max)
+    esp = medir(f, " ")[0] or f.size * .28
+    y0 = cy - lh * (len(linhas) - 1) / 2
+    for li, linha in enumerate(linhas):
+        vis = [(i, p) for i, p in linha if t >= ts[i]] if recentrar else linha
+        if not vis:
+            continue
+        larg = medir(f, " ".join(p for _, p in vis))[0]
+        x = W / 2 - larg / 2
+        for i, p in vis:
+            if t >= ts[i]:
+                k = (t - ts[i]) / FOCO
+                colar_foco(img, p, f, cor_fn(i, k), x, y0 + li * lh, k)
+            x += medir(f, p)[0] + esp
+
+
 # ----------------------------------------------------------------- estilos
 def est_revelar(cv, cena, t, ctx):
     W, H = ctx.W, ctx.H
-    bg = cena.get("bg", "#0b0b0b")
-    img = ctx.fx.solido(bg)
-    img = ctx.fx.vinheta_sobre(img, 0.7)
+    img = fundo(ctx, cena)
     palavras = cena["texto"].split()
     ts = tempos_palavras(cena, len(palavras))
     f = fonte(cena.get("fonte", "oswald"), cena.get("tamanho", 92))
-    c_on, c_off = cor(cena.get("cor", "#f2f2f2")), cor(cena.get("cor_apagada", "#5a5a5a"))
-    d = ImageDraw.Draw(img)
-    linhas = quebrar(palavras, f, W * .82)
-    esp = medir(f, " ")[0] or f.size * .28
-    lh = f.size * 1.18
-    y0 = H / 2 - lh * len(linhas) / 2 + cena.get("dy", 0)
-    for li, linha in enumerate(linhas):
-        visiveis = [(i, p) for i, p in linha if t >= ts[i]]
-        if not visiveis:
-            continue
-        # a linha recentra conforme as palavras entram (igual aos vídeos)
-        largura = medir(f, " ".join(p for _, p in visiveis))[0]
-        x = W / 2 - largura / 2
-        for i, p in visiveis:
-            k = (t - ts[i]) / 0.35
-            col = mix(c_off, c_on, ease_out(k))
-            dy = (1 - ease_out(k * 1.5)) * 18
-            d.text((x, y0 + li * lh + dy), p, font=f, fill=col, anchor="lm")
-            x += medir(f, p)[0] + esp
+    c_on, c_off = cor(cena.get("cor", "#ece9e4")), cor(cena.get("cor_apagada", "#5a5a5a"))
+    # palavra acende de cinza pra branco um pouco DEPOIS de assentar (igual aos edits)
+    cor_fn = lambda i, k: mix(c_off, c_on, ease_out((k - 0.4) / 1.2))
+    frase_em_foco(img, palavras, ts, t, f, cor_fn, W, H / 2 + cena.get("dy", 0), W * .82, f.size * 1.18)
     return img
 
 
 def est_pilha(cv, cena, t, ctx):
     W, H = ctx.W, ctx.H
-    img = ctx.fx.solido(cena.get("bg", "#000000"))
-    if cena.get("bg2"):
-        # gradiente radial pra dar profundidade (fundo vermelho dos vídeos)
-        g = ctx.fx.solido(cena["bg2"])
-        img = Image.composite(img, g, ctx.fx.vinheta)
+    img = fundo(ctx, cena, "#000000")
     palavras = cena["texto"].upper().split("/") if "/" in cena["texto"] else cena["texto"].upper().split()
     palavras = [p.strip() for p in palavras]
     ts = tempos_palavras(cena, len(palavras))
     f = fonte(cena.get("fonte", "black"), cena.get("tamanho", 120))
     cores = [cor(c) for c in cena.get("cores", ["#f5f5f5"])]
     lh = f.size * 1.02
-    n_vis = sum(1 for x in ts if t >= x)
-    # a pilha sobe suavemente conforme cresce
+    # a pilha sobe suavemente conforme cresce (interpola em vez de pular)
+    n_vis = sum(ease_out((t - x) / FOCO) for x in ts if t >= x)
     alvo = H / 2 - lh * n_vis / 2
     d = ImageDraw.Draw(img)
     for i, p in enumerate(palavras):
@@ -181,14 +267,7 @@ def est_pilha(cv, cena, t, ctx):
         k = (t - ts[i])
         c = cores[min(i * len(cores) // max(1, len(palavras)), len(cores) - 1)] if cena.get("degrade") else cores[i % len(cores)]
         y = alvo + i * lh + lh / 2
-        if k < 0.22:  # glitch de entrada
-            for off, cc in ((-9, (255, 40, 60)), (9, (40, 200, 255))):
-                d.text((W / 2 + off * random.random(), y), p, font=f, fill=cc, anchor="mm")
-            d.text((W / 2, y), p, font=f, fill=mix((90, 90, 90), c, k / 0.22), anchor="mm")
-            w = medir(f, p)[0]
-            d.rectangle([W / 2 - w / 2 - 10, y - 6, W / 2 + w / 2 + 10, y + 6], fill=c)
-        else:
-            d.text((W / 2, y), p, font=f, fill=c, anchor="mm")
+        colar_foco(img, p, f, c, W / 2, y, k / FOCO, anchor="mm", blur_max=20, subir=24)
     return img
 
 
@@ -203,32 +282,32 @@ def est_flash(cv, cena, t, ctx):
     if claro:
         img = ctx.fx.vinheta_sobre(img, 0.35, (150, 150, 150))
     f = fonte(cena.get("fonte", "medium"), cena.get("tamanho", 84))
-    txt = " ".join(palavras[:n])
-    d = ImageDraw.Draw(img)
-    linhas = quebrar(txt.split(), f, W * .86)
-    lh = f.size * 1.25
-    for li, ln in enumerate(linhas):
-        d.text((W / 2, H / 2 + (li - (len(linhas) - 1) / 2) * lh), " ".join(p for _, p in ln),
-               font=f, fill=fg, anchor="mm")
+    frase_em_foco(img, palavras, ts, t, f, lambda i, k: fg, W, H / 2, W * .86, f.size * 1.25)
     return img
 
 
 def est_gigante(cv, cena, t, ctx):
     W, H = ctx.W, ctx.H
     inverter = cena.get("inverter", False)
-    bg = cor(cena.get("bg", "#f0f0f0" if inverter else "#050505"))
-    fg = cor(cena.get("cor", "#0a0a0a" if inverter else "#f5f5f5"))
+    bg = cor(cena.get("bg", "#ebe8e2" if inverter else "#0a0a0a"))
+    fg = cor(cena.get("cor", "#111111" if inverter else "#eeebe5"))
     img = ctx.fx.solido(bg)
     txt = cena["texto"]
     f = fonte(cena.get("fonte", "anton"), 400)
-    k = ease_back(t / 0.28)
-    alt = H * cena.get("altura", 0.42) * (0.75 + 0.25 * k)
-    larg = W * cena.get("largura", 0.94) * (0.75 + 0.25 * k)
+    k = ease_back(t / 0.3)
+    alt = H * cena.get("altura", 0.42) * (0.86 + 0.14 * k)
+    larg = W * cena.get("largura", 0.94) * (0.86 + 0.14 * k)
     if cena.get("sangrar"):  # palavra maior que a tela, cortada nas bordas
         larg *= 1.35
     im = texto_esticado(txt, f, larg, alt, fg)
-    sx = int(math.sin(t * 60) * 6 * max(0, 1 - t / 0.3))  # tremidinha no impacto
-    img.paste(im, (int(W / 2 - im.width / 2) + sx, int(H / 2 - im.height / 2)), im)
+    km = t / 0.22
+    if km < 1:  # desfoque de movimento no impacto (some em ~7 quadros)
+        e = 1 - ease_out(km)
+        borrado = im.resize((im.width, max(1, int(im.height * (1 + 0.25 * e)))), Image.BICUBIC)
+        borrado = borrado.filter(ImageFilter.BoxBlur(int(2 + 18 * e)))
+        borrado.putalpha(borrado.getchannel("A").point(lambda v: int(v * min(1, 0.3 + km))))
+        im = borrado
+    img.paste(im, (int(W / 2 - im.width / 2), int(H / 2 - im.height / 2)), im)
     if cena.get("sub"):
         fs = fonte("bold", 46)
         ImageDraw.Draw(img).text((W / 2, H / 2 + alt / 2 + 70), cena["sub"], font=fs, fill=fg, anchor="mm")
@@ -252,11 +331,11 @@ def est_serifa(cv, cena, t, ctx):
     camada = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     nitida = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     y0 = H / 2 - lh * (n - 1) / 2
-    for i in range(n):
-        alvo = nitida if i == n - 1 else camada
-        k = ease_out((t - ts[i]) / 0.3)
-        ImageDraw.Draw(alvo).text((W / 2, y0 + i * lh + (1 - k) * 30), linhas[i], font=f,
-                                  fill=fg + (int(255 * (k if i == n - 1 else 0.55)),), anchor="mm")
+    for i in range(n - 1):
+        ImageDraw.Draw(camada).text((W / 2, y0 + i * lh), linhas[i], font=f, fill=fg + (140,), anchor="mm")
+    if n:
+        colar_foco(nitida, linhas[n - 1], f, fg, W / 2, y0 + (n - 1) * lh, (t - ts[n - 1]) / FOCO,
+                   anchor="mm", blur_max=18, subir=26)
     if n > 1:
         camada = camada.filter(ImageFilter.GaussianBlur(9))
         img.paste(camada, (0, 0), camada)
@@ -351,14 +430,8 @@ def quadro(proj, ctx, tempo, idx):
         img = ctx.fx.solido(proj.get("bg", "#000000"))
     else:
         t = tempo - cena["inicio"]
-        img = ESTILOS[cena["estilo"]](None, cena, t, ctx)
-        # tremida de câmera opcional em batidas
-        for b in proj.get("batidas", []):
-            if 0 <= tempo - b < 0.18:
-                k = 1 - (tempo - b) / 0.18
-                z = 1 + 0.06 * k
-                w, h = int(ctx.W * z), int(ctx.H * z)
-                img = img.resize((w, h)).crop(((w - ctx.W) // 2, (h - ctx.H) // 2, (w - ctx.W) // 2 + ctx.W, (h - ctx.H) // 2 + ctx.H))
+        img = ESTILOS[cena["estilo"]](None, com_paleta(cena), t, ctx)
+        img = ctx.fx.acabamento(img, tempo, t, cena["fim"] - cena["inicio"], idx, proj)
         # fade curtinho entre cenas
         fade = cena.get("fade", 0.12)
         restante = cena["fim"] - tempo
