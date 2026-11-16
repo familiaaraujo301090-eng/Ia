@@ -20,6 +20,8 @@ Estilos de cena (campo "estilo"):
 import argparse, json, math, os, random, subprocess, sys
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageChops
 import numpy as np
+from PIL import ImageOps
+from elementos import Elementos
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 FONTES = {
@@ -264,7 +266,7 @@ def frase_em_foco(img, palavras, ts, t, f, cor_fn, W, cy, largura_max, lh, recen
 # ----------------------------------------------------------------- estilos
 def est_revelar(cv, cena, t, ctx):
     W, H = ctx.W, ctx.H
-    img = fundo(ctx, cena)
+    img = ctx.elem(fundo(ctx, cena), cena, t)
     palavras = cena["texto"].split()
     ts = tempos_palavras(cena, len(palavras))
     f = caber(cena.get("fonte", "oswald"), cena.get("tamanho", 92), palavras, W * SEGURA)
@@ -277,7 +279,7 @@ def est_revelar(cv, cena, t, ctx):
 
 def est_pilha(cv, cena, t, ctx):
     W, H = ctx.W, ctx.H
-    img = fundo(ctx, cena, "#000000")
+    img = ctx.elem(fundo(ctx, cena, "#000000"), cena, t)
     palavras = cena["texto"].upper().split("/") if "/" in cena["texto"] else cena["texto"].upper().split()
     palavras = [p.strip() for p in palavras]
     ts = tempos_palavras(cena, len(palavras))
@@ -309,6 +311,7 @@ def est_flash(cv, cena, t, ctx):
     img = ctx.fx.solido(bg)
     if claro:
         img = ctx.fx.vinheta_sobre(img, 0.35, (150, 150, 150))
+    img = ctx.elem(img, cena, t)
     f = caber(cena.get("fonte", "medium"), cena.get("tamanho", 84), palavras, W * SEGURA)
     frase_em_foco(img, palavras, ts, t, f, lambda i, k: fg, W, H / 2, W * SEGURA, f.size * 1.25)
     return img
@@ -319,7 +322,7 @@ def est_gigante(cv, cena, t, ctx):
     inverter = cena.get("inverter", False)
     bg = cor(cena.get("bg", "#ebe8e2" if inverter else "#0a0a0a"))
     fg = cor(cena.get("cor", "#111111" if inverter else "#eeebe5"))
-    img = ctx.fx.solido(bg)
+    img = ctx.elem(ctx.fx.solido(bg), cena, t)
     txt = cena["texto"]
     t -= tempos_palavras(cena, 1)[0]  # pode esperar o segundo exato em que a palavra é cantada
     if t < 0:
@@ -356,7 +359,7 @@ def est_serifa(cv, cena, t, ctx):
     n = sum(1 for x in ts if t >= x)
     troca = cena.get("alternar", True) and n % 2 == 0
     bg, fg = (B, A) if troca else (A, B)
-    img = ctx.fx.solido(bg)
+    img = ctx.elem(ctx.fx.solido(bg), cena, t)
     f = caber(cena.get("fonte", "serif"), cena.get("tamanho", 120), linhas, W * SEGURA, H * SEGURA, len(linhas), 0.95)
     lh = f.size * 0.9
     camada = Image.new("RGBA", (W, H), (0, 0, 0, 0))
@@ -378,7 +381,7 @@ def est_cursiva(cv, cena, t, ctx):
     W, H = ctx.W, ctx.H
     claro = cena.get("claro", False)
     img = ctx.fx.solido("#f4f4f4" if claro else "#060606")
-    img = ctx.fx.vinheta_sobre(img, 0.75 if claro else 0.5, (120, 120, 120) if claro else (0, 0, 0))
+    img = ctx.elem(ctx.fx.vinheta_sobre(img, 0.75 if claro else 0.5, (120, 120, 120) if claro else (0, 0, 0)), cena, t)
     fg = (25, 25, 25) if claro else (235, 235, 235)
     txt = cena["texto"]
     f = caber(cena.get("fonte", "cursiva"), cena.get("tamanho", 150), txt.split(), W * SEGURA)
@@ -407,7 +410,7 @@ def est_maquina(cv, cena, t, ctx):
     tons = [cor(c) for c in cena.get("tons", ["#e9e9e9", "#c9c9c9", "#ffffff", "#0a0a0a", "#bdbdbd"])]
     bg = tons[cena.get("tom", 0) % len(tons)]
     fg = (15, 15, 15) if sum(bg) > 380 else (240, 240, 240)
-    img = ctx.fx.solido(bg)
+    img = ctx.elem(ctx.fx.solido(bg), cena, t)
     # hífen só fica visível na última sílaba mostrada ("a mi-" -> "a minha")
     s = "".join(silabas[:max(0, n - 1)]).replace("-", "") + (silabas[n - 1] if n else "")
     if n == len(silabas):
@@ -419,7 +422,7 @@ def est_maquina(cv, cena, t, ctx):
 
 def est_circulo(cv, cena, t, ctx):
     W, H = ctx.W, ctx.H
-    img = ctx.fx.solido(cena.get("bg", "#000000"))
+    img = ctx.elem(ctx.fx.solido(cena.get("bg", "#000000")), cena, t)
     faixa_h = H * cena.get("faixa", 0.26)
     k1 = ease_out(t / 0.45)          # círculo cresce
     k2 = ease_out((t - 0.4) / 0.4)   # vira faixa
@@ -465,6 +468,8 @@ def quadro(proj, ctx, tempo, idx):
         for k in ("bpm", "grade"):
             if k in proj and k not in cfg:
                 cfg[k] = proj[k]
+        lista = cfg.get("elementos", proj.get("elementos", []))
+        ctx.elem = lambda im, c, tt: ctx.el.aplicar(im, lista, tempo, tt, c, proj.get("batidas", []))
         img = ESTILOS[cena["estilo"]](None, cfg, t, ctx)
         img = ctx.fx.acabamento(img, tempo, t, cena["fim"] - cena["inicio"], idx, proj)
         # fade curtinho entre cenas
@@ -472,6 +477,9 @@ def quadro(proj, ctx, tempo, idx):
         restante = cena["fim"] - tempo
         if fade and restante < fade:
             img = Image.blend(img, ctx.fx.solido("#000"), 1 - restante / fade)
+    if proj.get("pb"):  # preto e branco com curva de filme (pretos fundos, brancos cremosos)
+        g = ImageOps.grayscale(img).point(lambda v: int(255 * (0.5 - 0.5 * math.cos(math.pi * v / 255)) ** 0.92))
+        img = Image.merge("RGB", [g, g, g.point(lambda v: max(0, v - 4))])
     return ctx.fx.grao(img, idx, proj.get("grao", 0.05))
 
 
@@ -480,6 +488,8 @@ def render(proj, saida, audio=None, inicio=0.0, preview=False):
     ctx = Ctx()
     ctx.W, ctx.H = W, H
     ctx.fx = Fundos(W, H)
+    ctx.el = Elementos(W, H)
+    ctx.elem = lambda im, c, tt: im
     dur = proj.get("duracao", max(c["fim"] for c in proj["cenas"]))
     random.seed(1)
     if preview:

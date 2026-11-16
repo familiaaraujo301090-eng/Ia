@@ -90,6 +90,19 @@ Todo vídeo sai **com a música sincronizada**:
   No projeto, use `"audio": "trilhas/minha.wav"` e `"bpm": 130`: **cada palavra é encaixada na
   colcheia mais próxima** (`"grade": 2`; use 4 pra semicolcheia) e as cenas trocam no compasso.
 
+## Preto e branco com elementos dinâmicos
+
+`"pb": true` no projeto deixa tudo em P&B com curva de filme. `"elementos"` (no projeto ou por cena)
+desenha elementos animados ATRÁS da letra, todos originais:
+
+`perfil` (rosto de perfil soprando fumaça) · `fumaca` · `lua` (esfera subindo) · `traco` (lápis desenhando)
+· `particulas` (poeira/bokeh) · `chuva` · `aneis` (nascem nas batidas) · `linhas` (scanner) · `luz` (flash nas batidas)
+
+```json
+{"pb": true, "cenas": [{"estilo": "revelar", "texto": "...", "elementos": ["perfil", "fumaca"], "dy": 330}]}
+```
+Os elementos podem passar da borda de propósito; a **letra** continua sempre dentro da área segura.
+
 ## Acabamento "sem cara de IA" (automático em todo vídeo)
 - **Entrada com foco de lente:** a palavra nasce desfocada e um pouco maior e assenta no lugar. Sem listras nem glitch por cima da letra.
 - **Câmera viva:** push-in lento em cada cena, deriva de mão que nunca repete e um leve giro. Soco de zoom nas batidas.
