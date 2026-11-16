@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grupo Shigueno</title>
+<meta name="description" content="Grupo Shigueno — tradição familiar no agronegócio desde 1932 em Tatuí/SP. Ovos, citros, café e pecuária.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,500;0,600;0,700;1,500&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Design system gerado com UI/UX Pro Max: Scroll-Triggered Storytelling + Nature Distilled
+     Cores: verde terra + dourado colheita | Tipografia: Cormorant / Montserrat */
+  :root{
+    --primary:#14532D; --primary-2:#15803D; --on-primary:#FFFFFF;
+    --accent:#A16207; --accent-soft:#E9C46A; --on-accent:#FFFFFF;
+    --bg:#F7F3EA; --bg-2:#EFE8D8; --fg:#1C1917; --muted:#57534E;
+    --card:#FFFFFF; --border:#DCD3C0; --terracotta:#B5651D;
+    --radius:20px; --shadow:0 10px 30px rgba(28,25,23,.08);
+    --serif:'Cormorant',Georgia,serif; --sans:'Montserrat',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--sans);background:var(--bg);color:var(--fg);line-height:1.65;font-size:16px;-webkit-font-smoothing:antialiased}
+  img,svg{display:block;max-width:100%}
+  a{color:inherit}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+  h1,h2,h3{font-family:var(--serif);font-weight:600;line-height:1.1;letter-spacing:-.01em}
+  .eyebrow{font-size:.75rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--accent)}
+  :focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:6px}
+  .skip{position:absolute;left:-999px;top:8px;background:var(--primary);color:#fff;padding:8px 14px;border-radius:8px;z-index:100}
+  .skip:focus{left:8px}
+
+  /* progresso */
+  #progress{position:fixed;top:0;left:0;height:3px;width:0;background:linear-gradient(90deg,var(--accent),var(--accent-soft));z-index:60}
+
+  /* header */
+  header{position:fixed;inset:0 0 auto;z-index:50;transition:background .3s,box-shadow .3s}
+  header.solid{background:rgba(247,243,234,.92);backdrop-filter:blur(10px);box-shadow:0 1px 0 var(--border)}
+  .nav{display:flex;align-items:center;justify-content:space-between;height:76px}
+  .logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:#fff;transition:color .3s}
+  header.solid .logo{color:var(--primary)}
+  .logo b{font-family:var(--serif);font-size:1.6rem;font-weight:700;letter-spacing:.02em}
+  .logo small{display:block;font-size:.62rem;letter-spacing:.24em;text-transform:uppercase;opacity:.8;margin-top:-4px}
+  .menu{display:flex;gap:30px;list-style:none}
+  .menu a{text-decoration:none;font-size:.88rem;font-weight:500;color:#fff;opacity:.9;transition:opacity .2s,color .3s}
+  header.solid .menu a{color:var(--fg)}
+  .menu a:hover{opacity:1;color:var(--accent-soft)}
+  header.solid .menu a:hover{color:var(--accent)}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:14px 26px;border-radius:999px;font-weight:600;font-size:.9rem;text-decoration:none;cursor:pointer;border:0;transition:transform .2s,background .2s,box-shadow .2s}
+  .btn:hover{transform:translateY(-2px)}
+  .btn-accent{background:var(--accent);color:var(--on-accent);box-shadow:0 8px 20px rgba(161,98,7,.3)}
+  .btn-accent:hover{background:#8a5306}
+  .btn-ghost{border:1.5px solid rgba(255,255,255,.6);color:#fff}
+  .btn-ghost:hover{background:rgba(255,255,255,.12)}
+  .burger{display:none;background:none;border:0;color:#fff;cursor:pointer;padding:8px}
+  header.solid .burger{color:var(--primary)}
+
+  /* hero */
+  .hero{position:relative;min-height:100svh;display:flex;align-items:flex-end;color:#fff;overflow:hidden;background:#0f3d22}
+  .hero-art{position:absolute;inset:0}
+  .hero-art svg{width:100%;height:100%}
+  .hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,30,18,.35) 0%,rgba(10,30,18,.15) 40%,rgba(10,30,18,.75) 100%)}
+  .hero .wrap{position:relative;z-index:2;padding-bottom:12vh;padding-top:140px}
+  .hero .eyebrow{color:var(--accent-soft)}
+  .hero h1{font-size:clamp(2.8rem,7vw,6rem);margin:18px 0 22px;max-width:14ch}
+  .hero h1 em{font-style:italic;color:var(--accent-soft)}
+  .hero p{max-width:52ch;font-size:1.08rem;opacity:.92}
+  .hero .ctas{display:flex;flex-wrap:wrap;gap:14px;margin-top:34px}
+  .scroll-hint{position:absolute;right:24px;bottom:28px;z-index:2;font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;writing-mode:vertical-rl;opacity:.7}
+
+  section{padding:120px 0}
+  .chapter-no{font-family:var(--serif);font-style:italic;font-size:1.1rem;color:var(--accent)}
+
+  /* história */
+  .story{display:grid;grid-template-columns:1fr 1.1fr;gap:80px;align-items:center}
+  .story h2{font-size:clamp(2.2rem,4.5vw,3.6rem);margin:14px 0 24px}
+  .story p{color:var(--muted);margin-bottom:16px;max-width:58ch}
+  .year-card{position:relative;background:var(--primary);color:#fff;border-radius:28px 28px 28px 120px;padding:56px 48px;overflow:hidden}
+  .year-card .big{font-family:var(--serif);font-size:clamp(5rem,12vw,9rem);font-weight:700;line-height:.9;color:var(--accent-soft)}
+  .story .year-card p{color:#fff;opacity:.88;margin-top:14px;max-width:32ch}
+  .year-card svg.leaf{position:absolute;right:-30px;top:-30px;width:220px;opacity:.12}
+
+  .timeline{margin-top:80px;display:grid;grid-template-columns:repeat(4,1fr);gap:24px;position:relative}
+  .timeline::before{content:"";position:absolute;top:9px;left:0;right:0;height:1px;background:var(--border)}
+  .tl{position:relative;padding-top:36px}
+  .tl::before{content:"";position:absolute;top:2px;left:0;width:16px;height:16px;border-radius:50%;background:var(--bg);border:3px solid var(--accent)}
+  .tl h3{font-size:1.5rem;color:var(--primary)}
+  .tl p{font-size:.92rem;color:var(--muted)}
+
+  /* frentes */
+  .frentes{background:var(--bg-2)}
+  .head{display:flex;justify-content:space-between;align-items:flex-end;gap:40px;margin-bottom:56px;flex-wrap:wrap}
+  .head h2{font-size:clamp(2.2rem,4.5vw,3.6rem);margin-top:14px;max-width:16ch}
+  .head p{max-width:44ch;color:var(--muted)}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:22px}
+  .unit{background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column;transition:transform .3s,box-shadow .3s;border:1px solid transparent}
+  .unit:hover{transform:translateY(-6px);box-shadow:0 20px 40px rgba(28,25,23,.12);border-color:var(--border)}
+  .unit .art{aspect-ratio:4/3;position:relative;overflow:hidden}
+  .unit .art svg{width:100%;height:100%}
+  .unit .body{padding:26px 24px 30px;flex:1;display:flex;flex-direction:column}
+  .unit .tag{font-size:.7rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
+  .unit h3{font-size:1.9rem;margin:6px 0 10px;color:var(--primary)}
+  .unit p{font-size:.92rem;color:var(--muted);flex:1}
+  .unit ul{list-style:none;margin-top:16px;display:grid;gap:6px}
+  .unit li{font-size:.85rem;display:flex;gap:8px;align-items:center}
+  .unit li svg{width:16px;height:16px;color:var(--primary-2);flex:none}
+
+  /* valores */
+  .values{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:56px}
+  .value{padding:36px 30px;border-radius:var(--radius);border:1px solid var(--border);background:var(--card)}
+  .ico{width:54px;height:54px;border-radius:16px;display:grid;place-items:center;background:#E7F1E9;color:var(--primary);margin-bottom:20px}
+  .ico svg{width:26px;height:26px}
+  .value h3{font-size:1.6rem;margin-bottom:8px}
+  .value p{color:var(--muted);font-size:.93rem}
+
+  /* faixa */
+  .band{background:var(--primary);color:#fff;padding:90px 0;position:relative;overflow:hidden}
+  .band blockquote{font-family:var(--serif);font-size:clamp(1.8rem,4vw,3rem);font-style:italic;line-height:1.25;max-width:24ch}
+  .band blockquote span{color:var(--accent-soft)}
+  .band cite{display:block;margin-top:22px;font-style:normal;font-size:.8rem;letter-spacing:.18em;text-transform:uppercase;opacity:.75}
+  .band svg.rows{position:absolute;right:-60px;bottom:-40px;width:520px;opacity:.12}
+
+  /* contato */
+  .contact{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start}
+  .contact h2{font-size:clamp(2.2rem,4.5vw,3.6rem);margin:14px 0 20px}
+  .contact > div > p{color:var(--muted);max-width:46ch}
+  .info{margin-top:34px;display:grid;gap:18px}
+  .info div{display:flex;gap:14px;align-items:flex-start}
+  .info svg{width:22px;height:22px;color:var(--accent);flex:none;margin-top:3px}
+  .info strong{display:block;font-size:.8rem;letter-spacing:.1em;text-transform:uppercase}
+  .info span{color:var(--muted);font-size:.95rem}
+  form{background:var(--card);border-radius:24px;padding:40px;box-shadow:var(--shadow);display:grid;gap:18px}
+  label{font-size:.82rem;font-weight:600;display:grid;gap:8px}
+  input,select,textarea{font:inherit;font-weight:400;padding:14px 16px;border-radius:12px;border:1.5px solid var(--border);background:var(--bg);color:var(--fg);transition:border-color .2s}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--primary-2);box-shadow:0 0 0 3px rgba(21,128,61,.15)}
+  textarea{min-height:120px;resize:vertical}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .form-ok{display:none;padding:14px 16px;border-radius:12px;background:#E7F1E9;color:var(--primary);font-size:.9rem}
+
+  footer{background:#0f2a1a;color:rgba(255,255,255,.75);padding:60px 0 30px;font-size:.88rem}
+  .foot{display:flex;justify-content:space-between;gap:30px;flex-wrap:wrap;padding-bottom:30px;border-bottom:1px solid rgba(255,255,255,.12)}
+  .foot .logo{color:#fff}
+  .foot ul{list-style:none;display:flex;gap:24px;flex-wrap:wrap}
+  .foot a{text-decoration:none}
+  .foot a:hover{color:var(--accent-soft)}
+  .copy{padding-top:24px;font-size:.78rem;opacity:.7}
+
+  /* revelar */
+  .reveal{opacity:0;transform:translateY(28px);transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1)}
+  .reveal.in{opacity:1;transform:none}
+  .d1{transition-delay:.08s}.d2{transition-delay:.16s}.d3{transition-delay:.24s}
+
+  @media (max-width:1000px){
+    .grid4{grid-template-columns:repeat(2,1fr)}
+    .story,.contact{grid-template-columns:1fr;gap:48px}
+    .timeline{grid-template-columns:repeat(2,1fr);row-gap:40px}
+    .timeline::before{display:none}
+    .values{grid-template-columns:1fr}
+  }
+  @media (max-width:760px){
+    section{padding:84px 0}
+    .wrap{padding:0 16px}
+    .menu,.nav .btn{display:none}
+    .burger{display:block}
+    .menu.open{display:flex;flex-direction:column;position:absolute;top:76px;left:0;right:0;background:var(--bg);padding:24px 16px;gap:20px;box-shadow:var(--shadow)}
+    .menu.open a{color:var(--fg)}
+    .grid4,.row2{grid-template-columns:1fr}
+    .timeline{grid-template-columns:1fr}
+    form{padding:26px}
+    .year-card{padding:40px 30px;border-radius:24px 24px 24px 80px}
+    .scroll-hint{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    .reveal{opacity:1;transform:none;transition:none}
+    *{animation:none!important;transition:none!important}
+  }
+  @keyframes sway{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+  .sun{animation:sway 8s ease-in-out infinite}
+</style>
+</head>
+<body>
+<a class="skip" href="#conteudo">Pular para o conteúdo</a>
+<div id="progress" aria-hidden="true"></div>
+
+<header id="top">
+  <div class="wrap nav">
+    <a href="#" class="logo" aria-label="Grupo Shigueno — início">
+      <svg width="38" height="38" viewBox="0 0 40 40" fill="none" aria-hidden="true"><circle cx="20" cy="20" r="19" stroke="currentColor" stroke-width="1.5"/><path d="M20 31V15M20 21c-5 0-8-3-8-8 5 0 8 3 8 8Zm0 0c5 0 8-3 8-8-5 0-8 3-8 8Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      <span><b>Shigueno</b><small>Desde 1932</small></span>
+    </a>
+    <nav aria-label="Principal">
+      <ul class="menu" id="menu">
+        <li><a href="#historia">História</a></li>
+        <li><a href="#frentes">Negócios</a></li>
+        <li><a href="#valores">Valores</a></li>
+        <li><a href="#contato">Contato</a></li>
+      </ul>
+    </nav>
+    <a href="#contato" class="btn btn-accent">Fale conosco</a>
+    <button class="burger" id="burger" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="conteudo">
+  <!-- Intro hook -->
+  <section class="hero" aria-label="Apresentação" style="padding:0">
+    <div class="hero-art" aria-hidden="true">
+      <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2F6B45"/><stop offset=".55" stop-color="#C99A3E"/><stop offset="1" stop-color="#E9C46A"/></linearGradient>
+          <linearGradient id="h1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2E6A3F"/><stop offset="1" stop-color="#173F25"/></linearGradient>
+          <linearGradient id="h2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1E5532"/><stop offset="1" stop-color="#0F2E1B"/></linearGradient>
+        </defs>
+        <rect width="1440" height="900" fill="url(#sky)"/>
+        <circle class="sun" cx="1050" cy="430" r="110" fill="#F6DFA0" opacity=".85"/>
+        <path d="M0 520C220 460 420 470 640 510s460 40 800-30V900H0Z" fill="#5C8A4E" opacity=".7"/>
+        <path d="M0 600c260-70 520-60 760-10s440 40 680-20V900H0Z" fill="url(#h1)"/>
+        <g stroke="#3F7D4E" stroke-width="3" opacity=".55">
+          <path d="M-20 700 C300 640 700 650 1460 610"/><path d="M-20 740 C300 680 700 690 1460 650"/><path d="M-20 785 C300 725 700 735 1460 695"/><path d="M-20 835 C300 775 700 785 1460 745"/>
+        </g>
+        <path d="M0 760c300-40 620-30 900 10s380 20 540 0V900H0Z" fill="url(#h2)"/>
+        <g fill="#123821">
+          <circle cx="210" cy="590" r="38"/><rect x="206" y="610" width="8" height="40"/>
+          <circle cx="270" cy="600" r="28"/><rect x="267" y="615" width="6" height="34"/>
+          <circle cx="1240" cy="560" r="44"/><rect x="1236" y="585" width="9" height="46"/>
+        </g>
+      </svg>
+    </div>
+    <div class="wrap">
+      <p class="eyebrow reveal">Tatuí · São Paulo · Desde 1932</p>
+      <h1 class="reveal d1">Da terra, com <em>cuidado</em> de família.</h1>
+      <p class="reveal d2">Há mais de nove décadas o Grupo Shigueno produz alimentos com dedicação, respeito ao campo e compromisso com quem está à mesa. Ovos, citros, café e pecuária.</p>
+      <div class="ctas reveal d3">
+        <a href="#frentes" class="btn btn-accent">Conheça nossos negócios
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <a href="#historia" class="btn btn-ghost">Nossa história</a>
+      </div>
+    </div>
+    <span class="scroll-hint" aria-hidden="true">Role para descobrir</span>
+  </section>
+
+  <!-- Capítulo 1: origem -->
+  <section id="historia">
+    <div class="wrap">
+      <div class="story">
+        <div>
+          <span class="chapter-no reveal">Capítulo I — A origem</span>
+          <h2 class="reveal d1">Uma história plantada há mais de 90 anos.</h2>
+          <p class="reveal d2">Fundado por Haruo Shigueno, o grupo nasceu do trabalho de uma família de imigrantes que encontrou no interior paulista o lugar para cultivar raízes.</p>
+          <p class="reveal d2">Geração após geração, a família manteve os mesmos princípios — trabalho sério, respeito à terra e qualidade em cada etapa — e expandiu a atuação para novas culturas.</p>
+          <a href="#frentes" class="btn btn-accent reveal d3" style="margin-top:16px">Ver o que produzimos</a>
+        </div>
+        <div class="year-card reveal d2">
+          <svg class="leaf" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1" aria-hidden="true"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+          <div class="big">1932</div>
+          <p>O ano em que a família Shigueno começou a escrever sua história no campo brasileiro.</p>
+        </div>
+      </div>
+
+      <div class="timeline" aria-label="Linha do tempo">
+        <div class="tl reveal"><h3>1932</h3><p>Início das atividades da família no interior de São Paulo.</p></div>
+        <div class="tl reveal d1"><h3>Granja</h3><p>A avicultura de postura se torna um dos pilares do grupo.</p></div>
+        <div class="tl reveal d2"><h3>Diversificação</h3><p>Expansão para citricultura, café e pecuária.</p></div>
+        <div class="tl reveal d3"><h3>Hoje</h3><p>Novas gerações conduzem o grupo com tecnologia e a mesma essência.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Capítulo 2: frentes de negócio -->
+  <section id="frentes" class="frentes">
+    <div class="wrap">
+      <div class="head">
+        <div>
+          <span class="chapter-no reveal">Capítulo II — O que cultivamos</span>
+          <h2 class="reveal d1">Quatro frentes, um mesmo cuidado.</h2>
+        </div>
+        <p class="reveal d2">Cada negócio do grupo segue o mesmo padrão: controle de ponta a ponta, bem-estar e respeito ao meio ambiente.</p>
+      </div>
+
+      <div class="grid4">
+        <article class="unit reveal">
+          <div class="art" aria-hidden="true"><svg viewBox="0 0 400 300"><rect width="400" height="300" fill="#F3E3BF"/><circle cx="320" cy="70" r="40" fill="#E9C46A"/><ellipse cx="170" cy="175" rx="56" ry="72" fill="#FFF8EC"/><ellipse cx="240" cy="190" rx="48" ry="62" fill="#E8C9A0"/><ellipse cx="160" cy="160" rx="14" ry="22" fill="#fff" opacity=".7"/><path d="M0 250h400v50H0z" fill="#C99A3E" opacity=".45"/></svg></div>
+          <div class="body">
+            <span class="tag">Avicultura</span>
+            <h3>Ovos</h3>
+            <p>Produção de ovos com rigor sanitário, rastreabilidade e frescor do galpão até o ponto de venda.</p>
+            <ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Controle sanitário</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Rastreabilidade</li></ul>
+          </div>
+        </article>
+        <article class="unit reveal d1">
+          <div class="art" aria-hidden="true"><svg viewBox="0 0 400 300"><rect width="400" height="300" fill="#E4EED9"/><path d="M120 60c30-30 70-20 80 10-35 15-60 10-80-10Z" fill="#3F7D4E"/><circle cx="170" cy="170" r="74" fill="#F08A24"/><circle cx="170" cy="170" r="74" fill="none" stroke="#D9701A" stroke-width="3"/><circle cx="280" cy="200" r="52" fill="#F4A340"/><circle cx="280" cy="200" r="36" fill="#FCD38D"/><g stroke="#F4A340" stroke-width="3"><path d="M280 164v72M244 200h72M255 175l50 50M305 175l-50 50"/></g></svg></div>
+          <div class="body">
+            <span class="tag">Citricultura</span>
+            <h3>Citros</h3>
+            <p>Pomares de laranja conduzidos com manejo técnico e foco em sanidade das plantas e qualidade da fruta.</p>
+            <ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Manejo técnico</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Fruta de qualidade</li></ul>
+          </div>
+        </article>
+        <article class="unit reveal d2">
+          <div class="art" aria-hidden="true"><svg viewBox="0 0 400 300"><rect width="400" height="300" fill="#EADCC8"/><path d="M60 250c40-90 110-150 200-170" stroke="#3F6B3A" stroke-width="5" fill="none"/><g fill="#4E8A4A"><ellipse cx="120" cy="170" rx="34" ry="14" transform="rotate(-30 120 170)"/><ellipse cx="200" cy="110" rx="34" ry="14" transform="rotate(-20 200 110)"/></g><g fill="#8E2C1E"><circle cx="160" cy="160" r="16"/><circle cx="182" cy="150" r="16"/><circle cx="170" cy="178" r="16"/><circle cx="240" cy="112" r="15"/><circle cx="258" cy="128" r="15"/></g><g fill="#B5651D"><circle cx="160" cy="160" r="5" opacity=".6"/><circle cx="240" cy="112" r="5" opacity=".6"/></g></svg></div>
+          <div class="body">
+            <span class="tag">Cafeicultura</span>
+            <h3>Café</h3>
+            <p>Cafés especiais cultivados com atenção à colheita e ao pós-colheita, para preservar aroma e doçura.</p>
+            <ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Cafés premium</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Pós-colheita cuidadoso</li></ul>
+          </div>
+        </article>
+        <article class="unit reveal d3">
+          <div class="art" aria-hidden="true"><svg viewBox="0 0 400 300"><rect width="400" height="300" fill="#DDE8D3"/><path d="M0 220c100-30 260-30 400 0v80H0Z" fill="#7FA36A"/><g fill="#5A4636"><rect x="130" y="140" width="130" height="62" rx="28"/><rect x="140" y="190" width="12" height="40" rx="5"/><rect x="230" y="190" width="12" height="40" rx="5"/><rect x="250" y="120" width="44" height="40" rx="16"/></g><path d="M258 120l-8-14M286 120l8-14" stroke="#5A4636" stroke-width="5" stroke-linecap="round"/><circle cx="330" cy="70" r="30" fill="#E9C46A"/></svg></div>
+          <div class="body">
+            <span class="tag">Pecuária</span>
+            <h3>Gado</h3>
+            <p>Criação de bovinos com atenção ao bem-estar animal, nutrição adequada e pastagens bem manejadas.</p>
+            <ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Bem-estar animal</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Pastagens manejadas</li></ul>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Capítulo 3: valores -->
+  <section id="valores">
+    <div class="wrap">
+      <span class="chapter-no reveal">Capítulo III — Como trabalhamos</span>
+      <h2 class="reveal d1" style="font-size:clamp(2.2rem,4.5vw,3.6rem);margin-top:14px;max-width:20ch">Tradição que se renova a cada safra.</h2>
+      <div class="values">
+        <div class="value reveal">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 20h10M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/><path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z"/></svg></div>
+          <h3>Sustentabilidade</h3>
+          <p>Uso responsável da água e do solo, preservação de áreas naturais e práticas que garantem o futuro do campo.</p>
+        </div>
+        <div class="value reveal d1">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></div>
+          <h3>Qualidade</h3>
+          <p>Processos controlados em todas as etapas, do manejo à entrega, para levar alimento seguro à mesa das famílias.</p>
+        </div>
+        <div class="value reveal d2">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+          <h3>Pessoas</h3>
+          <p>Valorizamos quem faz o grupo acontecer: colaboradores, parceiros e a comunidade de Tatuí e região.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="band">
+    <svg class="rows" viewBox="0 0 400 200" fill="none" stroke="#fff" stroke-width="2" aria-hidden="true"><path d="M0 40c100-20 300-20 400 0M0 80c100-20 300-20 400 0M0 120c100-20 300-20 400 0M0 160c100-20 300-20 400 0"/></svg>
+    <div class="wrap">
+      <blockquote class="reveal">“Cuidar da terra é cuidar das <span>próximas gerações</span>.”<cite>Família Shigueno</cite></blockquote>
+    </div>
+  </div>
+
+  <!-- Clímax CTA -->
+  <section id="contato">
+    <div class="wrap contact">
+      <div>
+        <span class="chapter-no reveal">Capítulo IV — Vamos conversar</span>
+        <h2 class="reveal d1">Seja um parceiro do Grupo Shigueno.</h2>
+        <p class="reveal d2">Clientes, fornecedores ou quem quer fazer parte da nossa equipe: envie sua mensagem e retornaremos em breve.</p>
+        <div class="info reveal d3">
+          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg><p><strong>Endereço</strong><span>Estrada Tatuí–Quadra, Km 1<br>Tatuí · SP</span></p></div>
+          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg><p><strong>Site</strong><span>www.shigueno.com.br</span></p></div>
+        </div>
+      </div>
+      <form class="reveal d2" id="form" novalidate>
+        <div class="row2">
+          <label>Nome<input name="nome" required autocomplete="name"></label>
+          <label>E-mail<input name="email" type="email" required autocomplete="email"></label>
+        </div>
+        <label>Assunto
+          <select name="assunto">
+            <option>Comercial — Ovos</option><option>Comercial — Citros</option><option>Comercial — Café</option><option>Comercial — Pecuária</option><option>Fornecedores</option><option>Trabalhe conosco</option><option>Outros</option>
+          </select>
+        </label>
+        <label>Mensagem<textarea name="mensagem" required></textarea></label>
+        <button class="btn btn-accent" type="submit" style="justify-self:start">Enviar mensagem</button>
+        <p class="form-ok" id="ok" role="status">Obrigado! Sua mensagem foi registrada.</p>
+      </form>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <a href="#" class="logo"><span><b>Shigueno</b><small>Desde 1932 · Tatuí/SP</small></span></a>
+      <ul><li><a href="#historia">História</a></li><li><a href="#frentes">Negócios</a></li><li><a href="#valores">Valores</a></li><li><a href="#contato">Contato</a></li></ul>
+    </div>
+    <p class="copy">© <span id="y"></span> Grupo Shigueno. Todos os direitos reservados.</p>
+  </div>
+</footer>
+
+<script>
+  const header=document.getElementById('top'),bar=document.getElementById('progress');
+  function onScroll(){const h=document.documentElement;header.classList.toggle('solid',h.scrollTop>40);bar.style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%'}
+  addEventListener('scroll',onScroll,{passive:true});onScroll();
+  const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.15});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+  const burger=document.getElementById('burger'),menu=document.getElementById('menu');
+  burger.addEventListener('click',()=>{const o=menu.classList.toggle('open');burger.setAttribute('aria-expanded',o);header.classList.add('solid')});
+  menu.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{menu.classList.remove('open');burger.setAttribute('aria-expanded','false')}));
+  document.getElementById('form').addEventListener('submit',e=>{e.preventDefault();const f=e.target;if(!f.checkValidity()){f.reportValidity();return}document.getElementById('ok').style.display='block';f.reset()});
+  document.getElementById('y').textContent=new Date().getFullYear();
+</script>
+</body>
+</html>
