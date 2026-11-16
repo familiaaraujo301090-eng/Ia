@@ -361,10 +361,11 @@ def est_gigante(cv, cena, t, ctx):
         borrado = borrado.filter(ImageFilter.BoxBlur(int(2 + 18 * e)))
         borrado.putalpha(borrado.getchannel("A").point(lambda v: int(v * min(1, 0.3 + km))))
         im = borrado
-    img.paste(im, (int(W / 2 - im.width / 2), int(H / 2 - im.height / 2)), im)
+    gy = H / 2 + cena.get("dy", 0)
+    img.paste(im, (int(W / 2 - im.width / 2), int(gy - im.height / 2)), im)
     if cena.get("sub"):
         fs = fonte("bold", 46)
-        ImageDraw.Draw(img).text((W / 2, H / 2 + alt / 2 + 70), cena["sub"], font=fs, fill=fg, anchor="mm")
+        ImageDraw.Draw(img).text((W / 2, H / 2 + cena.get("dy", 0) + alt / 2 + 70), cena["sub"], font=fs, fill=fg, anchor="mm")
     if cena.get("sobre"):
         fs = fonte("bold", 46)
         ImageDraw.Draw(img).text((W / 2, H / 2 - alt / 2 - 60), cena["sobre"], font=fs, fill=fg, anchor="mm")

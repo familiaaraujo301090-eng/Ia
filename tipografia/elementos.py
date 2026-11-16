@@ -628,3 +628,173 @@ def pulso(s, img, tempo, t, cena, claro):
 
 Elementos.fios = fios
 Elementos.pulso = pulso
+
+
+# ====================================================================== GRAVIDADE + ECLIPSE (música: "poder")
+def gravidade(s, img, tempo, t, cena, claro):
+    """Partículas orbitando o centro do texto; cada ataque da música puxa tudo pra dentro (o 'poder')."""
+    W, H = s.W, s.H
+    if not hasattr(s, "_grav"):
+        rng = random.Random(41)
+        s._grav = [(rng.uniform(0.18, 1.0), rng.random() * 6.28, rng.uniform(0.6, 1.4), rng.random()) for _ in range(300)]
+    ataques = getattr(s, "ataques", [])
+    puxao = min(1.0, sum(math.exp(-(tempo - a) * 5) for a in ataques if 0 <= tempo - a < 1.2))
+    cx, cy = W / 2, H / 2 + cena.get("dy", 0) * 0.6
+    R = W * 0.62
+    w2 = Image.new("L", (W // 2, H // 2), 0)
+    d = ImageDraw.Draw(w2)
+    for r0, a0, v, b in s._grav:
+        r = r0 * (1 - 0.35 * puxao)
+        w = v * 0.55 / r ** 1.5
+        a = a0 + tempo * w
+        rr = r * R
+        # rastro curto (arco) = sensação de velocidade
+        pts = [((cx + rr * math.cos(a - k * 0.03 * w)) / 2, (cy + rr * math.sin(a - k * 0.03 * w) * 0.42) / 2) for k in range(5)]
+        lum = int((90 + 165 * b) * (0.45 + 0.55 * puxao) * min(1, r0 * 3))
+        d.line(pts, fill=lum, width=1 + (b > 0.85))
+    # disco de acreção fininho
+    for k, al in ((1.0, 40), (0.7, 25)):
+        rr = R * 0.24 * k * (1 - 0.2 * puxao)
+        d.ellipse([(cx - rr) / 2, (cy - rr * 0.42) / 2, (cx + rr) / 2, (cy + rr * 0.42) / 2], outline=int(al * (1 + 2 * puxao)), width=1)
+    m = w2.resize((W, H), Image.BICUBIC)
+    m = ImageChops.lighter(m, m.filter(ImageFilter.GaussianBlur(6)))
+    cor = (240, 240, 240) if not claro else (15, 15, 15)
+    return Image.composite(Image.new("RGB", (W, H), cor), img, m)
+
+
+def eclipse(s, img, tempo, t, cena, claro):
+    """Disco escuro na frente de uma coroa de luz viva; a coroa explode em cada ataque."""
+    W, H = s.W, s.H
+    ataques = getattr(s, "ataques", [])
+    flare = min(1.0, sum(math.exp(-(tempo - a) * 6) for a in ataques if 0 <= tempo - a < 1.0))
+    cx, cy, R = W / 2, H * cena.get("eclipse_y", 0.5), W * 0.30
+    w2, h2 = W // 2, H // 2
+    y, x = np.mgrid[0:h2, 0:w2].astype(np.float32)
+    dx, dy = x * 2 - cx, y * 2 - cy
+    dist = np.sqrt(dx * dx + dy * dy) / R
+    ang = np.arctan2(dy, dx)
+    raios = (0.55 + 0.30 * np.sin(ang * 23 + tempo * 0.8) * np.sin(ang * 9 - tempo * 0.5)
+             + 0.15 * np.sin(ang * 41.7 + tempo * 1.3) + 0.12 * np.sin(ang * 6.3 - tempo * 0.2))
+    coroa = np.clip(1.15 - (dist - 1), 0, 1) ** (5 - 2.5 * flare) * (0.6 + 0.4 * raios)
+    coroa[dist < 1] = 0
+    coroa *= (0.75 + 0.5 * flare)
+    m = Image.fromarray((np.clip(coroa, 0, 1) * 255).astype(np.uint8)).resize((W, H), Image.BICUBIC)
+    m = m.filter(ImageFilter.GaussianBlur(3))
+    cor = (245, 243, 238) if not claro else (10, 10, 10)
+    img = Image.composite(Image.new("RGB", (W, H), cor), img, m)
+    disco = Image.new("L", (W, H), 0)
+    ImageDraw.Draw(disco).ellipse([cx - R, cy - R, cx + R, cy + R], fill=255)
+    fundo = img.getpixel((5, 5))
+    return Image.composite(Image.new("RGB", (W, H), fundo), img, disco.filter(ImageFilter.GaussianBlur(2)))
+
+
+# ====================================================================== PÉTALAS + ROSA + CIDADE (música: "flor")
+def petalas(s, img, tempo, t, cena, claro):
+    W, H = s.W, s.H
+    if not hasattr(s, "_pet"):
+        rng = random.Random(23)
+        s._pet = [(rng.random(), rng.random(), rng.uniform(0.35, 1), rng.random() * 6.28, rng.uniform(0.6, 1.6)) for _ in range(30)]
+    perto = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    longe = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    cor = (228, 226, 222) if not claro else (40, 40, 40)
+    veio = (150, 150, 150) if not claro else (120, 120, 120)
+    for x, y, z, fase, giro in s._pet:
+        cam = perto if z > 0.7 else longe
+        yy = ((y + tempo * 0.06 * z) % 1.15 - 0.08) * H
+        xx = x * W + math.sin(tempo * 0.9 * giro + fase) * 70 * z
+        L, Lw = 46 * z + 14, 26 * z + 8
+        flip = abs(math.cos(tempo * 1.7 * giro + fase))  # pétala virando no ar
+        p = Image.new("RGBA", (int(L * 2.4), int(L * 2.4)), (0, 0, 0, 0))
+        dp = ImageDraw.Draw(p)
+        c = p.width / 2
+        lw = Lw * max(0.12, flip)
+        gota = [(c + lw * math.sin(u / 20 * math.pi) * (1 - 0.55 * (u / 20)), c - L + 1.7 * L * u / 20) for u in range(21)]
+        gota += [(2 * c - x, y) for x, y in reversed(gota)]
+        dp.polygon(gota, fill=cor + (int(120 + 90 * z),))
+        dp.line([(c, c - L * 0.7), (c, c + L * 0.5)], fill=veio + (45,), width=2)
+        p = p.filter(ImageFilter.GaussianBlur(1.2))
+        p = p.rotate(math.degrees(tempo * 0.8 * giro + fase), resample=Image.BICUBIC)
+        cam.paste(p, (int(xx - c), int(yy - c)), p)
+    longe = longe.filter(ImageFilter.GaussianBlur(4))
+    img.paste(longe, (0, 0), longe)
+    img.paste(perto, (0, 0), perto)
+    return img
+
+
+def rosa(s, img, tempo, t, cena, claro):
+    """Rosa a traço desabrochando: pétalas em espiral que abrem e ganham traço com o tempo."""
+    W, H = s.W, s.H
+    k = 1 - (1 - max(0.0, min(1.0, (tempo - cena.get("rosa_t0", cena["inicio"])) / cena.get("rosa_dur", 1.6)))) ** 3
+    cx, cy = W / 2, H * cena.get("rosa_y", 0.5)
+    cam = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(cam)
+    cor = (235, 235, 235) if not claro else (25, 25, 25)
+    aneis = [(5, 70, 1.15), (6, 140, 1.05), (7, 215, 0.95), (8, 285, 0.85)]  # (pétalas, raio, abertura)
+    for j, (n, R, span) in enumerate(aneis):
+        abre = max(0.0, min(1.0, k * 1.6 - j * 0.22))
+        if abre <= 0:
+            continue
+        RR = R * (0.25 + 0.75 * abre)
+        giro = j * 0.55 + (1 - abre) * 0.8 + tempo * 0.04 * (1 if j % 2 else -1)
+        for i in range(n):
+            th0 = giro + i * 2 * math.pi / n
+            pts = []
+            for u in range(31):
+                th = th0 + span * (u / 30)
+                rr = RR * math.sin(math.pi * u / 30) ** 0.7 * (1 + 0.08 * math.sin(i * 3.1 + j))
+                pts.append((cx + rr * math.cos(th), cy + rr * math.sin(th) * 0.88))
+            d.line(pts, fill=cor + (int(230 * min(1, abre * 1.4) * (1 - 0.15 * j)),), width=4 - (j > 1), joint="curve")
+    # miolo em espiral
+    pts = [(cx + (3 + u * 1.3) * math.cos(u * 0.42 + tempo * 0.3), cy + (3 + u * 1.3) * math.sin(u * 0.42 + tempo * 0.3) * 0.88)
+           for u in range(int(40 * min(1, k * 2)))]
+    if len(pts) > 1:
+        d.line(pts, fill=cor + (230,), width=3)
+    # caule
+    if k > 0.2:
+        haste = [(cx + 12 * math.sin(u * 0.05), cy + 60 + u * 9 * min(1, (k - 0.2) / 0.5)) for u in range(80)]
+        d.line(haste, fill=cor + (170,), width=4)
+    brilho = cam.filter(ImageFilter.GaussianBlur(8))
+    img.paste(brilho, (0, 0), brilho)
+    img.paste(cam, (0, 0), cam)
+    return img
+
+
+def cidade(s, img, tempo, t, cena, claro):
+    """Contorno de prédios na base da tela; janelas acendem uma a uma e piscam nos ataques."""
+    W, H = s.W, s.H
+    if not hasattr(s, "_cid"):
+        rng = random.Random(64)
+        predios, x = [], -10
+        while x < W + 10:
+            w = rng.randint(70, 170)
+            h = rng.randint(int(H * 0.10), int(H * 0.34))
+            jan = [(rng.randint(8, w - 22), rng.randint(16, h - 30), rng.random()) for _ in range(w * h // 2600)]
+            predios.append((x, w, h, jan, rng.random() < 0.3))
+            x += w + rng.randint(-6, 10)
+        s._cid = predios
+    ataques = getattr(s, "ataques", [])
+    pisca = min(1.0, sum(math.exp(-(tempo - a) * 7) for a in ataques if 0 <= tempo - a < 0.8))
+    k = min(1.0, t / 1.2)
+    base = H
+    m = Image.new("L", (W, H), 0)
+    luz = Image.new("L", (W, H), 0)
+    dm, dl = ImageDraw.Draw(m), ImageDraw.Draw(luz)
+    for x, w, h, jan, antena in s._cid:
+        hh = h * (0.4 + 0.6 * k)
+        dm.rectangle([x, base - hh, x + w, base], fill=255)
+        if antena:
+            dm.line([(x + w / 2, base - hh), (x + w / 2, base - hh - 50)], fill=255, width=3)
+            if (tempo * 1.3 + x) % 1 < 0.5:
+                dl.ellipse([x + w / 2 - 5, base - hh - 55, x + w / 2 + 5, base - hh - 45], fill=255)
+        for jx, jy, liga in jan:
+            if liga < k * 0.8 and jy < hh - 20:
+                v = int(150 + 105 * pisca * (liga > 0.5))
+                dl.rectangle([x + jx, base - hh + jy, x + jx + 12, base - hh + jy + 16], fill=v)
+    silh = (22, 22, 22) if not claro else (200, 200, 200)
+    img = Image.composite(Image.new("RGB", (W, H), silh), img, m)
+    luz = ImageChops.lighter(luz, luz.filter(ImageFilter.GaussianBlur(8)))
+    return Image.composite(Image.new("RGB", (W, H), (240, 236, 225) if not claro else (20, 20, 20)), img, luz)
+
+
+for _f in (gravidade, eclipse, petalas, rosa, cidade):
+    setattr(Elementos, _f.__name__, _f)
