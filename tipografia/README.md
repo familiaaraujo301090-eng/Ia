@@ -49,11 +49,32 @@ Regras gerais que se repetem:
 - Opções: `fonte` (anton, bebas, black, bold, medium, oswald, serif, playfair, italico, cursiva),
   `tamanho`, `cor`, `bg`, `bg2` (degradê), `cores`, `sangrar` (palavra estoura a tela), `sub`/`sobre` (texto pequeno junto do gigante), `fade`.
 
-### Como sincronizar com a música
-1. Abra a música no CapCut/Audacity e anote o segundo em que cada frase começa.
-2. Preencha `inicio`/`fim` de cada cena (e `tempos` se quiser palavra por palavra).
-3. Gere o vídeo. **Recomendado:** suba o MP4 mudo no TikTok e escolha o som oficial lá
-   (é licenciado e conta pra trend). Ou use `--audio` com um arquivo que você tenha direito de usar.
+### Sincronia automática com a música (`sincronizar.py`)
+
+Você coloca o arquivo da música (mp3/m4a/wav que você tenha: comprado, exportado do CapCut,
+som do seu rascunho etc.) e a letra; a ferramenta acha o tempo de **cada palavra** e as **batidas**,
+monta o projeto e renderiza **com o áudio**.
+
+```bash
+pip install faster-whisper            # reconhecimento de voz (só na 1ª vez)
+
+# letra.txt: um trecho por linha. Prefixo opcional de estilo:
+#   gigante: PALAVRA
+#   pilha: LINHA 1 / LINHA 2
+#   frase normal  (estilo escolhido sozinho; linha de 1 palavra vira gigante)
+
+python3 sincronizar.py musica.mp3 letra.txt --inicio 47 --fim 62 --tema vermelho --render
+```
+
+- `--inicio/--fim`: o trecho da música (em segundos) que vira vídeo (TikTok: 10–30s).
+- `--tema`: `noite`, `vermelho`, `rosa`, `bordo`, `cursiva` (define a rotação de estilos e cores).
+- `--idioma pt` ou `en` ajuda o reconhecimento; `--modelo medium` é mais preciso (mais lento).
+- Sem instalar nada: `--modo tap` toca a música e você aperta **ENTER** no começo de cada linha.
+- Palavras que a voz não reconhecer são interpoladas pelas vizinhas; depois dá pra ajustar
+  qualquer tempo no `.json` gerado e rodar `python3 tipografia.py projetos/letra.json` de novo.
+
+Dica: pra postar, você pode subir o vídeo **com** o áudio ou mudo e escolher o som oficial no TikTok
+(o vídeo continua sincronizado se você escolher o mesmo trecho).
 
 ## Projetos prontos (`projetos/`)
 - `sm_rihanna.json`: Rihanna, *S&M* (círculo → flash → gigante → pilha vermelha)
