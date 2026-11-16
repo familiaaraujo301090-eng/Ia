@@ -178,7 +178,16 @@ def tempos_palavras(cena, n):
         return [t - cena["inicio"] for t in cena["tempos"]]
     dur = cena["fim"] - cena["inicio"]
     janela = dur * cena.get("ritmo", 0.7)
-    return [janela * i / max(1, n) for i in range(n)]
+    ts = [janela * i / max(1, n) for i in range(n)]
+    if cena.get("bpm"):  # encaixa cada palavra na grade da música (colcheia por padrão)
+        passo = 60 / cena["bpm"] / cena.get("grade", 2)
+        ini, out, ult = cena["inicio"], [], -1
+        for t in ts:
+            k = max(ult + 1, round((ini + t) / passo - 1e-6) if t else math.ceil(ini / passo - 1e-6))
+            ult = k
+            out.append(max(0.0, k * passo - ini))
+        ts = out
+    return ts
 
 
 # ----------------------------------------------------------------- entrada com foco
@@ -430,7 +439,11 @@ def quadro(proj, ctx, tempo, idx):
         img = ctx.fx.solido(proj.get("bg", "#000000"))
     else:
         t = tempo - cena["inicio"]
-        img = ESTILOS[cena["estilo"]](None, com_paleta(cena), t, ctx)
+        cfg = com_paleta(cena)
+        for k in ("bpm", "grade"):
+            if k in proj and k not in cfg:
+                cfg[k] = proj[k]
+        img = ESTILOS[cena["estilo"]](None, cfg, t, ctx)
         img = ctx.fx.acabamento(img, tempo, t, cena["fim"] - cena["inicio"], idx, proj)
         # fade curtinho entre cenas
         fade = cena.get("fade", 0.12)
@@ -482,4 +495,9 @@ if __name__ == "__main__":
     base = os.path.splitext(os.path.basename(a.projeto))[0]
     saida = a.saida or os.path.join(AQUI, "saida", base + ("_preview" if a.preview else ".mp4"))
     os.makedirs(os.path.dirname(saida) if not a.preview else saida, exist_ok=True)
-    render(proj, saida, a.audio or proj.get("audio"), a.inicio or proj.get("audio_inicio", 0), a.preview)
+    audio = a.audio or proj.get("audio")
+    if audio and not os.path.exists(audio) and os.path.exists(os.path.join(AQUI, audio)):
+        audio = os.path.join(AQUI, audio)
+    if not audio and not a.preview:
+        print("AVISO: projeto sem música. Use --audio musica.mp3, ou gere uma trilha original com musica.py", file=sys.stderr)
+    render(proj, saida, audio, a.inicio or proj.get("audio_inicio", 0), a.preview)

@@ -1,57 +1,63 @@
 {
-  "titulo": "demo original - noite (PT)",
+  "titulo": "demo_noite",
+  "audio": "trilhas/noite.wav",
+  "audio_inicio": 0,
+  "bpm": 80.0,
+  "grade": 2,
+  "duracao": 15.6,
   "batidas": [
-    2.4,
-    4.6,
-    7.4,
-    9.6
+    3.0,
+    6.0,
+    7.5,
+    9.0,
+    12.0
   ],
   "cenas": [
     {
       "estilo": "circulo",
+      "texto": "fecha a porta",
       "inicio": 0.0,
-      "fim": 2.4,
-      "texto": "fecha a porta"
+      "fim": 3.0
     },
     {
       "estilo": "revelar",
-      "inicio": 2.4,
-      "fim": 4.6,
       "texto": "e apaga a luz do quarto",
       "tamanho": 104,
       "paleta": "sangue",
-      "cor_apagada": "#5c1200"
+      "cor_apagada": "#5c1200",
+      "inicio": 3.0,
+      "fim": 6.0
     },
     {
       "estilo": "gigante",
-      "inicio": 4.6,
-      "fim": 5.8,
       "texto": "DEVAGAR",
       "altura": 0.32,
       "bg": "#9a0000",
-      "cor": "#ff8418"
+      "cor": "#ff8418",
+      "inicio": 6.0,
+      "fim": 7.5
     },
     {
       "estilo": "flash",
-      "inicio": 5.8,
-      "fim": 7.4,
-      "texto": "do jeito que você gosta"
+      "texto": "do jeito que você gosta",
+      "inicio": 7.5,
+      "fim": 9.0
     },
     {
       "estilo": "pilha",
-      "inicio": 7.4,
-      "fim": 9.6,
       "texto": "HOJE / VOCÊ / É MINHA",
+      "paleta": "sangue",
       "tamanho": 160,
-      "paleta": "sangue"
+      "inicio": 9.0,
+      "fim": 12.0
     },
     {
       "estilo": "pilha",
-      "inicio": 9.6,
-      "fim": 12.4,
       "texto": "NEM PRECISA / PEDIR",
       "paleta": "sangue_preto",
-      "tamanho": 150
+      "tamanho": 150,
+      "inicio": 12.0,
+      "fim": 15.0
     }
   ]
 }

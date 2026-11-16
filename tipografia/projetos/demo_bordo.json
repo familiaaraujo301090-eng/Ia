@@ -1,9 +1,41 @@
 {
-  "titulo": "demo original - bordô (EN)",
-  "batidas": [3.2, 7.2],
+  "titulo": "demo_bordo",
+  "audio": "trilhas/bordo.wav",
+  "audio_inicio": 0,
+  "bpm": 72.0,
+  "grade": 2,
+  "duracao": 13.933,
+  "batidas": [
+    3.3333,
+    6.6667,
+    10.0
+  ],
   "cenas": [
-    {"estilo": "cursiva", "inicio": 0.0, "fim": 3.2, "texto": "don't say a word", "claro": true},
-    {"estilo": "serifa",  "inicio": 3.2, "fim": 7.2, "texto": "just come / closer / closer / tonight", "tamanho": 140},
-    {"estilo": "gigante", "inicio": 7.2, "fim": 9.0, "texto": "MINE", "fonte": "playfair", "bg": "#5e0b1c", "cor": "#cbc2b1", "sangrar": true, "altura": 0.48}
+    {
+      "estilo": "cursiva",
+      "texto": "don't say a word",
+      "claro": true,
+      "ritmo": 0.6,
+      "inicio": 0.0,
+      "fim": 3.3333
+    },
+    {
+      "estilo": "serifa",
+      "texto": "just come / closer / closer / tonight",
+      "tamanho": 140,
+      "inicio": 3.3333,
+      "fim": 10.0
+    },
+    {
+      "estilo": "gigante",
+      "texto": "MINE",
+      "fonte": "playfair",
+      "bg": "#5e0b1c",
+      "cor": "#cbc2b1",
+      "sangrar": true,
+      "altura": 0.48,
+      "inicio": 10.0,
+      "fim": 13.3333
+    }
   ]
 }

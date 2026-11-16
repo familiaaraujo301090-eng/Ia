@@ -1,10 +1,50 @@
 {
-  "titulo": "demo original - rosa (PT)",
-  "batidas": [0.0, 2.6, 5.2],
+  "titulo": "demo_rosa",
+  "audio": "trilhas/rosa.wav",
+  "audio_inicio": 0,
+  "bpm": 130.0,
+  "grade": 2,
+  "duracao": 11.677,
+  "batidas": [
+    1.8462,
+    3.6923,
+    5.5385,
+    6.4615,
+    7.3846,
+    9.2308
+  ],
   "cenas": [
-    {"estilo": "maquina", "inicio": 0.0, "fim": 2.6, "texto": "sa-be que eu sou pe-ri-go", "tom": 3},
-    {"estilo": "pilha",   "inicio": 2.6, "fim": 5.2, "texto": "E MESMO / ASSIM / VOCÊ VEM", "cores": ["#ffd1e8", "#ff4fa3", "#ff006e"], "bg": "#0a0006", "bg2": "#3d0020", "tamanho": 130},
-    {"estilo": "gigante", "inicio": 5.2, "fim": 6.8, "texto": "VEM", "fonte": "bebas", "inverter": true, "altura": 0.45},
-    {"estilo": "revelar", "inicio": 6.8, "fim": 9.6, "texto": "que hoje a noite é nossa", "fonte": "medium", "tamanho": 80}
+    {
+      "estilo": "maquina",
+      "texto": "sa-be que eu sou pe-ri-go",
+      "tom": 3,
+      "inicio": 0.0,
+      "fim": 1.8462
+    },
+    {
+      "estilo": "pilha",
+      "texto": "E MESMO / ASSIM / VOCÊ VEM",
+      "paleta": "rosa",
+      "tamanho": 130,
+      "inicio": 1.8462,
+      "fim": 5.5385
+    },
+    {
+      "estilo": "gigante",
+      "texto": "VEM",
+      "fonte": "bebas",
+      "inverter": true,
+      "altura": 0.45,
+      "inicio": 5.5385,
+      "fim": 7.3846
+    },
+    {
+      "estilo": "revelar",
+      "texto": "que hoje a noite é nossa",
+      "fonte": "medium",
+      "tamanho": 80,
+      "inicio": 7.3846,
+      "fim": 11.0769
+    }
   ]
 }

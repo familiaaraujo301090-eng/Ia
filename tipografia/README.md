@@ -76,6 +76,20 @@ python3 sincronizar.py musica.mp3 letra.txt --inicio 47 --fim 62 --tema vermelho
 Dica: pra postar, você pode subir o vídeo **com** o áudio ou mudo e escolher o som oficial no TikTok
 (o vídeo continua sincronizado se você escolher o mesmo trecho).
 
+## Música no vídeo (sempre com som)
+
+Todo vídeo sai **com a música sincronizada**:
+
+- **Com a música que você quiser:** mande o áudio (mp3/m4a) ou um vídeo seu com a música, e
+  `sincronizar.py` acha o tempo de cada palavra e renderiza com o som.
+- **Trilha original (livre de direitos):** `musica.py` compõe uma batida nova (`rnb`, `funk`, `trap`)
+  e grava junto um `.json` com os tempos das batidas:
+  ```bash
+  python3 musica.py --estilo funk --bpm 130 --compassos 6 -o trilhas/minha.wav
+  ```
+  No projeto, use `"audio": "trilhas/minha.wav"` e `"bpm": 130`: **cada palavra é encaixada na
+  colcheia mais próxima** (`"grade": 2`; use 4 pra semicolcheia) e as cenas trocam no compasso.
+
 ## Acabamento "sem cara de IA" (automático em todo vídeo)
 - **Entrada com foco de lente:** a palavra nasce desfocada e um pouco maior e assenta no lugar. Sem listras nem glitch por cima da letra.
 - **Câmera viva:** push-in lento em cada cena, deriva de mão que nunca repete e um leve giro. Soco de zoom nas batidas.
