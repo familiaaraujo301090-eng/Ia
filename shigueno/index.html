@@ -7,181 +7,294 @@
 <meta name="description" content="Grupo Shigueno — tradição familiar no agronegócio desde 1932 em Tatuí/SP. Ovos, citros, café e pecuária.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,500;0,600;0,700;1,500&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  /* Design system gerado com UI/UX Pro Max: Scroll-Triggered Storytelling + Nature Distilled
+  /* Design system: UI/UX Pro Max — Scroll-Triggered Storytelling + Nature Distilled
+     Motion: GSAP (Complex tier) — split-text, layered parallax, pin+scrub, stagger
      Cores: verde terra + dourado colheita | Tipografia: Cormorant / Montserrat */
   :root{
-    --primary:#14532D; --primary-2:#15803D; --on-primary:#FFFFFF;
-    --accent:#A16207; --accent-soft:#E9C46A; --on-accent:#FFFFFF;
+    --primary:#14532D; --primary-2:#15803D; --deep:#0f2a1a;
+    --accent:#A16207; --accent-soft:#E9C46A; --orange:#F08A24;
     --bg:#F7F3EA; --bg-2:#EFE8D8; --fg:#1C1917; --muted:#57534E;
-    --card:#FFFFFF; --border:#DCD3C0; --terracotta:#B5651D;
-    --radius:20px; --shadow:0 10px 30px rgba(28,25,23,.08);
+    --card:#FFFFFF; --border:#DCD3C0;
+    --radius:22px; --shadow:0 10px 30px rgba(28,25,23,.08);
     --serif:'Cormorant',Georgia,serif; --sans:'Montserrat',system-ui,sans-serif;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  html{scroll-behavior:smooth}
-  body{font-family:var(--sans);background:var(--bg);color:var(--fg);line-height:1.65;font-size:16px;-webkit-font-smoothing:antialiased}
+  body{font-family:var(--sans);background:var(--bg);color:var(--fg);line-height:1.65;font-size:16px;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  body.loading{overflow:hidden}
   img,svg{display:block;max-width:100%}
   a{color:inherit}
   .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
-  h1,h2,h3{font-family:var(--serif);font-weight:600;line-height:1.1;letter-spacing:-.01em}
+  h1,h2,h3{font-family:var(--serif);font-weight:600;line-height:1.08;letter-spacing:-.01em}
   .eyebrow{font-size:.75rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--accent)}
+  .chapter-no{font-family:var(--serif);font-style:italic;font-size:1.15rem;color:var(--accent);display:inline-block}
+  .h2{font-size:clamp(2.3rem,5vw,4rem)}
   :focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:6px}
-  .skip{position:absolute;left:-999px;top:8px;background:var(--primary);color:#fff;padding:8px 14px;border-radius:8px;z-index:100}
+  .skip{position:absolute;left:-999px;top:8px;background:var(--primary);color:#fff;padding:8px 14px;border-radius:8px;z-index:200}
   .skip:focus{left:8px}
+  .char{display:inline-block;will-change:transform}
+  .word{display:inline-block;white-space:nowrap}
 
-  /* progresso */
-  #progress{position:fixed;top:0;left:0;height:3px;width:0;background:linear-gradient(90deg,var(--accent),var(--accent-soft));z-index:60}
+  /* ===== Preloader ===== */
+  #loader{position:fixed;inset:0;z-index:300;background:var(--deep);display:grid;place-items:center;color:var(--accent-soft)}
+  #loader .in{text-align:center}
+  #loader svg{width:84px;height:84px;margin:0 auto 18px}
+  #loader svg path,#loader svg circle{stroke-dasharray:200;stroke-dashoffset:200;animation:draw 1.4s ease forwards}
+  #loader svg path:nth-child(2){animation-delay:.3s}
+  #loader .name{font-family:var(--serif);font-size:2.2rem;color:#fff;letter-spacing:.04em}
+  #loader .pct{font-size:.72rem;letter-spacing:.3em;margin-top:6px}
+  @keyframes draw{to{stroke-dashoffset:0}}
 
-  /* header */
-  header{position:fixed;inset:0 0 auto;z-index:50;transition:background .3s,box-shadow .3s}
-  header.solid{background:rgba(247,243,234,.92);backdrop-filter:blur(10px);box-shadow:0 1px 0 var(--border)}
+  /* ===== Cursor ===== */
+  .cur,.cur-ring{position:fixed;top:0;left:0;pointer-events:none;z-index:250;border-radius:50%;transform:translate(-50%,-50%);display:none}
+  .cur{width:8px;height:8px;background:var(--accent)}
+  .cur-ring{width:38px;height:38px;border:1.5px solid var(--accent);transition:width .25s,height .25s,background .25s,border-color .25s}
+  .cur-ring.big{width:74px;height:74px;background:rgba(233,196,106,.18);border-color:transparent}
+  @media (hover:hover) and (pointer:fine){.cur,.cur-ring{display:block}}
+
+  #progress{position:fixed;top:0;left:0;height:3px;width:100%;transform-origin:0 50%;transform:scaleX(0);background:linear-gradient(90deg,var(--accent),var(--accent-soft),var(--orange));z-index:120}
+
+  /* ===== Header ===== */
+  header{position:fixed;inset:0 0 auto;z-index:100;transition:background .35s,box-shadow .35s,transform .45s cubic-bezier(.2,.7,.2,1)}
+  header.solid{background:rgba(247,243,234,.9);backdrop-filter:blur(12px);box-shadow:0 1px 0 var(--border)}
+  header.hide{transform:translateY(-100%)}
   .nav{display:flex;align-items:center;justify-content:space-between;height:76px}
   .logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:#fff;transition:color .3s}
   header.solid .logo{color:var(--primary)}
   .logo b{font-family:var(--serif);font-size:1.6rem;font-weight:700;letter-spacing:.02em}
   .logo small{display:block;font-size:.62rem;letter-spacing:.24em;text-transform:uppercase;opacity:.8;margin-top:-4px}
-  .menu{display:flex;gap:30px;list-style:none}
-  .menu a{text-decoration:none;font-size:.88rem;font-weight:500;color:#fff;opacity:.9;transition:opacity .2s,color .3s}
+  .logo svg{transition:transform .8s cubic-bezier(.2,.7,.2,1)}
+  .logo:hover svg{transform:rotate(360deg)}
+  .menu{display:flex;gap:32px;list-style:none}
+  .menu a{position:relative;text-decoration:none;font-size:.88rem;font-weight:500;color:#fff;transition:color .3s;padding:4px 0}
+  .menu a::after{content:"";position:absolute;left:0;bottom:-2px;height:2px;width:100%;background:var(--accent-soft);transform:scaleX(0);transform-origin:right;transition:transform .4s cubic-bezier(.2,.7,.2,1)}
+  .menu a:hover::after,.menu a.active::after{transform:scaleX(1);transform-origin:left}
   header.solid .menu a{color:var(--fg)}
-  .menu a:hover{opacity:1;color:var(--accent-soft)}
-  header.solid .menu a:hover{color:var(--accent)}
-  .btn{display:inline-flex;align-items:center;gap:8px;padding:14px 26px;border-radius:999px;font-weight:600;font-size:.9rem;text-decoration:none;cursor:pointer;border:0;transition:transform .2s,background .2s,box-shadow .2s}
-  .btn:hover{transform:translateY(-2px)}
-  .btn-accent{background:var(--accent);color:var(--on-accent);box-shadow:0 8px 20px rgba(161,98,7,.3)}
-  .btn-accent:hover{background:#8a5306}
+  header.solid .menu a::after{background:var(--accent)}
+  .btn{position:relative;display:inline-flex;align-items:center;gap:8px;padding:15px 28px;border-radius:999px;font-weight:600;font-size:.9rem;text-decoration:none;cursor:pointer;border:0;overflow:hidden;isolation:isolate;transition:box-shadow .3s,color .3s}
+  .btn::before{content:"";position:absolute;inset:0;border-radius:inherit;z-index:-1;transform:translateY(101%);transition:transform .45s cubic-bezier(.2,.7,.2,1)}
+  .btn:hover::before{transform:none}
+  .btn svg{transition:transform .3s}
+  .btn:hover svg{transform:translateX(4px)}
+  .btn-accent{background:var(--accent);color:#fff;box-shadow:0 8px 22px rgba(161,98,7,.32)}
+  .btn-accent::before{background:var(--primary)}
   .btn-ghost{border:1.5px solid rgba(255,255,255,.6);color:#fff}
-  .btn-ghost:hover{background:rgba(255,255,255,.12)}
+  .btn-ghost::before{background:#fff}
+  .btn-ghost:hover{color:var(--primary)}
   .burger{display:none;background:none;border:0;color:#fff;cursor:pointer;padding:8px}
   header.solid .burger{color:var(--primary)}
 
-  /* hero */
-  .hero{position:relative;min-height:100svh;display:flex;align-items:flex-end;color:#fff;overflow:hidden;background:#0f3d22}
-  .hero-art{position:absolute;inset:0}
-  .hero-art svg{width:100%;height:100%}
-  .hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,30,18,.35) 0%,rgba(10,30,18,.15) 40%,rgba(10,30,18,.75) 100%)}
-  .hero .wrap{position:relative;z-index:2;padding-bottom:12vh;padding-top:140px}
+  /* ===== Hero ===== */
+  .hero{position:relative;height:100svh;min-height:640px;display:flex;align-items:flex-end;color:#fff;overflow:hidden;background:#0f3d22}
+  .layer{position:absolute;inset:-6% -4%;will-change:transform}
+  .layer svg{width:100%;height:100%}
+  #particles{position:absolute;inset:0;z-index:3;pointer-events:none}
+  .hero::after{content:"";position:absolute;inset:0;z-index:4;background:linear-gradient(180deg,rgba(10,30,18,.35) 0%,rgba(10,30,18,.05) 40%,rgba(10,30,18,.8) 100%)}
+  .hero .wrap{position:relative;z-index:5;padding-bottom:13vh;width:100%}
   .hero .eyebrow{color:var(--accent-soft)}
-  .hero h1{font-size:clamp(2.8rem,7vw,6rem);margin:18px 0 22px;max-width:14ch}
+  .hero h1{font-size:clamp(3rem,8vw,7rem);margin:18px 0 22px;max-width:13ch;perspective:600px}
   .hero h1 em{font-style:italic;color:var(--accent-soft)}
-  .hero p{max-width:52ch;font-size:1.08rem;opacity:.92}
+  .hero p.lead{max-width:52ch;font-size:1.08rem;opacity:.92}
   .hero .ctas{display:flex;flex-wrap:wrap;gap:14px;margin-top:34px}
-  .scroll-hint{position:absolute;right:24px;bottom:28px;z-index:2;font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;writing-mode:vertical-rl;opacity:.7}
+  .scroll-hint{position:absolute;left:50%;bottom:26px;z-index:5;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;font-size:.66rem;letter-spacing:.25em;text-transform:uppercase;opacity:.8}
+  .mouse{width:24px;height:38px;border:2px solid rgba(255,255,255,.7);border-radius:14px;position:relative}
+  .mouse::after{content:"";position:absolute;left:50%;top:7px;width:4px;height:8px;margin-left:-2px;border-radius:2px;background:#fff;animation:wheel 1.8s infinite}
+  @keyframes wheel{0%{opacity:0;transform:translateY(0)}30%{opacity:1}100%{opacity:0;transform:translateY(12px)}}
+  .cloud{animation:drift linear infinite}
+  @keyframes drift{from{transform:translateX(-300px)}to{transform:translateX(1700px)}}
+  .bird{animation:fly 22s linear infinite}
+  .bird path{animation:flap .5s ease-in-out infinite alternate;transform-origin:center}
+  @keyframes fly{from{transform:translate(-120px,0)}to{transform:translate(1600px,-120px)}}
+  @keyframes flap{to{transform:scaleY(.4)}}
+  .tree{transform-box:fill-box;transform-origin:50% 100%;animation:sway 5s ease-in-out infinite}
+  @keyframes sway{0%,100%{transform:rotate(-1.5deg)}50%{transform:rotate(1.5deg)}}
 
-  section{padding:120px 0}
-  .chapter-no{font-family:var(--serif);font-style:italic;font-size:1.1rem;color:var(--accent)}
+  /* ===== Marquee ===== */
+  .marquee{background:var(--accent);color:#fff;overflow:hidden;padding:18px 0;white-space:nowrap;position:relative;z-index:6}
+  .marquee .track{display:inline-flex;gap:48px;animation:mq 28s linear infinite;font-family:var(--serif);font-size:1.8rem;font-style:italic}
+  .marquee .track span{display:inline-flex;align-items:center;gap:48px}
+  .marquee .track i{width:10px;height:10px;border-radius:50%;background:var(--accent-soft);display:inline-block}
+  .marquee:hover .track{animation-play-state:paused}
+  @keyframes mq{to{transform:translateX(-50%)}}
 
-  /* história */
-  .story{display:grid;grid-template-columns:1fr 1.1fr;gap:80px;align-items:center}
-  .story h2{font-size:clamp(2.2rem,4.5vw,3.6rem);margin:14px 0 24px}
+  section{padding:130px 0;position:relative}
+
+  /* ===== História ===== */
+  .story{display:grid;grid-template-columns:1fr 1.05fr;gap:80px;align-items:center}
+  .story h2{margin:14px 0 24px}
   .story p{color:var(--muted);margin-bottom:16px;max-width:58ch}
-  .year-card{position:relative;background:var(--primary);color:#fff;border-radius:28px 28px 28px 120px;padding:56px 48px;overflow:hidden}
-  .year-card .big{font-family:var(--serif);font-size:clamp(5rem,12vw,9rem);font-weight:700;line-height:.9;color:var(--accent-soft)}
+  .year-card{position:relative;background:var(--primary);color:#fff;border-radius:28px 28px 28px 140px;padding:60px 52px;overflow:hidden;transform-style:preserve-3d}
+  .year-card .big{font-family:var(--serif);font-size:clamp(5rem,12vw,9.5rem);font-weight:700;line-height:.9;color:var(--accent-soft);font-variant-numeric:tabular-nums}
   .story .year-card p{color:#fff;opacity:.88;margin-top:14px;max-width:32ch}
-  .year-card svg.leaf{position:absolute;right:-30px;top:-30px;width:220px;opacity:.12}
+  .year-card .leaf{position:absolute;right:-30px;top:-30px;width:240px;opacity:.14;animation:spin 40s linear infinite}
+  .year-card .ring{position:absolute;left:-80px;bottom:-80px;width:260px;height:260px;border-radius:50%;border:1px dashed rgba(233,196,106,.35);animation:spin 30s linear infinite reverse}
+  @keyframes spin{to{transform:rotate(360deg)}}
 
-  .timeline{margin-top:80px;display:grid;grid-template-columns:repeat(4,1fr);gap:24px;position:relative}
-  .timeline::before{content:"";position:absolute;top:9px;left:0;right:0;height:1px;background:var(--border)}
-  .tl{position:relative;padding-top:36px}
-  .tl::before{content:"";position:absolute;top:2px;left:0;width:16px;height:16px;border-radius:50%;background:var(--bg);border:3px solid var(--accent)}
-  .tl h3{font-size:1.5rem;color:var(--primary)}
+  .timeline{margin-top:90px;display:grid;grid-template-columns:repeat(4,1fr);gap:24px;position:relative}
+  .tl-line{position:absolute;top:9px;left:0;right:0;height:2px;background:var(--border)}
+  .tl-line i{position:absolute;inset:0;background:linear-gradient(90deg,var(--accent),var(--primary-2));transform-origin:0 50%;transform:scaleX(0)}
+  .tl{position:relative;padding-top:38px}
+  .tl::before{content:"";position:absolute;top:2px;left:0;width:16px;height:16px;border-radius:50%;background:var(--bg);border:3px solid var(--accent);transition:background .4s,transform .4s}
+  .tl.on::before{background:var(--accent);transform:scale(1.25)}
+  .tl h3{font-size:1.55rem;color:var(--primary)}
   .tl p{font-size:.92rem;color:var(--muted)}
 
-  /* frentes */
-  .frentes{background:var(--bg-2)}
-  .head{display:flex;justify-content:space-between;align-items:flex-end;gap:40px;margin-bottom:56px;flex-wrap:wrap}
-  .head h2{font-size:clamp(2.2rem,4.5vw,3.6rem);margin-top:14px;max-width:16ch}
+  /* ===== Números ===== */
+  .stats{position:relative;background:var(--deep);color:#fff;padding:100px 0;overflow:hidden}
+  .stats .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;position:relative;z-index:2}
+  .stat{border-left:1px solid rgba(255,255,255,.15);padding-left:24px}
+  .stat .n{font-family:var(--serif);font-size:clamp(3rem,6vw,5rem);font-weight:700;color:var(--accent-soft);line-height:1;font-variant-numeric:tabular-nums}
+  .stat p{opacity:.75;font-size:.9rem;margin-top:8px}
+  .stats .bgword{position:absolute;left:0;top:50%;transform:translateY(-50%);font-family:var(--serif);font-size:22vw;font-weight:700;color:rgba(255,255,255,.03);white-space:nowrap;line-height:1;pointer-events:none}
+
+  /* ===== Frentes (pin horizontal) ===== */
+  .frentes{background:var(--bg-2);padding:0;overflow:hidden}
+  .frentes-inner{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:96px 0 40px}
+  @media (min-width:761px){.frentes .head{margin-bottom:28px;align-items:flex-end}.frentes .head h2{max-width:none;font-size:clamp(2.2rem,3.6vw,3.2rem)}.unit .art{aspect-ratio:16/9}.unit .body{padding:20px 24px 24px}.hbar{margin-top:28px}}
+  @media (min-width:761px) and (max-height:820px){.frentes .head p{display:none}.unit ul{display:none}}
+  .head{display:flex;justify-content:space-between;align-items:flex-end;gap:40px;margin-bottom:48px;flex-wrap:wrap}
+  .head h2{margin-top:14px;max-width:16ch}
   .head p{max-width:44ch;color:var(--muted)}
-  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:22px}
-  .unit{background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column;transition:transform .3s,box-shadow .3s;border:1px solid transparent}
-  .unit:hover{transform:translateY(-6px);box-shadow:0 20px 40px rgba(28,25,23,.12);border-color:var(--border)}
+  .hscroll{display:flex;gap:28px;padding:0 max(24px,calc((100vw - 1180px)/2 + 24px));will-change:transform;width:max-content}
+  .unit{width:min(380px,78vw);background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column;transform-style:preserve-3d;transition:box-shadow .3s;position:relative;flex:none}
+  .unit:hover{box-shadow:0 30px 60px rgba(28,25,23,.18)}
+  .unit .glare{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at var(--gx,50%) var(--gy,50%),rgba(255,255,255,.45),transparent 50%);opacity:0;transition:opacity .3s;z-index:3}
+  .unit:hover .glare{opacity:1}
   .unit .art{aspect-ratio:4/3;position:relative;overflow:hidden}
-  .unit .art svg{width:100%;height:100%}
-  .unit .body{padding:26px 24px 30px;flex:1;display:flex;flex-direction:column}
+  .unit .art svg{width:100%;height:100%;transition:transform .8s cubic-bezier(.2,.7,.2,1)}
+  .unit:hover .art svg{transform:scale(1.07)}
+  .unit .num{position:absolute;top:16px;left:18px;z-index:2;font-family:var(--serif);font-size:1.1rem;font-style:italic;color:var(--primary);background:rgba(255,255,255,.75);padding:2px 12px;border-radius:999px}
+  .unit .body{padding:26px 26px 30px;flex:1;display:flex;flex-direction:column}
   .unit .tag{font-size:.7rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
-  .unit h3{font-size:1.9rem;margin:6px 0 10px;color:var(--primary)}
-  .unit p{font-size:.92rem;color:var(--muted);flex:1}
+  .unit h3{font-size:2.1rem;margin:6px 0 10px;color:var(--primary)}
+  .unit p{font-size:.93rem;color:var(--muted);flex:1}
   .unit ul{list-style:none;margin-top:16px;display:grid;gap:6px}
   .unit li{font-size:.85rem;display:flex;gap:8px;align-items:center}
   .unit li svg{width:16px;height:16px;color:var(--primary-2);flex:none}
+  .hbar{margin:40px auto 0;width:min(1132px,calc(100% - 48px));height:3px;background:var(--border);border-radius:3px;overflow:hidden}
+  .hbar i{display:block;height:100%;width:100%;background:var(--accent);transform-origin:0 50%;transform:scaleX(0)}
+  /* animações das ilustrações */
+  .egg{transform-box:fill-box;transform-origin:50% 100%;animation:wobble 3s ease-in-out infinite}
+  .egg.e2{animation-delay:-1.4s}
+  @keyframes wobble{0%,100%{transform:rotate(0)}20%{transform:rotate(-6deg)}40%{transform:rotate(5deg)}60%{transform:rotate(-2deg)}}
+  .slice{transform-box:fill-box;transform-origin:center;animation:spin 14s linear infinite}
+  .orange{transform-box:fill-box;transform-origin:50% 100%;animation:bounce 2.6s cubic-bezier(.5,0,.5,1) infinite}
+  @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+  .branch{transform-box:fill-box;transform-origin:0 100%;animation:sway 4s ease-in-out infinite}
+  .steam path{stroke-dasharray:40;animation:steam 3s linear infinite}
+  @keyframes steam{to{stroke-dashoffset:-80}}
+  .cow{animation:graze 6s ease-in-out infinite}
+  @keyframes graze{0%,100%{transform:translateX(0)}50%{transform:translateX(18px)}}
+  .tail{transform-box:fill-box;transform-origin:100% 0;animation:tail 1.2s ease-in-out infinite alternate}
+  @keyframes tail{from{transform:rotate(-20deg)}to{transform:rotate(25deg)}}
+  .sunsm{animation:pulse 4s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+  @keyframes pulse{50%{transform:scale(1.12)}}
 
-  /* valores */
+  /* ===== Valores ===== */
   .values{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:56px}
-  .value{padding:36px 30px;border-radius:var(--radius);border:1px solid var(--border);background:var(--card)}
-  .ico{width:54px;height:54px;border-radius:16px;display:grid;place-items:center;background:#E7F1E9;color:var(--primary);margin-bottom:20px}
-  .ico svg{width:26px;height:26px}
-  .value h3{font-size:1.6rem;margin-bottom:8px}
+  .value{position:relative;padding:38px 30px;border-radius:var(--radius);border:1px solid var(--border);background:var(--card);overflow:hidden;transition:transform .4s cubic-bezier(.2,.7,.2,1),border-color .3s}
+  .value::before{content:"";position:absolute;inset:auto 0 0 0;height:4px;background:linear-gradient(90deg,var(--accent),var(--primary-2));transform:scaleX(0);transform-origin:left;transition:transform .5s cubic-bezier(.2,.7,.2,1)}
+  .value:hover{transform:translateY(-8px);border-color:transparent}
+  .value:hover::before{transform:scaleX(1)}
+  .ico{width:58px;height:58px;border-radius:18px;display:grid;place-items:center;background:#E7F1E9;color:var(--primary);margin-bottom:22px;transition:transform .5s,background .3s,color .3s}
+  .value:hover .ico{transform:rotate(-8deg) scale(1.1);background:var(--primary);color:#fff}
+  .ico svg{width:28px;height:28px}
+  .ico svg *{stroke-dasharray:100;stroke-dashoffset:100}
+  .value.drawn .ico svg *{animation:draw 1.6s ease forwards}
+  .value h3{font-size:1.7rem;margin-bottom:8px}
   .value p{color:var(--muted);font-size:.93rem}
 
-  /* faixa */
-  .band{background:var(--primary);color:#fff;padding:90px 0;position:relative;overflow:hidden}
-  .band blockquote{font-family:var(--serif);font-size:clamp(1.8rem,4vw,3rem);font-style:italic;line-height:1.25;max-width:24ch}
-  .band blockquote span{color:var(--accent-soft)}
-  .band cite{display:block;margin-top:22px;font-style:normal;font-size:.8rem;letter-spacing:.18em;text-transform:uppercase;opacity:.75}
-  .band svg.rows{position:absolute;right:-60px;bottom:-40px;width:520px;opacity:.12}
+  /* ===== Quote scrub ===== */
+  .band{background:var(--primary);color:#fff;padding:150px 0;position:relative;overflow:hidden}
+  .band blockquote{font-family:var(--serif);font-size:clamp(2.2rem,5.5vw,4.6rem);font-style:italic;line-height:1.15;max-width:20ch}
+  .band blockquote .word{opacity:.18;transition:none}
+  .band cite{display:block;margin-top:26px;font-style:normal;font-size:.8rem;letter-spacing:.18em;text-transform:uppercase;opacity:.75}
+  .band .rows{position:absolute;right:-60px;bottom:-40px;width:600px;opacity:.14}
+  .band .rows path{stroke-dasharray:500;stroke-dashoffset:500}
 
-  /* contato */
+  /* ===== Contato ===== */
   .contact{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start}
-  .contact h2{font-size:clamp(2.2rem,4.5vw,3.6rem);margin:14px 0 20px}
-  .contact > div > p{color:var(--muted);max-width:46ch}
+  .contact h2{margin:14px 0 20px}
+  .contact .intro{color:var(--muted);max-width:46ch}
   .info{margin-top:34px;display:grid;gap:18px}
-  .info div{display:flex;gap:14px;align-items:flex-start}
+  .info > div{display:flex;gap:14px;align-items:flex-start}
   .info svg{width:22px;height:22px;color:var(--accent);flex:none;margin-top:3px}
+  .info .pin{animation:bounce 2s ease-in-out infinite}
   .info strong{display:block;font-size:.8rem;letter-spacing:.1em;text-transform:uppercase}
   .info span{color:var(--muted);font-size:.95rem}
-  form{background:var(--card);border-radius:24px;padding:40px;box-shadow:var(--shadow);display:grid;gap:18px}
-  label{font-size:.82rem;font-weight:600;display:grid;gap:8px}
-  input,select,textarea{font:inherit;font-weight:400;padding:14px 16px;border-radius:12px;border:1.5px solid var(--border);background:var(--bg);color:var(--fg);transition:border-color .2s}
-  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--primary-2);box-shadow:0 0 0 3px rgba(21,128,61,.15)}
-  textarea{min-height:120px;resize:vertical}
+  form{position:relative;background:var(--card);border-radius:26px;padding:42px;box-shadow:var(--shadow);display:grid;gap:20px;overflow:hidden}
+  .field{position:relative}
+  .field input,.field textarea,.field select{width:100%;font:inherit;padding:22px 16px 10px;border-radius:14px;border:1.5px solid var(--border);background:var(--bg);color:var(--fg);transition:border-color .25s,box-shadow .25s}
+  .field select{padding:14px 16px}
+  .field label{position:absolute;left:17px;top:16px;font-size:.92rem;color:var(--muted);pointer-events:none;transition:all .25s cubic-bezier(.2,.7,.2,1)}
+  .field input:focus+label,.field input:not(:placeholder-shown)+label,.field textarea:focus+label,.field textarea:not(:placeholder-shown)+label{top:6px;font-size:.7rem;font-weight:600;color:var(--primary-2);letter-spacing:.06em}
+  .field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--primary-2);box-shadow:0 0 0 4px rgba(21,128,61,.14)}
+  .field textarea{min-height:130px;resize:vertical}
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   .form-ok{display:none;padding:14px 16px;border-radius:12px;background:#E7F1E9;color:var(--primary);font-size:.9rem}
+  .leafburst{position:absolute;pointer-events:none;width:14px;height:14px;z-index:5}
 
-  footer{background:#0f2a1a;color:rgba(255,255,255,.75);padding:60px 0 30px;font-size:.88rem}
+  footer{background:var(--deep);color:rgba(255,255,255,.75);padding:70px 0 30px;font-size:.88rem;overflow:hidden;position:relative}
   .foot{display:flex;justify-content:space-between;gap:30px;flex-wrap:wrap;padding-bottom:30px;border-bottom:1px solid rgba(255,255,255,.12)}
   .foot .logo{color:#fff}
   .foot ul{list-style:none;display:flex;gap:24px;flex-wrap:wrap}
-  .foot a{text-decoration:none}
+  .foot a{text-decoration:none;transition:color .2s}
   .foot a:hover{color:var(--accent-soft)}
   .copy{padding-top:24px;font-size:.78rem;opacity:.7}
+  .bigname{font-family:var(--serif);font-weight:700;font-size:clamp(4rem,17vw,15rem);line-height:.8;color:rgba(233,196,106,.08);margin-top:30px;text-align:center;letter-spacing:.02em;white-space:nowrap}
 
-  /* revelar */
-  .reveal{opacity:0;transform:translateY(28px);transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1)}
-  .reveal.in{opacity:1;transform:none}
-  .d1{transition-delay:.08s}.d2{transition-delay:.16s}.d3{transition-delay:.24s}
+  /* topo */
+  #totop{position:fixed;right:22px;bottom:22px;z-index:90;width:54px;height:54px;border-radius:50%;border:0;background:var(--card);box-shadow:var(--shadow);cursor:pointer;display:grid;place-items:center;opacity:0;transform:translateY(20px) scale(.8);pointer-events:none;transition:opacity .3s,transform .3s}
+  #totop.show{opacity:1;transform:none;pointer-events:auto}
+  #totop svg.ringp{position:absolute;inset:0;transform:rotate(-90deg)}
+  #totop svg.ringp circle{fill:none;stroke:var(--accent);stroke-width:3;stroke-dasharray:157;stroke-dashoffset:157}
+  #totop .arr{width:20px;height:20px;color:var(--primary);transition:transform .3s}
+  #totop:hover .arr{transform:translateY(-3px)}
 
   @media (max-width:1000px){
-    .grid4{grid-template-columns:repeat(2,1fr)}
     .story,.contact{grid-template-columns:1fr;gap:48px}
     .timeline{grid-template-columns:repeat(2,1fr);row-gap:40px}
-    .timeline::before{display:none}
+    .tl-line{display:none}
     .values{grid-template-columns:1fr}
+    .stats .grid{grid-template-columns:repeat(2,1fr);row-gap:40px}
   }
   @media (max-width:760px){
-    section{padding:84px 0}
+    section{padding:90px 0}
     .wrap{padding:0 16px}
     .menu,.nav .btn{display:none}
     .burger{display:block}
     .menu.open{display:flex;flex-direction:column;position:absolute;top:76px;left:0;right:0;background:var(--bg);padding:24px 16px;gap:20px;box-shadow:var(--shadow)}
     .menu.open a{color:var(--fg)}
-    .grid4,.row2{grid-template-columns:1fr}
-    .timeline{grid-template-columns:1fr}
+    .row2,.timeline{grid-template-columns:1fr}
+    .hscroll{flex-direction:column;width:auto;padding:0 16px}
+    .unit{width:100%}
+    .hbar{display:none}
+    .frentes-inner{padding:90px 0}
     form{padding:26px}
     .year-card{padding:40px 30px;border-radius:24px 24px 24px 80px}
-    .scroll-hint{display:none}
+    .band{padding:100px 0}
   }
   @media (prefers-reduced-motion:reduce){
-    html{scroll-behavior:auto}
-    .reveal{opacity:1;transform:none;transition:none}
-    *{animation:none!important;transition:none!important}
+    *,*::before,*::after{animation:none!important;transition:none!important}
+    .band blockquote .word{opacity:1}
+    .ico svg *,.band .rows path{stroke-dashoffset:0}
+    #loader{display:none}
   }
-  @keyframes sway{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
-  .sun{animation:sway 8s ease-in-out infinite}
 </style>
 </head>
-<body>
+<body class="loading">
 <a class="skip" href="#conteudo">Pular para o conteúdo</a>
+
+<div id="loader" aria-hidden="true">
+  <div class="in">
+    <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><circle cx="20" cy="20" r="19"/><path d="M20 31V15M20 21c-5 0-8-3-8-8 5 0 8 3 8 8Zm0 0c5 0 8-3 8-8-5 0-8 3-8 8Z"/></svg>
+    <div class="name">Shigueno</div>
+    <div class="pct"><span id="pct">0</span>%</div>
+  </div>
+</div>
+
+<div class="cur" aria-hidden="true"></div><div class="cur-ring" aria-hidden="true"></div>
 <div id="progress" aria-hidden="true"></div>
 
 <header id="top">
@@ -198,7 +311,7 @@
         <li><a href="#contato">Contato</a></li>
       </ul>
     </nav>
-    <a href="#contato" class="btn btn-accent">Fale conosco</a>
+    <a href="#contato" class="btn btn-accent magnetic">Fale conosco</a>
     <button class="burger" id="burger" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
     </button>
@@ -206,139 +319,175 @@
 </header>
 
 <main id="conteudo">
-  <!-- Intro hook -->
+  <!-- ===== Intro hook ===== -->
   <section class="hero" aria-label="Apresentação" style="padding:0">
-    <div class="hero-art" aria-hidden="true">
+    <div class="layer" data-depth="0" aria-hidden="true">
       <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
-        <defs>
-          <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2F6B45"/><stop offset=".55" stop-color="#C99A3E"/><stop offset="1" stop-color="#E9C46A"/></linearGradient>
-          <linearGradient id="h1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2E6A3F"/><stop offset="1" stop-color="#173F25"/></linearGradient>
-          <linearGradient id="h2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1E5532"/><stop offset="1" stop-color="#0F2E1B"/></linearGradient>
-        </defs>
+        <defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2F6B45"/><stop offset=".55" stop-color="#C99A3E"/><stop offset="1" stop-color="#F2CF7A"/></linearGradient>
+        <radialGradient id="glow"><stop offset="0" stop-color="#FFF1C4"/><stop offset=".5" stop-color="#F6DFA0" stop-opacity=".6"/><stop offset="1" stop-color="#F6DFA0" stop-opacity="0"/></radialGradient></defs>
         <rect width="1440" height="900" fill="url(#sky)"/>
-        <circle class="sun" cx="1050" cy="430" r="110" fill="#F6DFA0" opacity=".85"/>
-        <path d="M0 520C220 460 420 470 640 510s460 40 800-30V900H0Z" fill="#5C8A4E" opacity=".7"/>
-        <path d="M0 600c260-70 520-60 760-10s440 40 680-20V900H0Z" fill="url(#h1)"/>
-        <g stroke="#3F7D4E" stroke-width="3" opacity=".55">
-          <path d="M-20 700 C300 640 700 650 1460 610"/><path d="M-20 740 C300 680 700 690 1460 650"/><path d="M-20 785 C300 725 700 735 1460 695"/><path d="M-20 835 C300 775 700 785 1460 745"/>
+        <g id="sun"><circle cx="1040" cy="430" r="260" fill="url(#glow)"/><circle cx="1040" cy="430" r="105" fill="#FBE7B0"/></g>
+        <g fill="#fff" opacity=".35">
+          <g class="cloud" style="animation-duration:90s"><ellipse cx="0" cy="170" rx="120" ry="26"/><ellipse cx="50" cy="152" rx="70" ry="30"/></g>
+          <g class="cloud" style="animation-duration:130s;animation-delay:-60s"><ellipse cx="0" cy="260" rx="160" ry="22"/><ellipse cx="-40" cy="245" rx="80" ry="26"/></g>
+          <g class="cloud" style="animation-duration:110s;animation-delay:-30s"><ellipse cx="0" cy="110" rx="90" ry="18"/></g>
         </g>
-        <path d="M0 760c300-40 620-30 900 10s380 20 540 0V900H0Z" fill="url(#h2)"/>
-        <g fill="#123821">
-          <circle cx="210" cy="590" r="38"/><rect x="206" y="610" width="8" height="40"/>
-          <circle cx="270" cy="600" r="28"/><rect x="267" y="615" width="6" height="34"/>
-          <circle cx="1240" cy="560" r="44"/><rect x="1236" y="585" width="9" height="46"/>
+        <g fill="none" stroke="#1d3b26" stroke-width="2.4" stroke-linecap="round">
+          <g class="bird"><path d="M200 300q10-10 20 0q10-10 20 0"/></g>
+          <g class="bird" style="animation-delay:-4s;animation-duration:26s"><path d="M160 340q8-8 16 0q8-8 16 0"/></g>
+          <g class="bird" style="animation-delay:-9s;animation-duration:24s"><path d="M240 360q7-7 14 0q7-7 14 0"/></g>
         </g>
       </svg>
     </div>
+    <div class="layer" data-depth="1" aria-hidden="true">
+      <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice"><path d="M0 520C220 460 420 470 640 510s460 40 800-30V900H0Z" fill="#5C8A4E" opacity=".75"/></svg>
+    </div>
+    <div class="layer" data-depth="2" aria-hidden="true">
+      <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+        <defs><linearGradient id="h1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2E6A3F"/><stop offset="1" stop-color="#173F25"/></linearGradient></defs>
+        <path d="M0 600c260-70 520-60 760-10s440 40 680-20V900H0Z" fill="url(#h1)"/>
+        <g stroke="#3F7D4E" stroke-width="3" opacity=".6" fill="none"><path d="M-20 700 C300 640 700 650 1460 610"/><path d="M-20 740 C300 680 700 690 1460 650"/><path d="M-20 785 C300 725 700 735 1460 695"/></g>
+        <g fill="#123821"><g class="tree"><circle cx="210" cy="590" r="38"/><rect x="206" y="610" width="8" height="40"/></g><g class="tree" style="animation-delay:-2s"><circle cx="270" cy="600" r="28"/><rect x="267" y="615" width="6" height="34"/></g><g class="tree" style="animation-delay:-1s"><circle cx="1240" cy="560" r="44"/><rect x="1236" y="585" width="9" height="46"/></g></g>
+      </svg>
+    </div>
+    <div class="layer" data-depth="3" aria-hidden="true">
+      <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+        <defs><linearGradient id="h2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1E5532"/><stop offset="1" stop-color="#0F2E1B"/></linearGradient></defs>
+        <path d="M0 760c300-40 620-30 900 10s380 20 540 0V900H0Z" fill="url(#h2)"/>
+        <g stroke="#2E6A3F" stroke-width="2" fill="none" stroke-linecap="round"><path class="tree" d="M80 790q4-30 0-50M92 790q8-26 14-40M70 790q-6-24-14-34"/><path class="tree" style="animation-delay:-1.5s" d="M1320 780q4-30 0-50M1332 780q8-26 14-40M1310 780q-6-24-14-34"/></g>
+      </svg>
+    </div>
+    <canvas id="particles" aria-hidden="true"></canvas>
     <div class="wrap">
-      <p class="eyebrow reveal">Tatuí · São Paulo · Desde 1932</p>
-      <h1 class="reveal d1">Da terra, com <em>cuidado</em> de família.</h1>
-      <p class="reveal d2">Há mais de nove décadas o Grupo Shigueno produz alimentos com dedicação, respeito ao campo e compromisso com quem está à mesa. Ovos, citros, café e pecuária.</p>
-      <div class="ctas reveal d3">
-        <a href="#frentes" class="btn btn-accent">Conheça nossos negócios
+      <p class="eyebrow h-in">Tatuí · São Paulo · Desde 1932</p>
+      <h1 class="split" aria-label="Da terra, com cuidado de família.">Da terra, com <em>cuidado</em> de família.</h1>
+      <p class="lead h-in">Há mais de nove décadas o Grupo Shigueno produz alimentos com dedicação, respeito ao campo e compromisso com quem está à mesa. Ovos, citros, café e pecuária.</p>
+      <div class="ctas h-in">
+        <a href="#frentes" class="btn btn-accent magnetic">Conheça nossos negócios
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-        <a href="#historia" class="btn btn-ghost">Nossa história</a>
+        <a href="#historia" class="btn btn-ghost magnetic">Nossa história</a>
       </div>
     </div>
-    <span class="scroll-hint" aria-hidden="true">Role para descobrir</span>
+    <div class="scroll-hint" aria-hidden="true"><span class="mouse"></span>Role</div>
   </section>
 
-  <!-- Capítulo 1: origem -->
+  <div class="marquee" aria-hidden="true">
+    <div class="track">
+      <span>Ovos <i></i> Citros <i></i> Café <i></i> Pecuária <i></i> Tradição desde 1932 <i></i> Tatuí · SP <i></i></span>
+      <span>Ovos <i></i> Citros <i></i> Café <i></i> Pecuária <i></i> Tradição desde 1932 <i></i> Tatuí · SP <i></i></span>
+    </div>
+  </div>
+
+  <!-- ===== Capítulo 1 ===== -->
   <section id="historia">
     <div class="wrap">
       <div class="story">
-        <div>
-          <span class="chapter-no reveal">Capítulo I — A origem</span>
-          <h2 class="reveal d1">Uma história plantada há mais de 90 anos.</h2>
-          <p class="reveal d2">Fundado por Haruo Shigueno, o grupo nasceu do trabalho de uma família de imigrantes que encontrou no interior paulista o lugar para cultivar raízes.</p>
-          <p class="reveal d2">Geração após geração, a família manteve os mesmos princípios — trabalho sério, respeito à terra e qualidade em cada etapa — e expandiu a atuação para novas culturas.</p>
-          <a href="#frentes" class="btn btn-accent reveal d3" style="margin-top:16px">Ver o que produzimos</a>
+        <div class="stagger">
+          <span class="chapter-no">Capítulo I — A origem</span>
+          <h2 class="h2 split">Uma história plantada há mais de 90 anos.</h2>
+          <p>Fundado por Haruo Shigueno, o grupo nasceu do trabalho de uma família de imigrantes que encontrou no interior paulista o lugar para cultivar raízes.</p>
+          <p>Geração após geração, a família manteve os mesmos princípios — trabalho sério, respeito à terra e qualidade em cada etapa — e expandiu a atuação para novas culturas.</p>
+          <a href="#frentes" class="btn btn-accent magnetic" style="margin-top:16px">Ver o que produzimos</a>
         </div>
-        <div class="year-card reveal d2">
+        <div class="year-card tilt" id="yearCard">
+          <div class="ring" aria-hidden="true"></div>
           <svg class="leaf" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1" aria-hidden="true"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
-          <div class="big">1932</div>
+          <div class="big" data-count="1932" data-from="1850">1932</div>
           <p>O ano em que a família Shigueno começou a escrever sua história no campo brasileiro.</p>
         </div>
       </div>
 
-      <div class="timeline" aria-label="Linha do tempo">
-        <div class="tl reveal"><h3>1932</h3><p>Início das atividades da família no interior de São Paulo.</p></div>
-        <div class="tl reveal d1"><h3>Granja</h3><p>A avicultura de postura se torna um dos pilares do grupo.</p></div>
-        <div class="tl reveal d2"><h3>Diversificação</h3><p>Expansão para citricultura, café e pecuária.</p></div>
-        <div class="tl reveal d3"><h3>Hoje</h3><p>Novas gerações conduzem o grupo com tecnologia e a mesma essência.</p></div>
+      <div class="timeline" id="timeline" aria-label="Linha do tempo">
+        <div class="tl-line" aria-hidden="true"><i></i></div>
+        <div class="tl"><h3>1932</h3><p>Início das atividades da família no interior de São Paulo.</p></div>
+        <div class="tl"><h3>Granja</h3><p>A avicultura de postura se torna um dos pilares do grupo.</p></div>
+        <div class="tl"><h3>Diversificação</h3><p>Expansão para citricultura, café e pecuária.</p></div>
+        <div class="tl"><h3>Hoje</h3><p>Novas gerações conduzem o grupo com tecnologia e a mesma essência.</p></div>
       </div>
     </div>
   </section>
 
-  <!-- Capítulo 2: frentes de negócio -->
+  <!-- ===== Números ===== -->
+  <div class="stats">
+    <div class="bgword" aria-hidden="true">Shigueno · Shigueno ·</div>
+    <div class="wrap grid">
+      <div class="stat"><div class="n"><span data-count="90">90</span>+</div><p>anos de história no campo</p></div>
+      <div class="stat"><div class="n" data-count="4">4</div><p>frentes de negócio</p></div>
+      <div class="stat"><div class="n" data-count="1">1</div><p>família à frente do grupo</p></div>
+      <div class="stat"><div class="n"><span data-count="100">100</span>%</div><p>compromisso com a qualidade</p></div>
+    </div>
+  </div>
+
+  <!-- ===== Capítulo 2 (pin horizontal) ===== -->
   <section id="frentes" class="frentes">
-    <div class="wrap">
-      <div class="head">
+    <div class="frentes-inner">
+      <div class="wrap head stagger">
         <div>
-          <span class="chapter-no reveal">Capítulo II — O que cultivamos</span>
-          <h2 class="reveal d1">Quatro frentes, um mesmo cuidado.</h2>
+          <span class="chapter-no">Capítulo II — O que cultivamos</span>
+          <h2 class="h2 split">Quatro frentes, um mesmo cuidado.</h2>
         </div>
-        <p class="reveal d2">Cada negócio do grupo segue o mesmo padrão: controle de ponta a ponta, bem-estar e respeito ao meio ambiente.</p>
+        <p>Cada negócio do grupo segue o mesmo padrão: controle de ponta a ponta, bem-estar e respeito ao meio ambiente.</p>
       </div>
 
-      <div class="grid4">
-        <article class="unit reveal">
-          <div class="art" aria-hidden="true"><svg viewBox="0 0 400 300"><rect width="400" height="300" fill="#F3E3BF"/><circle cx="320" cy="70" r="40" fill="#E9C46A"/><ellipse cx="170" cy="175" rx="56" ry="72" fill="#FFF8EC"/><ellipse cx="240" cy="190" rx="48" ry="62" fill="#E8C9A0"/><ellipse cx="160" cy="160" rx="14" ry="22" fill="#fff" opacity=".7"/><path d="M0 250h400v50H0z" fill="#C99A3E" opacity=".45"/></svg></div>
+      <div class="hscroll" id="hscroll">
+        <article class="unit tilt">
+          <span class="glare"></span><span class="num">01</span>
+          <div class="art" aria-hidden="true"><svg viewBox="0 0 400 300"><rect width="400" height="300" fill="#F3E3BF"/><circle class="sunsm" cx="320" cy="70" r="40" fill="#E9C46A"/><path d="M0 250h400v50H0z" fill="#C99A3E" opacity=".45"/><g class="egg"><ellipse cx="170" cy="178" rx="56" ry="72" fill="#FFF8EC"/><ellipse cx="156" cy="160" rx="14" ry="22" fill="#fff" opacity=".8"/></g><g class="egg e2"><ellipse cx="245" cy="192" rx="48" ry="60" fill="#E8C9A0"/><ellipse cx="232" cy="176" rx="11" ry="17" fill="#fff" opacity=".45"/></g></svg></div>
           <div class="body">
-            <span class="tag">Avicultura</span>
-            <h3>Ovos</h3>
+            <span class="tag">Avicultura</span><h3>Ovos</h3>
             <p>Produção de ovos com rigor sanitário, rastreabilidade e frescor do galpão até o ponto de venda.</p>
             <ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Controle sanitário</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Rastreabilidade</li></ul>
           </div>
         </article>
-        <article class="unit reveal d1">
-          <div class="art" aria-hidden="true"><svg viewBox="0 0 400 300"><rect width="400" height="300" fill="#E4EED9"/><path d="M120 60c30-30 70-20 80 10-35 15-60 10-80-10Z" fill="#3F7D4E"/><circle cx="170" cy="170" r="74" fill="#F08A24"/><circle cx="170" cy="170" r="74" fill="none" stroke="#D9701A" stroke-width="3"/><circle cx="280" cy="200" r="52" fill="#F4A340"/><circle cx="280" cy="200" r="36" fill="#FCD38D"/><g stroke="#F4A340" stroke-width="3"><path d="M280 164v72M244 200h72M255 175l50 50M305 175l-50 50"/></g></svg></div>
+        <article class="unit tilt">
+          <span class="glare"></span><span class="num">02</span>
+          <div class="art" aria-hidden="true"><svg viewBox="0 0 400 300"><rect width="400" height="300" fill="#E4EED9"/><g class="orange"><path d="M150 100c25-30 65-25 75 5-35 12-58 8-75-5Z" fill="#3F7D4E"/><circle cx="170" cy="172" r="74" fill="#F08A24"/><circle cx="145" cy="145" r="18" fill="#F8B060" opacity=".6"/></g><g class="slice"><circle cx="285" cy="205" r="52" fill="#F4A340"/><circle cx="285" cy="205" r="38" fill="#FCD38D"/><g stroke="#F4A340" stroke-width="3"><path d="M285 167v76M247 205h76M258 178l54 54M312 178l-54 54"/></g></g></svg></div>
           <div class="body">
-            <span class="tag">Citricultura</span>
-            <h3>Citros</h3>
+            <span class="tag">Citricultura</span><h3>Citros</h3>
             <p>Pomares de laranja conduzidos com manejo técnico e foco em sanidade das plantas e qualidade da fruta.</p>
             <ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Manejo técnico</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Fruta de qualidade</li></ul>
           </div>
         </article>
-        <article class="unit reveal d2">
-          <div class="art" aria-hidden="true"><svg viewBox="0 0 400 300"><rect width="400" height="300" fill="#EADCC8"/><path d="M60 250c40-90 110-150 200-170" stroke="#3F6B3A" stroke-width="5" fill="none"/><g fill="#4E8A4A"><ellipse cx="120" cy="170" rx="34" ry="14" transform="rotate(-30 120 170)"/><ellipse cx="200" cy="110" rx="34" ry="14" transform="rotate(-20 200 110)"/></g><g fill="#8E2C1E"><circle cx="160" cy="160" r="16"/><circle cx="182" cy="150" r="16"/><circle cx="170" cy="178" r="16"/><circle cx="240" cy="112" r="15"/><circle cx="258" cy="128" r="15"/></g><g fill="#B5651D"><circle cx="160" cy="160" r="5" opacity=".6"/><circle cx="240" cy="112" r="5" opacity=".6"/></g></svg></div>
+        <article class="unit tilt">
+          <span class="glare"></span><span class="num">03</span>
+          <div class="art" aria-hidden="true"><svg viewBox="0 0 400 300"><rect width="400" height="300" fill="#EADCC8"/><g class="steam" fill="none" stroke="#B5651D" stroke-width="3" stroke-linecap="round" opacity=".5"><path d="M320 140q-10-20 0-40t0-40"/><path d="M340 140q-10-20 0-40t0-40" style="animation-delay:-1s"/></g><path d="M295 150h70v40a35 35 0 0 1-70 0Z" fill="#6B3E26"/><path d="M365 160h10a12 12 0 0 1 0 24h-10" stroke="#6B3E26" stroke-width="6" fill="none"/><g class="branch"><path d="M40 260c40-90 110-150 200-170" stroke="#3F6B3A" stroke-width="5" fill="none"/><g fill="#4E8A4A"><ellipse cx="100" cy="180" rx="34" ry="14" transform="rotate(-30 100 180)"/><ellipse cx="180" cy="118" rx="34" ry="14" transform="rotate(-20 180 118)"/></g><g fill="#8E2C1E"><circle cx="140" cy="168" r="16"/><circle cx="162" cy="158" r="16"/><circle cx="150" cy="186" r="16"/><circle cx="220" cy="118" r="15"/><circle cx="238" cy="134" r="15"/></g></g></svg></div>
           <div class="body">
-            <span class="tag">Cafeicultura</span>
-            <h3>Café</h3>
+            <span class="tag">Cafeicultura</span><h3>Café</h3>
             <p>Cafés especiais cultivados com atenção à colheita e ao pós-colheita, para preservar aroma e doçura.</p>
             <ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Cafés premium</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Pós-colheita cuidadoso</li></ul>
           </div>
         </article>
-        <article class="unit reveal d3">
-          <div class="art" aria-hidden="true"><svg viewBox="0 0 400 300"><rect width="400" height="300" fill="#DDE8D3"/><path d="M0 220c100-30 260-30 400 0v80H0Z" fill="#7FA36A"/><g fill="#5A4636"><rect x="130" y="140" width="130" height="62" rx="28"/><rect x="140" y="190" width="12" height="40" rx="5"/><rect x="230" y="190" width="12" height="40" rx="5"/><rect x="250" y="120" width="44" height="40" rx="16"/></g><path d="M258 120l-8-14M286 120l8-14" stroke="#5A4636" stroke-width="5" stroke-linecap="round"/><circle cx="330" cy="70" r="30" fill="#E9C46A"/></svg></div>
+        <article class="unit tilt">
+          <span class="glare"></span><span class="num">04</span>
+          <div class="art" aria-hidden="true"><svg viewBox="0 0 400 300"><rect width="400" height="300" fill="#DDE8D3"/><circle class="sunsm" cx="330" cy="70" r="30" fill="#E9C46A"/><path d="M0 220c100-30 260-30 400 0v80H0Z" fill="#7FA36A"/><g class="cow"><path class="tail" d="M132 150q-14 10-12 34" stroke="#5A4636" stroke-width="5" fill="none" stroke-linecap="round"/><g fill="#5A4636"><rect x="130" y="140" width="130" height="62" rx="28"/><rect x="140" y="190" width="12" height="40" rx="5"/><rect x="230" y="190" width="12" height="40" rx="5"/><rect x="250" y="120" width="44" height="40" rx="16"/></g><ellipse cx="190" cy="160" rx="22" ry="14" fill="#F3E9DC" opacity=".8"/><path d="M258 120l-8-14M286 120l8-14" stroke="#5A4636" stroke-width="5" stroke-linecap="round"/></g></svg></div>
           <div class="body">
-            <span class="tag">Pecuária</span>
-            <h3>Gado</h3>
+            <span class="tag">Pecuária</span><h3>Gado</h3>
             <p>Criação de bovinos com atenção ao bem-estar animal, nutrição adequada e pastagens bem manejadas.</p>
             <ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Bem-estar animal</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Pastagens manejadas</li></ul>
           </div>
         </article>
       </div>
+      <div class="hbar" aria-hidden="true"><i id="hbar"></i></div>
     </div>
   </section>
 
-  <!-- Capítulo 3: valores -->
+  <!-- ===== Capítulo 3 ===== -->
   <section id="valores">
     <div class="wrap">
-      <span class="chapter-no reveal">Capítulo III — Como trabalhamos</span>
-      <h2 class="reveal d1" style="font-size:clamp(2.2rem,4.5vw,3.6rem);margin-top:14px;max-width:20ch">Tradição que se renova a cada safra.</h2>
-      <div class="values">
-        <div class="value reveal">
+      <span class="chapter-no reveal-up">Capítulo III — Como trabalhamos</span>
+      <h2 class="h2 split" style="margin-top:14px;max-width:20ch">Tradição que se renova a cada safra.</h2>
+      <div class="values" id="values">
+        <div class="value">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 20h10M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/><path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z"/></svg></div>
           <h3>Sustentabilidade</h3>
           <p>Uso responsável da água e do solo, preservação de áreas naturais e práticas que garantem o futuro do campo.</p>
         </div>
-        <div class="value reveal d1">
+        <div class="value">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></div>
           <h3>Qualidade</h3>
           <p>Processos controlados em todas as etapas, do manejo à entrega, para levar alimento seguro à mesa das famílias.</p>
         </div>
-        <div class="value reveal d2">
+        <div class="value">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
           <h3>Pessoas</h3>
           <p>Valorizamos quem faz o grupo acontecer: colaboradores, parceiros e a comunidade de Tatuí e região.</p>
@@ -347,37 +496,38 @@
     </div>
   </section>
 
-  <div class="band">
-    <svg class="rows" viewBox="0 0 400 200" fill="none" stroke="#fff" stroke-width="2" aria-hidden="true"><path d="M0 40c100-20 300-20 400 0M0 80c100-20 300-20 400 0M0 120c100-20 300-20 400 0M0 160c100-20 300-20 400 0"/></svg>
+  <div class="band" id="band">
+    <svg class="rows" viewBox="0 0 400 200" fill="none" stroke="#fff" stroke-width="2" aria-hidden="true"><path d="M0 40c100-20 300-20 400 0"/><path d="M0 80c100-20 300-20 400 0"/><path d="M0 120c100-20 300-20 400 0"/><path d="M0 160c100-20 300-20 400 0"/></svg>
     <div class="wrap">
-      <blockquote class="reveal">“Cuidar da terra é cuidar das <span>próximas gerações</span>.”<cite>Família Shigueno</cite></blockquote>
+      <blockquote id="quote">“Cuidar da terra é cuidar das próximas gerações.”<cite>Família Shigueno</cite></blockquote>
     </div>
   </div>
 
-  <!-- Clímax CTA -->
+  <!-- ===== Clímax CTA ===== -->
   <section id="contato">
     <div class="wrap contact">
-      <div>
-        <span class="chapter-no reveal">Capítulo IV — Vamos conversar</span>
-        <h2 class="reveal d1">Seja um parceiro do Grupo Shigueno.</h2>
-        <p class="reveal d2">Clientes, fornecedores ou quem quer fazer parte da nossa equipe: envie sua mensagem e retornaremos em breve.</p>
-        <div class="info reveal d3">
-          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg><p><strong>Endereço</strong><span>Estrada Tatuí–Quadra, Km 1<br>Tatuí · SP</span></p></div>
+      <div class="stagger">
+        <span class="chapter-no">Capítulo IV — Vamos conversar</span>
+        <h2 class="h2 split">Seja um parceiro do Grupo Shigueno.</h2>
+        <p class="intro">Clientes, fornecedores ou quem quer fazer parte da nossa equipe: envie sua mensagem e retornaremos em breve.</p>
+        <div class="info">
+          <div><svg class="pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg><p><strong>Endereço</strong><span>Estrada Tatuí–Quadra, Km 1<br>Tatuí · SP</span></p></div>
           <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg><p><strong>Site</strong><span>www.shigueno.com.br</span></p></div>
         </div>
       </div>
-      <form class="reveal d2" id="form" novalidate>
+      <form id="form" novalidate class="reveal-up">
         <div class="row2">
-          <label>Nome<input name="nome" required autocomplete="name"></label>
-          <label>E-mail<input name="email" type="email" required autocomplete="email"></label>
+          <div class="field"><input id="f-nome" name="nome" required autocomplete="name" placeholder=" "><label for="f-nome">Nome</label></div>
+          <div class="field"><input id="f-email" name="email" type="email" required autocomplete="email" placeholder=" "><label for="f-email">E-mail</label></div>
         </div>
-        <label>Assunto
-          <select name="assunto">
+        <div class="field">
+          <select name="assunto" aria-label="Assunto">
             <option>Comercial — Ovos</option><option>Comercial — Citros</option><option>Comercial — Café</option><option>Comercial — Pecuária</option><option>Fornecedores</option><option>Trabalhe conosco</option><option>Outros</option>
           </select>
-        </label>
-        <label>Mensagem<textarea name="mensagem" required></textarea></label>
-        <button class="btn btn-accent" type="submit" style="justify-self:start">Enviar mensagem</button>
+        </div>
+        <div class="field"><textarea id="f-msg" name="mensagem" required placeholder=" "></textarea><label for="f-msg">Mensagem</label></div>
+        <button class="btn btn-accent magnetic" type="submit" style="justify-self:start">Enviar mensagem
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button>
         <p class="form-ok" id="ok" role="status">Obrigado! Sua mensagem foi registrada.</p>
       </form>
     </div>
@@ -391,20 +541,231 @@
       <ul><li><a href="#historia">História</a></li><li><a href="#frentes">Negócios</a></li><li><a href="#valores">Valores</a></li><li><a href="#contato">Contato</a></li></ul>
     </div>
     <p class="copy">© <span id="y"></span> Grupo Shigueno. Todos os direitos reservados.</p>
+    <div class="bigname" id="bigname" aria-hidden="true">Shigueno</div>
   </div>
 </footer>
 
+<button id="totop" aria-label="Voltar ao topo">
+  <svg class="ringp" viewBox="0 0 54 54" aria-hidden="true"><circle cx="27" cy="27" r="25"/></svg>
+  <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+</button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 <script>
-  const header=document.getElementById('top'),bar=document.getElementById('progress');
-  function onScroll(){const h=document.documentElement;header.classList.toggle('solid',h.scrollTop>40);bar.style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%'}
-  addEventListener('scroll',onScroll,{passive:true});onScroll();
-  const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.15});
-  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
-  const burger=document.getElementById('burger'),menu=document.getElementById('menu');
-  burger.addEventListener('click',()=>{const o=menu.classList.toggle('open');burger.setAttribute('aria-expanded',o);header.classList.add('solid')});
-  menu.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{menu.classList.remove('open');burger.setAttribute('aria-expanded','false')}));
-  document.getElementById('form').addEventListener('submit',e=>{e.preventDefault();const f=e.target;if(!f.checkValidity()){f.reportValidity();return}document.getElementById('ok').style.display='block';f.reset()});
-  document.getElementById('y').textContent=new Date().getFullYear();
+(() => {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const fine = matchMedia('(hover:hover) and (pointer:fine)').matches;
+  const $ = (s, c=document) => c.querySelector(s), $$ = (s, c=document) => [...c.querySelectorAll(s)];
+  $('#y').textContent = new Date().getFullYear();
+
+  /* ---------- split text (chars, keeps words together) ---------- */
+  function split(el){
+    const walk = node => {
+      [...node.childNodes].forEach(n => {
+        if (n.nodeType === 3) {
+          const frag = document.createDocumentFragment();
+          n.textContent.split(/(\s+)/).forEach(w => {
+            if (!w) return;
+            if (/^\s+$/.test(w)) { frag.appendChild(document.createTextNode(' ')); return; }
+            const ws = document.createElement('span'); ws.className = 'word'; ws.setAttribute('aria-hidden','true');
+            [...w].forEach(c => { const s = document.createElement('span'); s.className = 'char'; s.textContent = c; ws.appendChild(s); });
+            frag.appendChild(ws);
+          });
+          n.replaceWith(frag);
+        } else if (n.nodeType === 1) walk(n);
+      });
+    };
+    if (!el.getAttribute('aria-label')) el.setAttribute('aria-label', el.textContent.trim());
+    walk(el);
+  }
+  $$('.split').forEach(split);
+  // quote: words
+  const q = $('#quote'); const cite = q.querySelector('cite'); cite.remove();
+  q.setAttribute('aria-label', q.textContent.trim());
+  q.innerHTML = q.textContent.trim().split(/\s+/).map(w => `<span class="word" aria-hidden="true">${w}</span>`).join(' ');
+  q.appendChild(cite);
+  $$('#quote .word').forEach(w => { if (/próximas|gerações/.test(w.textContent)) w.style.color = 'var(--accent-soft)'; });
+
+  /* ---------- header / menu ---------- */
+  const header = $('#top'); let lastY = 0;
+  const burger = $('#burger'), menu = $('#menu');
+  burger.addEventListener('click', () => { const o = menu.classList.toggle('open'); burger.setAttribute('aria-expanded', o); header.classList.add('solid'); });
+  $$('a', menu).forEach(a => a.addEventListener('click', () => { menu.classList.remove('open'); burger.setAttribute('aria-expanded','false'); }));
+  const totop = $('#totop'), ring = $('#totop .ringp circle');
+  totop.addEventListener('click', () => scrollTo({top:0, behavior: reduce ? 'auto' : 'smooth'}));
+  function onScroll(){
+    const y = scrollY, max = document.documentElement.scrollHeight - innerHeight, p = max > 0 ? y / max : 0;
+    header.classList.toggle('solid', y > 40);
+    header.classList.toggle('hide', y > lastY && y > 400 && !menu.classList.contains('open'));
+    lastY = y;
+    $('#progress').style.transform = `scaleX(${p})`;
+    totop.classList.toggle('show', y > 600);
+    ring.style.strokeDashoffset = 157 * (1 - p);
+    ['historia','frentes','valores','contato'].forEach(id => {
+      const s = document.getElementById(id), a = $(`.menu a[href="#${id}"]`);
+      const r = s.getBoundingClientRect(); a.classList.toggle('active', r.top < innerHeight*.4 && r.bottom > innerHeight*.4);
+    });
+  }
+  addEventListener('scroll', onScroll, {passive:true}); onScroll();
+
+  /* ---------- form + leaf burst ---------- */
+  $('#form').addEventListener('submit', e => {
+    e.preventDefault(); const f = e.target;
+    if (!f.checkValidity()) { f.reportValidity(); if (window.gsap && !reduce) gsap.fromTo(f, {x:-10}, {x:0, duration:.5, ease:'elastic.out(1,.3)'}); return; }
+    $('#ok').style.display = 'block'; f.reset();
+    if (!window.gsap || reduce) return;
+    const btn = f.querySelector('button'), br = btn.getBoundingClientRect(), fr = f.getBoundingClientRect();
+    const colors = ['#15803D','#A16207','#E9C46A','#F08A24','#14532D'];
+    for (let i = 0; i < 28; i++) {
+      const l = document.createElement('span'); l.className = 'leafburst';
+      l.innerHTML = `<svg viewBox="0 0 24 24" fill="${colors[i%5]}"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/></svg>`;
+      l.style.left = (br.left - fr.left + br.width/2) + 'px'; l.style.top = (br.top - fr.top + br.height/2) + 'px';
+      f.appendChild(l);
+      gsap.to(l, {x: gsap.utils.random(-220,220), y: gsap.utils.random(-260,-40), rotation: gsap.utils.random(-360,360), opacity:0, scale: gsap.utils.random(.6,1.6), duration: gsap.utils.random(1,1.8), ease:'power2.out', onComplete: () => l.remove()});
+    }
+  });
+
+  /* ---------- no GSAP / reduced motion: final state ---------- */
+  const loader = $('#loader');
+  const finishLoad = () => { loader.remove(); document.body.classList.remove('loading'); };
+  if (!window.gsap || reduce) {
+    finishLoad();
+    $$('#quote .word').forEach(w => w.style.opacity = 1);
+    $$('.value').forEach(v => v.classList.add('drawn'));
+    return;
+  }
+  gsap.registerPlugin(ScrollTrigger);
+
+  /* ---------- preloader → intro ---------- */
+  const pct = {v:0};
+  const intro = gsap.timeline({paused:true});
+  intro.from('.hero .layer[data-depth="0"] #sun', {y:220, duration:2.2, ease:'power3.out'}, 0)
+       .from('.hero .layer[data-depth="1"]', {yPercent:20, duration:1.8, ease:'power3.out'}, 0)
+       .from('.hero .layer[data-depth="2"]', {yPercent:28, duration:1.8, ease:'power3.out'}, .1)
+       .from('.hero .layer[data-depth="3"]', {yPercent:36, duration:1.8, ease:'power3.out'}, .2)
+       .from('.hero h1 .char', {opacity:0, yPercent:80, rotateX:-70, duration:.9, stagger:.025, ease:'expo.out'}, .5)
+       .from('.hero .h-in', {opacity:0, y:30, duration:.9, stagger:.15, ease:'power3.out'}, .9)
+       .from('header', {yPercent:-100, duration:.8, ease:'power3.out'}, 1)
+       .from('.scroll-hint', {opacity:0, y:20, duration:.6}, 1.6);
+  gsap.to(pct, {v:100, duration:1.3, ease:'power2.inOut', onUpdate: () => $('#pct').textContent = Math.round(pct.v),
+    onComplete: () => gsap.to(loader, {yPercent:-100, duration:.9, ease:'expo.inOut', onComplete: finishLoad, onStart: () => intro.play()})});
+
+  /* ---------- cursor + magnetic ---------- */
+  if (fine) {
+    const dot = $('.cur'), rg = $('.cur-ring');
+    const dx = gsap.quickTo(dot,'x',{duration:.1}), dy = gsap.quickTo(dot,'y',{duration:.1});
+    const rx = gsap.quickTo(rg,'x',{duration:.45,ease:'power3'}), ry = gsap.quickTo(rg,'y',{duration:.45,ease:'power3'});
+    addEventListener('mousemove', e => { dx(e.clientX); dy(e.clientY); rx(e.clientX); ry(e.clientY); });
+    $$('a,button,.unit,input,select,textarea').forEach(el => { el.addEventListener('mouseenter', () => rg.classList.add('big')); el.addEventListener('mouseleave', () => rg.classList.remove('big')); });
+    $$('.magnetic').forEach(b => {
+      const xT = gsap.quickTo(b,'x',{duration:.5,ease:'elastic.out(1,.4)'}), yT = gsap.quickTo(b,'y',{duration:.5,ease:'elastic.out(1,.4)'});
+      b.addEventListener('mousemove', e => { const r = b.getBoundingClientRect(); xT((e.clientX - r.left - r.width/2) * .35); yT((e.clientY - r.top - r.height/2) * .45); });
+      b.addEventListener('mouseleave', () => { xT(0); yT(0); });
+    });
+    /* tilt 3D */
+    $$('.tilt').forEach(c => {
+      c.addEventListener('mousemove', e => {
+        const r = c.getBoundingClientRect(), px = (e.clientX - r.left)/r.width, py = (e.clientY - r.top)/r.height;
+        gsap.to(c, {rotateY:(px-.5)*14, rotateX:(.5-py)*12, transformPerspective:900, duration:.5, ease:'power2.out'});
+        c.style.setProperty('--gx', px*100+'%'); c.style.setProperty('--gy', py*100+'%');
+      });
+      c.addEventListener('mouseleave', () => gsap.to(c, {rotateY:0, rotateX:0, duration:.8, ease:'elastic.out(1,.5)'}));
+    });
+    /* mouse parallax hero */
+    const hero = $('.hero');
+    hero.addEventListener('mousemove', e => {
+      const mx = e.clientX/innerWidth - .5, my = e.clientY/innerHeight - .5;
+      $$('.hero .layer').forEach(l => { const d = +l.dataset.depth + 1; gsap.to(l, {x: -mx*d*14, duration:1.2, ease:'power3.out', overwrite:'auto'}); });
+    });
+  }
+
+  /* ---------- particles (pollen / fireflies) ---------- */
+  const cv = $('#particles'), ctx = cv.getContext('2d'); let W, H, parts = [], heroVisible = true;
+  function size(){ W = cv.width = cv.offsetWidth * devicePixelRatio; H = cv.height = cv.offsetHeight * devicePixelRatio; }
+  size(); addEventListener('resize', size);
+  const N = innerWidth < 760 ? 35 : 80;
+  for (let i = 0; i < N; i++) parts.push({x:Math.random(), y:Math.random(), r:Math.random()*2.2+.6, s:Math.random()*.0006+.0002, a:Math.random()*Math.PI*2, w:Math.random()*.002+.0005});
+  ScrollTrigger.create({trigger:'.hero', start:'top top', end:'bottom top', onToggle: s => heroVisible = s.isActive});
+  (function tick(t){
+    if (heroVisible && !document.hidden) {
+      ctx.clearRect(0,0,W,H);
+      parts.forEach(p => {
+        p.y -= p.s; p.a += p.w * 6; p.x += Math.sin(p.a) * .0006;
+        if (p.y < -.02) { p.y = 1.02; p.x = Math.random(); }
+        const tw = .45 + Math.sin(t*.002 + p.a*3)*.35;
+        ctx.beginPath(); ctx.arc(p.x*W, p.y*H, p.r*devicePixelRatio, 0, Math.PI*2);
+        ctx.fillStyle = `rgba(255,232,160,${tw})`; ctx.shadowColor = 'rgba(255,220,130,.9)'; ctx.shadowBlur = 10; ctx.fill();
+      });
+    }
+    requestAnimationFrame(tick);
+  })(0);
+
+  /* ---------- scroll parallax hero ---------- */
+  $$('.hero .layer').forEach(l => {
+    const d = +l.dataset.depth;
+    gsap.to(l, {yPercent: [6, 14, 24, 36][d], ease:'none', scrollTrigger:{trigger:'.hero', start:'top top', end:'bottom top', scrub:true}});
+  });
+  gsap.to('.hero .wrap', {y:-120, opacity:0, ease:'none', scrollTrigger:{trigger:'.hero', start:'top top', end:'bottom top', scrub:true}});
+
+  /* ---------- split headings on scroll ---------- */
+  $$('.split').forEach(el => {
+    if (el.closest('.hero')) return;
+    gsap.from($$('.char', el), {opacity:0, yPercent:70, rotateX:-60, duration:.8, stagger:.018, ease:'expo.out', scrollTrigger:{trigger:el, start:'top 85%'}});
+  });
+  $$('.stagger').forEach(g => {
+    gsap.from([...g.children].filter(c => !c.classList.contains('split') && !c.querySelector('.split')), {opacity:0, y:34, duration:.8, stagger:.1, ease:'power3.out', scrollTrigger:{trigger:g, start:'top 80%'}});
+  });
+  $$('.reveal-up').forEach(el => gsap.from(el, {opacity:0, y:50, duration:1, ease:'power3.out', scrollTrigger:{trigger:el, start:'top 85%'}}));
+
+  /* ---------- year card ---------- */
+  gsap.from('#yearCard', {clipPath:'inset(100% 0 0 0 round 28px)', duration:1.3, ease:'expo.inOut', scrollTrigger:{trigger:'#yearCard', start:'top 80%'}});
+  gsap.to('#yearCard', {y:-50, ease:'none', scrollTrigger:{trigger:'#yearCard', scrub:true}});
+
+  /* ---------- counters ---------- */
+  $$('[data-count]').forEach(el => {
+    const end = +el.dataset.count, from = +(el.dataset.from || 0), o = {v:from};
+    el.textContent = from;
+    gsap.to(o, {v:end, duration: end > 1000 ? 2.2 : 1.8, ease:'power3.out', scrollTrigger:{trigger:el, start:'top 88%'}, onUpdate: () => el.textContent = Math.round(o.v)});
+  });
+  gsap.from('.stat', {opacity:0, y:40, duration:.8, stagger:.12, ease:'back.out(1.4)', scrollTrigger:{trigger:'.stats', start:'top 75%'}});
+  gsap.fromTo('.stats .bgword', {xPercent:0}, {xPercent:-30, ease:'none', scrollTrigger:{trigger:'.stats', scrub:true}});
+
+  /* ---------- timeline draw ---------- */
+  const tls = $$('.tl');
+  gsap.to('.tl-line i', {scaleX:1, ease:'none', scrollTrigger:{trigger:'#timeline', start:'top 80%', end:'bottom 55%', scrub:.6,
+    onUpdate: s => tls.forEach((t,i) => t.classList.toggle('on', s.progress >= i/(tls.length-1) - .02))}});
+  gsap.from(tls, {opacity:0, y:30, duration:.7, stagger:.15, ease:'power3.out', scrollTrigger:{trigger:'#timeline', start:'top 85%'}});
+  ScrollTrigger.matchMedia({'(max-width:1000px)': () => { tls.forEach(t => ScrollTrigger.create({trigger:t, start:'top 75%', onEnter:() => t.classList.add('on')})); }});
+
+  /* ---------- horizontal pinned frentes ---------- */
+  const mm = gsap.matchMedia();
+  mm.add('(min-width:761px)', () => {
+    const track = $('#hscroll');
+    const dist = () => Math.max(0, track.scrollWidth - innerWidth);
+    const tw = gsap.to(track, {x: () => -dist(), ease:'none', scrollTrigger:{trigger:'.frentes', start:'top top', end: () => '+=' + (dist() + innerHeight*.4), pin:true, scrub:1, invalidateOnRefresh:true,
+      onUpdate: s => gsap.set('#hbar', {scaleX:s.progress})}});
+    gsap.from('.unit', {opacity:0, y:80, rotate:3, duration:1, stagger:.12, ease:'power3.out', scrollTrigger:{trigger:'.frentes', start:'top 70%'}});
+    return () => tw.kill();
+  });
+  mm.add('(max-width:760px)', () => {
+    $$('.unit').forEach(u => gsap.from(u, {opacity:0, y:60, scale:.95, duration:.8, ease:'power3.out', scrollTrigger:{trigger:u, start:'top 88%'}}));
+  });
+
+  /* ---------- valores ---------- */
+  gsap.from('.value', {opacity:0, y:60, scale:.92, duration:.8, stagger:.12, ease:'back.out(1.4)', scrollTrigger:{trigger:'#values', start:'top 80%', onEnter: () => $$('.value').forEach((v,i) => setTimeout(() => v.classList.add('drawn'), 300 + i*150))}});
+
+  /* ---------- quote word scrub ---------- */
+  gsap.to('#quote .word', {opacity:1, stagger:.1, ease:'none', scrollTrigger:{trigger:'#band', start:'top 70%', end:'bottom 70%', scrub:true}});
+  gsap.to('.band .rows path', {strokeDashoffset:0, stagger:.1, ease:'none', scrollTrigger:{trigger:'#band', start:'top 80%', end:'bottom 40%', scrub:true}});
+  gsap.from('.band cite', {opacity:0, letterSpacing:'.6em', duration:1.2, scrollTrigger:{trigger:'#band', start:'center 70%'}});
+
+  /* ---------- footer big name ---------- */
+  gsap.from('#bigname', {yPercent:60, opacity:0, ease:'none', scrollTrigger:{trigger:'footer', start:'top bottom', end:'bottom bottom', scrub:true}});
+
+  addEventListener('load', () => ScrollTrigger.refresh());
+  document.fonts && document.fonts.ready.then(() => ScrollTrigger.refresh());
+})();
 </script>
 </body>
 </html>
