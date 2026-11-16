@@ -47,7 +47,7 @@ Regras gerais que se repetem:
 - `inicio`/`fim`: segundos. Por padrão as palavras se espalham pelos primeiros 70% da cena (`"ritmo": 0.7`).
 - Pra sincronizar perfeito, passe o segundo exato de cada palavra: `"tempos": [0.0, 0.42, 0.9]`.
 - Opções: `fonte` (anton, bebas, black, bold, medium, oswald, serif, playfair, italico, cursiva),
-  `tamanho`, `cor`, `bg`, `bg2` (degradê), `cores`, `sangrar` (palavra estoura a tela), `sub`/`sobre` (texto pequeno junto do gigante), `fade`.
+  `tamanho`, `cor`, `bg`, `bg2` (degradê), `cores`, `sub`/`sobre` (texto pequeno junto do gigante), `fade`.
 
 ### Sincronia automática com a música (`sincronizar.py`)
 
@@ -96,6 +96,7 @@ Todo vídeo sai **com a música sincronizada**:
 - **Gigante** entra com desfoque de movimento, não com tremedeira.
 - **Brilho de lente (halation)**, **grão de filme** que não repete padrão e **flicker** sutil de exposição.
 - Branco e preto nunca puros (`#eeebe5` / `#0a0a0a`), como em filme.
+- **Letra nunca sai da tela:** todo texto é medido e reduzido para caber em 80% da largura e da altura, já contando o zoom e o balanço da câmera.
 - Ajuste por projeto: `"zoom"`, `"deriva"`, `"giro"`, `"brilho"`, `"grao"` (0 desliga).
 
 ## Paletas (`"paleta"` em qualquer cena)

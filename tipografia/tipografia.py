@@ -147,6 +147,24 @@ def medir(f, txt):
     return b[2] - b[0], b[3] - b[1], b
 
 
+# área segura: o texto nunca passa de 80% da largura/altura. Já desconta o zoom máximo da câmera
+# (push-in 3,5% + soco 4,5%), a deriva e o foco de entrada, então NADA encosta na borda.
+SEGURA = 0.80
+
+
+def caber(nome, tam, textos, largura, altura=None, linhas=1, entrelinha=1.2):
+    """Diminui a fonte até o maior texto caber na largura (e o bloco na altura)."""
+    tam = int(tam)
+    while tam > 12:
+        f = fonte(nome, tam)
+        w = max((medir(f, x)[0] for x in textos if x), default=0)
+        h = tam * entrelinha * linhas
+        if w <= largura and (altura is None or h <= altura):
+            return f
+        tam = int(tam * 0.94)
+    return fonte(nome, tam)
+
+
 def quebrar(palavras, f, largura_max):
     """Quebra lista de palavras em linhas que caibam na largura."""
     linhas, atual = [], []
@@ -249,11 +267,11 @@ def est_revelar(cv, cena, t, ctx):
     img = fundo(ctx, cena)
     palavras = cena["texto"].split()
     ts = tempos_palavras(cena, len(palavras))
-    f = fonte(cena.get("fonte", "oswald"), cena.get("tamanho", 92))
+    f = caber(cena.get("fonte", "oswald"), cena.get("tamanho", 92), palavras, W * SEGURA)
     c_on, c_off = cor(cena.get("cor", "#ece9e4")), cor(cena.get("cor_apagada", "#5a5a5a"))
     # palavra acende de cinza pra branco um pouco DEPOIS de assentar (igual aos edits)
     cor_fn = lambda i, k: mix(c_off, c_on, ease_out((k - 0.4) / 1.2))
-    frase_em_foco(img, palavras, ts, t, f, cor_fn, W, H / 2 + cena.get("dy", 0), W * .82, f.size * 1.18)
+    frase_em_foco(img, palavras, ts, t, f, cor_fn, W, H / 2 + cena.get("dy", 0), W * SEGURA, f.size * 1.18)
     return img
 
 
@@ -263,7 +281,8 @@ def est_pilha(cv, cena, t, ctx):
     palavras = cena["texto"].upper().split("/") if "/" in cena["texto"] else cena["texto"].upper().split()
     palavras = [p.strip() for p in palavras]
     ts = tempos_palavras(cena, len(palavras))
-    f = fonte(cena.get("fonte", "black"), cena.get("tamanho", 120))
+    f = caber(cena.get("fonte", "black"), cena.get("tamanho", 120), palavras, W * SEGURA,
+              H * SEGURA, len(palavras), 1.02)
     cores = [cor(c) for c in cena.get("cores", ["#f5f5f5"])]
     lh = f.size * 1.02
     # a pilha sobe suavemente conforme cresce (interpola em vez de pular)
@@ -290,8 +309,8 @@ def est_flash(cv, cena, t, ctx):
     img = ctx.fx.solido(bg)
     if claro:
         img = ctx.fx.vinheta_sobre(img, 0.35, (150, 150, 150))
-    f = fonte(cena.get("fonte", "medium"), cena.get("tamanho", 84))
-    frase_em_foco(img, palavras, ts, t, f, lambda i, k: fg, W, H / 2, W * .86, f.size * 1.25)
+    f = caber(cena.get("fonte", "medium"), cena.get("tamanho", 84), palavras, W * SEGURA)
+    frase_em_foco(img, palavras, ts, t, f, lambda i, k: fg, W, H / 2, W * SEGURA, f.size * 1.25)
     return img
 
 
@@ -304,15 +323,15 @@ def est_gigante(cv, cena, t, ctx):
     txt = cena["texto"]
     f = fonte(cena.get("fonte", "anton"), 400)
     k = ease_back(t / 0.3)
-    alt = H * cena.get("altura", 0.42) * (0.86 + 0.14 * k)
-    larg = W * cena.get("largura", 0.94) * (0.86 + 0.14 * k)
-    if cena.get("sangrar"):  # palavra maior que a tela, cortada nas bordas
-        larg *= 1.35
+    # pico do soco (~1.1x) ainda cabe na área segura; "sangrar" foi aposentado (letra não sai da tela)
+    teto = SEGURA / 1.02
+    alt = H * min(cena.get("altura", 0.42), teto) * (0.86 + 0.14 * k)
+    larg = W * min(cena.get("largura", teto), teto) * (0.86 + 0.14 * k)
     im = texto_esticado(txt, f, larg, alt, fg)
     km = t / 0.22
     if km < 1:  # desfoque de movimento no impacto (some em ~7 quadros)
         e = 1 - ease_out(km)
-        borrado = im.resize((im.width, max(1, int(im.height * (1 + 0.25 * e)))), Image.BICUBIC)
+        borrado = im.resize((im.width, max(1, int(min(H * SEGURA, im.height * (1 + 0.25 * e))))), Image.BICUBIC)
         borrado = borrado.filter(ImageFilter.BoxBlur(int(2 + 18 * e)))
         borrado.putalpha(borrado.getchannel("A").point(lambda v: int(v * min(1, 0.3 + km))))
         im = borrado
@@ -335,7 +354,7 @@ def est_serifa(cv, cena, t, ctx):
     troca = cena.get("alternar", True) and n % 2 == 0
     bg, fg = (B, A) if troca else (A, B)
     img = ctx.fx.solido(bg)
-    f = fonte(cena.get("fonte", "serif"), cena.get("tamanho", 120))
+    f = caber(cena.get("fonte", "serif"), cena.get("tamanho", 120), linhas, W * SEGURA, H * SEGURA, len(linhas), 0.95)
     lh = f.size * 0.9
     camada = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     nitida = Image.new("RGBA", (W, H), (0, 0, 0, 0))
@@ -359,11 +378,11 @@ def est_cursiva(cv, cena, t, ctx):
     img = ctx.fx.vinheta_sobre(img, 0.75 if claro else 0.5, (120, 120, 120) if claro else (0, 0, 0))
     fg = (25, 25, 25) if claro else (235, 235, 235)
     txt = cena["texto"]
-    f = fonte(cena.get("fonte", "cursiva"), cena.get("tamanho", 150))
+    f = caber(cena.get("fonte", "cursiva"), cena.get("tamanho", 150), txt.split(), W * SEGURA)
     dur = (cena["fim"] - cena["inicio"]) * cena.get("ritmo", 0.7)
     n = int(len(txt) * min(1, t / max(.01, dur))) + 1
     d = ImageDraw.Draw(img)
-    linhas = quebrar(txt.split(), f, W * .8)
+    linhas = quebrar(txt.split(), f, W * SEGURA)
     lh = f.size * 1.05
     cont = 0
     for li, ln in enumerate(linhas):
@@ -390,7 +409,7 @@ def est_maquina(cv, cena, t, ctx):
     s = "".join(silabas[:max(0, n - 1)]).replace("-", "") + (silabas[n - 1] if n else "")
     if n == len(silabas):
         s = s.rstrip("-")
-    f = fonte(cena.get("fonte", "medium"), cena.get("tamanho", 74))
+    f = caber(cena.get("fonte", "medium"), cena.get("tamanho", 74), [cena["texto"].replace("-", "")], W * SEGURA)
     ImageDraw.Draw(img).text((W / 2, H / 2), s, font=f, fill=fg, anchor="mm")
     return img
 
@@ -416,7 +435,7 @@ def est_circulo(cv, cena, t, ctx):
         palavras = cena["texto"].upper().split()
         ts = tempos_palavras(cena2, len(palavras))
         n = sum(1 for x in ts if t - 0.75 >= x)
-        f = fonte(cena.get("fonte", "black"), cena.get("tamanho", 66))
+        f = caber(cena.get("fonte", "black"), cena.get("tamanho", 66), [" ".join(palavras)], W * SEGURA, faixa_h * 0.8)
         ImageDraw.Draw(img).text((W / 2, H / 2), " ".join(palavras[:n]), font=f, fill=(15, 15, 15), anchor="mm")
     return img
 
