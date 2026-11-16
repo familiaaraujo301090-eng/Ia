@@ -289,7 +289,7 @@ def est_pilha(cv, cena, t, ctx):
     lh = f.size * 1.02
     # a pilha sobe suavemente conforme cresce (interpola em vez de pular)
     n_vis = sum(ease_out((t - x) / FOCO) for x in ts if t >= x)
-    alvo = H / 2 - lh * n_vis / 2
+    alvo = H / 2 - lh * n_vis / 2 + cena.get("dy", 0)
     d = ImageDraw.Draw(img)
     for i, p in enumerate(palavras):
         if t < ts[i]:
@@ -307,13 +307,25 @@ def est_flash(cv, cena, t, ctx):
     ts = tempos_palavras(cena, len(palavras))
     n = sum(1 for x in ts if t >= x)
     claro = (n % 2 == 1) if cena.get("alternar", True) else False
+    pulo = 0.0
+    if cena.get("piscar"):
+        # frase repetida: inverte preto/branco em cada ataque da música (detectado no áudio)
+        agora = cena["inicio"] + t
+        ons = [o for o in ctx.ataques if cena["inicio"] - 0.02 <= o <= agora]
+        claro = len(ons) % 2 == 1
+        if ons:
+            pulo = max(0.0, 1 - (agora - ons[-1]) / 0.14)
+        if "tempos" not in cena:  # sem tempos: frase inteira já na tela
+            n = len(palavras)
+            ts = [-1] * n
     bg, fg = ((242, 242, 242), (10, 10, 10)) if claro else ((8, 8, 8), (240, 240, 240))
     img = ctx.fx.solido(bg)
     if claro:
         img = ctx.fx.vinheta_sobre(img, 0.35, (150, 150, 150))
     img = ctx.elem(img, cena, t)
-    f = caber(cena.get("fonte", "medium"), cena.get("tamanho", 84), palavras, W * SEGURA)
-    frase_em_foco(img, palavras, ts, t, f, lambda i, k: fg, W, H / 2, W * SEGURA, f.size * 1.25)
+    tam = cena.get("tamanho", 84) * (1 + 0.07 * pulo)
+    f = caber(cena.get("fonte", "medium"), tam, palavras, W * SEGURA / (1 + 0.07 * pulo))
+    frase_em_foco(img, palavras, ts, t, f, lambda i, k: fg, W, H / 2 + cena.get("dy", 0), W * SEGURA, f.size * 1.25)
     return img
 
 
@@ -491,6 +503,13 @@ def render(proj, saida, audio=None, inicio=0.0, preview=False):
     ctx.el = Elementos(W, H)
     ctx.elem = lambda im, c, tt: im
     dur = proj.get("duracao", max(c["fim"] for c in proj["cenas"]))
+    ctx.ataques = []
+    if audio:
+        try:
+            from sincronizar import carregar, detectar_batidas
+            ctx.ataques = [round(x, 3) for x in detectar_batidas(carregar(audio, inicio, inicio + dur), 4, 0.6)]
+        except Exception as e:
+            print("aviso: não detectei ataques do áudio:", e, file=sys.stderr)
     random.seed(1)
     if preview:
         os.makedirs(saida, exist_ok=True)

@@ -2,5 +2,5 @@
 __pycache__/
 audios/
 projetos/musica_*.json
-saida/musica_*.mp4
 projetos/musica_*_pb.json
+saida/musica_*.mp4

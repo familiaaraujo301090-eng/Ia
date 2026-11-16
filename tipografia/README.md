@@ -95,12 +95,16 @@ Todo vídeo sai **com a música sincronizada**:
 `"pb": true` no projeto deixa tudo em P&B com curva de filme. `"elementos"` (no projeto ou por cena)
 desenha elementos animados ATRÁS da letra, todos originais:
 
-`perfil` (rosto de perfil soprando fumaça) · `fumaca` · `lua` (esfera subindo) · `traco` (lápis desenhando)
+`casal` (ele respira, sopra, e a fumaça forma o rosto dela) · `porta` (porta abrindo, luz no chão, silhueta no vão) · `vidro` (box embaçado com gotas escorrendo) · `perfil` (rosto de perfil soprando fumaça) · `fumaca` · `lua` (esfera subindo) · `traco` (lápis desenhando)
 · `particulas` (poeira/bokeh) · `chuva` · `aneis` (nascem nas batidas) · `linhas` (scanner) · `luz` (flash nas batidas)
 
 ```json
 {"pb": true, "cenas": [{"estilo": "revelar", "texto": "...", "elementos": ["perfil", "fumaca"], "dy": 330}]}
 ```
+- `"piscar": true` numa cena `flash`: frase repetida pisca preto/branco em cada ataque da música (detectado no áudio).
+- `referencia.py projeto.json video_ref.mp4 --offset S`: acerta os tempos pelas trocas de um edit de referência.
+- Regra da casa: **cada música nova ganha um elemento novo**; só a base P&B se repete.
+
 Os elementos podem passar da borda de propósito; a **letra** continua sempre dentro da área segura.
 
 ## Acabamento "sem cara de IA" (automático em todo vídeo)

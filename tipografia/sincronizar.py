@@ -44,7 +44,7 @@ def carregar(audio, inicio, fim):
     return np.frombuffer(subprocess.run(cmd, capture_output=True, check=True).stdout, np.float32)
 
 
-def detectar_batidas(y, max_por_seg=1.0):
+def detectar_batidas(y, max_por_seg=1.0, limiar=2.0):
     """Fluxo espectral nas graves/médias -> picos fortes = batidas."""
     hop, n = 512, 2048
     if len(y) < n:
@@ -59,7 +59,7 @@ def detectar_batidas(y, max_por_seg=1.0):
     dist = int(SR / hop / max_por_seg)
     picos = []
     for i in np.argsort(-fluxo):
-        if fluxo[i] < 2.0:
+        if fluxo[i] < limiar:
             break
         if all(abs(i - j) >= dist for j in picos):
             picos.append(i)
