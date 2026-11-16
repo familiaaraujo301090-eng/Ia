@@ -321,6 +321,9 @@ def est_gigante(cv, cena, t, ctx):
     fg = cor(cena.get("cor", "#111111" if inverter else "#eeebe5"))
     img = ctx.fx.solido(bg)
     txt = cena["texto"]
+    t -= tempos_palavras(cena, 1)[0]  # pode esperar o segundo exato em que a palavra é cantada
+    if t < 0:
+        return img
     f = fonte(cena.get("fonte", "anton"), 400)
     k = ease_back(t / 0.3)
     # pico do soco (~1.1x) ainda cabe na área segura; "sangrar" foi aposentado (letra não sai da tela)
@@ -465,7 +468,7 @@ def quadro(proj, ctx, tempo, idx):
         img = ESTILOS[cena["estilo"]](None, cfg, t, ctx)
         img = ctx.fx.acabamento(img, tempo, t, cena["fim"] - cena["inicio"], idx, proj)
         # fade curtinho entre cenas
-        fade = cena.get("fade", 0.12)
+        fade = cena.get("fade", proj.get("fade", 0.12))
         restante = cena["fim"] - tempo
         if fade and restante < fade:
             img = Image.blend(img, ctx.fx.solido("#000"), 1 - restante / fade)
@@ -489,7 +492,8 @@ def render(proj, saida, audio=None, inicio=0.0, preview=False):
     cmd = ["ffmpeg", "-y", "-v", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}",
            "-r", str(fps), "-i", "-"]
     if audio:
-        cmd += ["-ss", str(inicio), "-i", audio, "-map", "0:v", "-map", "1:a", "-c:a", "aac", "-b:a", "192k", "-shortest"]
+        cmd += ["-ss", str(inicio), "-t", str(dur), "-i", audio, "-map", "0:v", "-map", "1:a",
+                "-af", f"afade=t=out:st={max(0, dur - 0.35):.3f}:d=0.35", "-c:a", "aac", "-b:a", "192k", "-shortest"]
     cmd += ["-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p", "-movflags", "+faststart", saida]
     p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
     total = int(dur * fps)

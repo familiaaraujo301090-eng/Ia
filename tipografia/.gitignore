@@ -1,2 +1,5 @@
 .trecho_tmp.wav
 __pycache__/
+audios/
+projetos/musica_*.json
+saida/musica_*.mp4
