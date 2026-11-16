@@ -1,0 +1,14 @@
+{
+  "musica": "Rihanna - S&M",
+  "dica_audio": "No TikTok/CapCut, use o som oficial e comece no refrão ('Na na na, come on')",
+  "batidas": [0.0, 3.2, 6.4, 9.6],
+  "cenas": [
+    {"estilo": "circulo", "inicio": 0.0, "fim": 2.4, "texto": "na na na come on"},
+    {"estilo": "flash",   "inicio": 2.4, "fim": 4.8, "texto": "'cause I may be bad"},
+    {"estilo": "gigante", "inicio": 4.8, "fim": 6.0, "texto": "BUT", "inverter": true},
+    {"estilo": "revelar", "inicio": 6.0, "fim": 8.4, "texto": "I'm perfectly good at it", "fonte": "oswald", "tamanho": 100},
+    {"estilo": "pilha",   "inicio": 8.4, "fim": 11.6, "texto": "SEX / IN THE / AIR", "cores": ["#ffffff", "#ff5a1f", "#ff2a2a"], "bg": "#000000", "bg2": "#5a0000", "tamanho": 170},
+    {"estilo": "revelar", "inicio": 11.6, "fim": 13.8, "texto": "I don't care", "fonte": "oswald", "tamanho": 110},
+    {"estilo": "gigante", "inicio": 13.8, "fim": 15.2, "texto": "I LOVE", "sub": "the smell of it", "sangrar": false}
+  ]
+}
