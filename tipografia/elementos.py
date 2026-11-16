@@ -630,38 +630,7 @@ Elementos.fios = fios
 Elementos.pulso = pulso
 
 
-# ====================================================================== GRAVIDADE + ECLIPSE (música: "poder")
-def gravidade(s, img, tempo, t, cena, claro):
-    """Partículas orbitando o centro do texto; cada ataque da música puxa tudo pra dentro (o 'poder')."""
-    W, H = s.W, s.H
-    if not hasattr(s, "_grav"):
-        rng = random.Random(41)
-        s._grav = [(rng.uniform(0.18, 1.0), rng.random() * 6.28, rng.uniform(0.6, 1.4), rng.random()) for _ in range(300)]
-    ataques = getattr(s, "ataques", [])
-    puxao = min(1.0, sum(math.exp(-(tempo - a) * 5) for a in ataques if 0 <= tempo - a < 1.2))
-    cx, cy = W / 2, H / 2 + cena.get("dy", 0) * 0.6
-    R = W * 0.62
-    w2 = Image.new("L", (W // 2, H // 2), 0)
-    d = ImageDraw.Draw(w2)
-    for r0, a0, v, b in s._grav:
-        r = r0 * (1 - 0.35 * puxao)
-        w = v * 0.55 / r ** 1.5
-        a = a0 + tempo * w
-        rr = r * R
-        # rastro curto (arco) = sensação de velocidade
-        pts = [((cx + rr * math.cos(a - k * 0.03 * w)) / 2, (cy + rr * math.sin(a - k * 0.03 * w) * 0.42) / 2) for k in range(5)]
-        lum = int((90 + 165 * b) * (0.45 + 0.55 * puxao) * min(1, r0 * 3))
-        d.line(pts, fill=lum, width=1 + (b > 0.85))
-    # disco de acreção fininho
-    for k, al in ((1.0, 40), (0.7, 25)):
-        rr = R * 0.24 * k * (1 - 0.2 * puxao)
-        d.ellipse([(cx - rr) / 2, (cy - rr * 0.42) / 2, (cx + rr) / 2, (cy + rr * 0.42) / 2], outline=int(al * (1 + 2 * puxao)), width=1)
-    m = w2.resize((W, H), Image.BICUBIC)
-    m = ImageChops.lighter(m, m.filter(ImageFilter.GaussianBlur(6)))
-    cor = (240, 240, 240) if not claro else (15, 15, 15)
-    return Image.composite(Image.new("RGB", (W, H), cor), img, m)
-
-
+# ====================================================================== ECLIPSE (música: "poder")
 def eclipse(s, img, tempo, t, cena, claro):
     """Disco escuro na frente de uma coroa de luz viva; a coroa explode em cada ataque."""
     W, H = s.W, s.H
@@ -796,5 +765,5 @@ def cidade(s, img, tempo, t, cena, claro):
     return Image.composite(Image.new("RGB", (W, H), (240, 236, 225) if not claro else (20, 20, 20)), img, luz)
 
 
-for _f in (gravidade, eclipse, petalas, rosa, cidade):
+for _f in (eclipse, petalas, rosa, cidade):
     setattr(Elementos, _f.__name__, _f)
