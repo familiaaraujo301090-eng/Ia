@@ -195,7 +195,13 @@ def texto_esticado(txt, f, alvo_w, alvo_h, c, fundo=None):
 def tempos_palavras(cena, n):
     """Tempo (relativo à cena) em que cada palavra entra."""
     if "tempos" in cena:
-        return [t - cena["inicio"] for t in cena["tempos"]]
+        ts = [t - cena["inicio"] for t in cena["tempos"]][:n]
+        if len(ts) < n:  # faltou tempo pra alguma palavra: espalha o resto no que sobra da cena
+            ult = ts[-1] if ts else 0.0
+            resto = (cena["fim"] - cena["inicio"]) * 0.85 - ult
+            falta = n - len(ts)
+            ts += [ult + resto * (k + 1) / (falta + 1) for k in range(falta)]
+        return ts
     dur = cena["fim"] - cena["inicio"]
     janela = dur * cena.get("ritmo", 0.7)
     ts = [janela * i / max(1, n) for i in range(n)]
@@ -332,6 +338,8 @@ def est_flash(cv, cena, t, ctx):
 def est_gigante(cv, cena, t, ctx):
     W, H = ctx.W, ctx.H
     inverter = cena.get("inverter", False)
+    if cena.get("piscar"):  # palavra repetida: inverte a cada ataque da música
+        inverter = inverter ^ (sum(1 for a in ctx.ataques if cena["inicio"] - 0.02 <= a <= cena["inicio"] + t) % 2 == 1)
     bg = cor(cena.get("bg", "#ebe8e2" if inverter else "#0a0a0a"))
     fg = cor(cena.get("cor", "#111111" if inverter else "#eeebe5"))
     img = ctx.elem(ctx.fx.solido(bg), cena, t)
@@ -510,6 +518,7 @@ def render(proj, saida, audio=None, inicio=0.0, preview=False):
             ctx.ataques = [round(x, 3) for x in detectar_batidas(carregar(audio, inicio, inicio + dur), 4, 0.6)]
         except Exception as e:
             print("aviso: não detectei ataques do áudio:", e, file=sys.stderr)
+    ctx.el.ataques = ctx.ataques
     random.seed(1)
     if preview:
         os.makedirs(saida, exist_ok=True)

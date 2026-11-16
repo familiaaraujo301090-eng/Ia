@@ -539,3 +539,92 @@ def vidro(s, img, tempo, t, cena, claro):
 
 Elementos.porta = porta
 Elementos.vidro = vidro
+
+
+# ====================================================================== FIOS (música: "poder sobre mim")
+def fios(s, img, tempo, t, cena, claro):
+    """Cruz de marionete no alto, balançando; fios descem até a área do texto e dão TRANCO em cada ataque."""
+    W, H = s.W, s.H
+    ataques = getattr(s, "ataques", [])
+    tranco = sum(math.exp(-(tempo - a) * 7) for a in ataques if 0 <= tempo - a < 1.0)
+    tranco = min(1.4, tranco)
+    ang = 0.10 * math.sin(tempo * 1.15) + 0.05 * math.sin(tempo * 2.9) + 0.06 * tranco * math.sin(tempo * 9)
+    cx, cy = W / 2 + 18 * math.sin(tempo * 0.7), H * 0.11 - 26 * tranco
+    ca, sa = math.cos(ang), math.sin(ang)
+    rot = lambda x, y: (cx + x * ca - y * sa, cy + x * sa + y * ca)
+    barra1 = (rot(-W * 0.30, 0), rot(W * 0.30, 0))
+    barra2 = (rot(0, -H * 0.035), rot(0, H * 0.035))
+    pontas = [barra1[0], rot(-W * 0.15, 0), barra2[1], rot(W * 0.15, 0), barra1[1]]
+    ancoras = [(W * 0.16, H * 0.60), (W * 0.33, H * 0.52), (W * 0.50, H * 0.47), (W * 0.67, H * 0.52), (W * 0.84, H * 0.60)]
+    cam = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(cam)
+    linha = (225, 225, 225) if not claro else (25, 25, 25)
+    for i, (p, (ax, ay)) in enumerate(zip(pontas, ancoras)):
+        ay = ay - 40 * tranco * (0.7 + 0.3 * math.sin(i * 1.7)) + 6 * math.sin(tempo * 1.3 + i)
+        folga = max(0.0, 0.6 - tranco) * 45  # fio frouxo faz barriga; no tranco fica esticado
+        pts = []
+        for k in range(21):
+            u = k / 20
+            x = p[0] + (ax - p[0]) * u
+            y = p[1] + (ay - p[1]) * u + folga * 4 * u * (1 - u)
+            pts.append((x, y))
+        d.line(pts, fill=linha + (70,), width=6)
+        d.line(pts, fill=linha + (210,), width=2)
+        d.ellipse([ax - 7, ay - 7, ax + 7, ay + 7], outline=linha + (230,), width=3)
+    madeira = (70, 70, 70) if not claro else (190, 190, 190)
+    for a, b in (barra1, barra2):
+        d.line([a, b], fill=madeira + (255,), width=26)
+        d.line([a, b], fill=linha + (150,), width=3)  # luz no topo da madeira
+    for p in pontas:
+        d.ellipse([p[0] - 9, p[1] - 9, p[0] + 9, p[1] + 9], fill=madeira + (255,), outline=linha + (180,), width=2)
+    sombra = cam.getchannel("A").filter(ImageFilter.GaussianBlur(14)).point(lambda v: int(v * 0.35))
+    img = Image.composite(Image.new("RGB", (W, H), (0, 0, 0) if not claro else (120, 120, 120)), img,
+                          ImageChops.offset(sombra, 10, 18))
+    img.paste(cam, (0, 0), cam)
+    return img
+
+
+# ====================================================================== PULSO (música: "cheiro de flor / pulsação")
+def _ecg(d):
+    g = lambda c, w, a: a * math.exp(-((d - c) / w) ** 2)
+    return g(0.0, 0.025, 12) + g(0.05, 0.010, -26) + g(0.075, 0.012, 190) + g(0.10, 0.012, -60) + g(0.22, 0.04, 34)
+
+
+def pulso(s, img, tempo, t, cena, claro):
+    """Monitor cardíaco: a linha corre pela tela e o pico acontece em cada ataque da música."""
+    W, H = s.W, s.H
+    ataques = getattr(s, "ataques", [])
+    vel = cena.get("pulso_vel", 0.45)  # telas por segundo
+    y0 = H * cena.get("pulso_y", 0.36)
+    cam = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(cam)
+    linha = (238, 238, 238) if not claro else (20, 20, 20)
+    varredura = math.floor(tempo * vel)
+    segs = []
+    for xi in range(0, W + 1, 4):
+        tx = (varredura + xi / W) / vel
+        if tx > tempo:
+            tx -= 1 / vel  # parte ainda da varredura anterior
+        idade = tempo - tx
+        if idade < 0 or idade > 1 / vel * 0.92:
+            segs.append(None)
+            continue
+        amp = sum(_ecg(tx - a) for a in ataques if -0.05 < tx - a < 0.35)
+        segs.append((xi, y0 - amp, idade * vel))
+    for a, b in zip(segs, segs[1:]):
+        if a and b and abs(a[0] - b[0]) < 10:
+            alfa = int(255 * (1 - a[2]) ** 1.5)
+            d.line([a[:2], b[:2]], fill=linha + (alfa,), width=4)
+    brilho = cam.filter(ImageFilter.GaussianBlur(10))
+    img.paste(brilho, (0, 0), brilho)
+    img.paste(cam, (0, 0), cam)
+    hx = (tempo * vel % 1) * W
+    hy = y0 - sum(_ecg(tempo - a) for a in ataques if -0.05 < tempo - a < 0.35)
+    ponto = Image.new("L", (W, H), 0)
+    ImageDraw.Draw(ponto).ellipse([hx - 14, hy - 14, hx + 14, hy + 14], fill=255)
+    ponto = ponto.filter(ImageFilter.GaussianBlur(7))
+    return Image.composite(Image.new("RGB", (W, H), linha), img, ponto)
+
+
+Elementos.fios = fios
+Elementos.pulso = pulso
