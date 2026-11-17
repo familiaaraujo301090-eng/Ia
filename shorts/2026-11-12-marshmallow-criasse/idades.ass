@@ -1,0 +1,21 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+WrapStyle: 0
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Idade,Inter ExtraBold,120,&H0060C8F0,&H0060C8F0,&H00101010,&H96000000,0,0,0,0,100,100,4,0,1,6,4,8,60,60,335,1
+Style: Gancho,Inter ExtraBold,82,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,3,18,0,8,70,70,260,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 1,0:00:00.00,0:00:03.20,Gancho,,0,0,0,,{\fad(0,200)}UMA CRIANÇA, UM DOCE E\N{\c&H004AD8FF}15 MINUTOS{\c&H00FFFFFF&}: O TESTE QUE\NPREVÊ O SEU FUTURO
+Dialogue: 0,0:00:03.20,0:00:04.58,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}STANFORD
+Dialogue: 0,0:00:04.58,0:00:11.10,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}O DOCE
+Dialogue: 0,0:00:11.10,0:00:16.79,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}15 MINUTOS
+Dialogue: 0,0:00:16.79,0:00:21.99,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}A ESPERA
+Dialogue: 0,0:00:21.99,0:00:26.80,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}O SEGREDO
+Dialogue: 0,0:00:26.80,0:00:32.11,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}ANOS DEPOIS
+Dialogue: 0,0:00:32.11,0:00:41.05,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}VOCÊ
