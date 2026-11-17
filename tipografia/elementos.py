@@ -767,3 +767,70 @@ def cidade(s, img, tempo, t, cena, claro):
 
 for _f in (eclipse, petalas, rosa, cidade):
     setattr(Elementos, _f.__name__, _f)
+
+
+# ====================================================================== CORTES + CINZAS (música: "vingança")
+def cortes(s, img, tempo, t, cena, claro):
+    """Em cada ataque da música, um corte atravessa a tela num golpe rápido e some (com brilho)."""
+    W, H = s.W, s.H
+    ataques = [a for a in getattr(s, "ataques", []) if cena["inicio"] - 0.05 <= a <= tempo and tempo - a < 0.7]
+    if not ataques:
+        return img
+    lum = sum(img.getpixel((x, y))[0] for x, y in ((10, 10), (W - 10, H - 10), (W // 2, 10))) / 3
+    vermelho_fundo = img.getpixel((W // 2, 10))[0] > 100 and img.getpixel((W // 2, 10))[1] < 60
+    if vermelho_fundo:
+        cor = (14, 4, 4)
+    elif claro:
+        cor = (170, 10, 24)
+    else:
+        cor = (250, 244, 236)
+    nucleo = Image.new("L", (W, H), 0)
+    halo = Image.new("L", (W, H), 0)
+    dn, dh = ImageDraw.Draw(nucleo), ImageDraw.Draw(halo)
+    for a in ataques:
+        rng = random.Random(int(a * 1000))
+        idade = tempo - a
+        ang = rng.uniform(-0.55, 0.55) + (math.pi / 2 if rng.random() < 0.15 else 0)
+        cx, cy = W * rng.uniform(0.3, 0.7), H * rng.uniform(0.3, 0.7)
+        L = math.hypot(W, H)
+        dx, dy = math.cos(ang) * L / 2, math.sin(ang) * L / 2
+        golpe = min(1.0, idade / 0.07)  # o corte "corre" pela tela
+        p0 = (cx - dx, cy - dy)
+        p1 = (cx - dx + 2 * dx * golpe, cy - dy + 2 * dy * golpe)
+        some = max(0.0, 1 - idade / 0.7) ** 1.6
+        larg = 2 + 7 * max(0.0, 1 - idade / 0.25)
+        dn.line([p0, p1], fill=int(255 * some), width=int(larg))
+        dh.line([p0, p1], fill=int(150 * some), width=int(larg * 6))
+    halo = halo.filter(ImageFilter.GaussianBlur(14))
+    m = ImageChops.lighter(nucleo.filter(ImageFilter.GaussianBlur(0.8)), halo)
+    return Image.composite(Image.new("RGB", (W, H), cor), img, m)
+
+
+def cinzas(s, img, tempo, t, cena, claro):
+    """Brasas/cinzas subindo e piscando; mais fortes logo depois de cada ataque."""
+    W, H = s.W, s.H
+    if not hasattr(s, "_cinzas"):
+        rng = random.Random(55)
+        s._cinzas = [(rng.random(), rng.random(), rng.uniform(0.3, 1), rng.random() * 6.28, rng.random()) for _ in range(110)]
+    ataques = getattr(s, "ataques", [])
+    pulso = min(1.0, sum(math.exp(-(tempo - a) * 4) for a in ataques if 0 <= tempo - a < 1.0))
+    cam = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(cam)
+    for x, y, z, fase, brasa in s._cinzas:
+        yy = ((y - tempo * 0.05 * z) % 1.1 - 0.05) * H
+        xx = (x + 0.02 * math.sin(tempo * 0.8 + fase)) * W
+        r = 1.2 + 3.0 * z
+        if claro:
+            c = (60, 60, 60)
+        else:
+            c = (255, 120 + int(80 * brasa), 60) if brasa > 0.45 else (200, 200, 200)
+        a = int(255 * (0.25 + 0.55 * z) * (0.55 + 0.45 * math.sin(tempo * 4 * (0.5 + brasa) + fase)) * (0.7 + 0.3 * pulso))
+        d.ellipse([xx - r, yy - r, xx + r, yy + r], fill=c + (max(0, a),))
+    glow = cam.filter(ImageFilter.GaussianBlur(4))
+    img.paste(glow, (0, 0), glow)
+    img.paste(cam, (0, 0), cam.filter(ImageFilter.GaussianBlur(0.6)))
+    return img
+
+
+Elementos.cortes = cortes
+Elementos.cinzas = cinzas
