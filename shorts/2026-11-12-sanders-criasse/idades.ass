@@ -1,0 +1,21 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+WrapStyle: 0
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Idade,Inter ExtraBold,120,&H0060C8F0,&H0060C8F0,&H00101010,&H96000000,0,0,0,0,100,100,4,0,1,6,4,8,60,60,335,1
+Style: Gancho,Inter ExtraBold,82,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,3,18,0,8,70,70,260,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 1,0:00:00.00,0:00:03.20,Gancho,,0,0,0,,{\fad(0,200)}AOS {\c&H004AD8FF}65 ANOS{\c&H00FFFFFF&} ELE\NESTAVA FALIDO.\NOLHA O QUE ELE FEZ
+Dialogue: 0,0:00:03.20,0:00:06.21,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}65 ANOS
+Dialogue: 0,0:00:06.21,0:00:11.13,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}6 ANOS
+Dialogue: 0,0:00:11.13,0:00:16.28,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}16 ANOS
+Dialogue: 0,0:00:16.28,0:00:22.22,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}40 ANOS
+Dialogue: 0,0:00:22.22,0:00:27.69,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}65 ANOS
+Dialogue: 0,0:00:27.69,0:00:33.42,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}1.009 NÃOS
+Dialogue: 0,0:00:33.42,0:00:44.20,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}88 ANOS
