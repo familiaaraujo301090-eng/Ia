@@ -141,7 +141,10 @@ def fundo(ctx, cena, padrao="#0b0b0b", vinheta=0.7):
     img = ctx.fx.solido(cena.get("bg", padrao))
     if cena.get("bg2"):
         return Image.composite(img, ctx.fx.solido(cena["bg2"]), ctx.fx.vinheta)
-    return ctx.fx.vinheta_sobre(img, vinheta)
+    v = cena.get("vinheta", vinheta)
+    if sum(cor(cena.get("bg", padrao))) > 600:  # fundo claro: vinheta leve e clara, sem cantos sujos
+        return ctx.fx.vinheta_sobre(img, min(v, 0.25), (200, 200, 200))
+    return ctx.fx.vinheta_sobre(img, v)
 
 
 # ----------------------------------------------------------------- texto
@@ -236,6 +239,13 @@ def colar_foco(img, txt, f, c, x, y, k, anchor="lm", blur_max=16, escala=0.10, s
         return
     e = ease_out(k)
     im, b = camada_texto(txt, f, c)
+    if modo == "cortina":
+        corte = Image.new("L", im.size, 0)
+        larg = int(im.width * min(1.0, e * 1.08))
+        ImageDraw.Draw(corte).rectangle([0, 0, larg, im.height], fill=255)
+        corte = corte.filter(ImageFilter.GaussianBlur(6))
+        im.putalpha(ImageChops.multiply(im.getchannel("A"), corte))
+        blur_max, escala, subir = 0, 0, 16
     z = 1 + escala * (1 - e)
     if modo == "pop":      # nasce grande e assenta com um quiquinho
         z = 1 + 0.95 * (1 - ease_back(k))
@@ -272,7 +282,7 @@ def colar_foco(img, txt, f, c, x, y, k, anchor="lm", blur_max=16, escala=0.10, s
     img.paste(im, (int(cx - im.width / 2), int(cy - im.height / 2)), im)
 
 
-def frase_em_foco(img, palavras, ts, t, f, cor_fn, W, cy, largura_max, lh, recentrar=True, modos=None):
+def frase_em_foco(img, palavras, ts, t, f, cor_fn, W, cy, largura_max, lh, recentrar=True, modos=None, cx=None):
     """Layout de frase palavra a palavra; a palavra nova entra com foco."""
     linhas = quebrar(palavras, f, largura_max)
     esp = medir(f, " ")[0] or f.size * .28
@@ -282,7 +292,7 @@ def frase_em_foco(img, palavras, ts, t, f, cor_fn, W, cy, largura_max, lh, recen
         if not vis:
             continue
         larg = medir(f, " ".join(p for _, p in vis))[0]
-        x = W / 2 - larg / 2
+        x = (W / 2 if cx is None else cx) - larg / 2
         for i, p in vis:
             if t >= ts[i]:
                 k = (t - ts[i]) / FOCO
@@ -296,16 +306,18 @@ def est_revelar(cv, cena, t, ctx):
     img = ctx.elem(fundo(ctx, cena), cena, t)
     palavras = cena["texto"].split()
     ts = tempos_palavras(cena, len(palavras))
-    f = caber(cena.get("fonte", "oswald"), cena.get("tamanho", 92), palavras, W * SEGURA)
+    LARG = W * cena.get("largura", SEGURA)
+    CX = W / 2 + cena.get("dx", 0)
+    f = caber(cena.get("fonte", "oswald"), cena.get("tamanho", 92), palavras, LARG)
     c_on, c_off = cor(cena.get("cor", "#ece9e4")), cor(cena.get("cor_apagada", "#5a5a5a"))
     # palavra acende de cinza pra branco um pouco DEPOIS de assentar (igual aos edits)
     cor_fn = lambda i, k: mix(c_off, c_on, ease_out((k - 0.4) / 1.2))
-    modos = ["subir", "pop", "queda", "zoom"] if cena.get("animar") else None
-    if cena.get("sombra") or cena.get("animar"):
+    modos = [cena["entrada"]] if cena.get("entrada") else (["subir", "pop", "queda", "zoom"] if cena.get("animar") else None)
+    if cena.get("sombra") or cena.get("animar") or cena.get("entrada"):
         cam = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         cy = H / 2 + cena.get("dy", 0)
-        frase_em_foco(cam, palavras, ts, t, f, cor_fn, W, cy, W * SEGURA, f.size * 1.18, modos=modos)
-        if cena.get("animar"):  # a frase pulsa em cada ataque da música
+        frase_em_foco(cam, palavras, ts, t, f, cor_fn, W, cy, LARG, f.size * 1.18, modos=modos, cx=CX)
+        if cena.get("pulsar"):  # a frase pulsa em cada ataque da música
             agora = cena["inicio"] + t
             pul = min(1.0, sum(math.exp(-(agora - a) * 9) for a in ctx.ataques if 0 <= agora - a < 0.6))
             z = 1 + 0.045 * pul + 0.015 * t / max(0.5, cena["fim"] - cena["inicio"])
@@ -320,7 +332,7 @@ def est_revelar(cv, cena, t, ctx):
         img = Image.composite(Image.new("RGB", (W, H), (20, 10, 10)), img, ImageChops.offset(sb, 3, 5))
         img.paste(cam, (0, 0), cam)
         return img
-    frase_em_foco(img, palavras, ts, t, f, cor_fn, W, H / 2 + cena.get("dy", 0), W * SEGURA, f.size * 1.18)
+    frase_em_foco(img, palavras, ts, t, f, cor_fn, W, H / 2 + cena.get("dy", 0), LARG, f.size * 1.18, cx=CX)
     return img
 
 
@@ -330,8 +342,9 @@ def est_pilha(cv, cena, t, ctx):
     palavras = cena["texto"].upper().split("/") if "/" in cena["texto"] else cena["texto"].upper().split()
     palavras = [p.strip() for p in palavras]
     ts = tempos_palavras(cena, len(palavras))
-    f = caber(cena.get("fonte", "black"), cena.get("tamanho", 120), palavras, W * SEGURA,
+    f = caber(cena.get("fonte", "black"), cena.get("tamanho", 120), palavras, W * cena.get("largura", SEGURA),
               H * SEGURA, len(palavras), 1.02)
+    PX = W / 2 + cena.get("dx", 0)
     cores = [cor(c) for c in cena.get("cores", ["#f5f5f5"])]
     lh = f.size * 1.02
     # a pilha sobe suavemente conforme cresce (interpola em vez de pular)
@@ -344,8 +357,8 @@ def est_pilha(cv, cena, t, ctx):
         k = (t - ts[i])
         c = cores[min(i * len(cores) // max(1, len(palavras)), len(cores) - 1)] if cena.get("degrade") else cores[i % len(cores)]
         y = alvo + i * lh + lh / 2
-        colar_foco(img, p, f, c, W / 2, y, k / FOCO, anchor="mm", blur_max=20, subir=24,
-                   modo=["pop", "subir", "zoom", "queda"][i % 4] if cena.get("animar") else None)
+        colar_foco(img, p, f, c, PX, y, k / FOCO, anchor="mm", blur_max=20, subir=24,
+                   modo=cena.get("entrada") or (["pop", "subir", "zoom", "queda"][i % 4] if cena.get("animar") else None))
     return img
 
 
@@ -373,7 +386,8 @@ def est_flash(cv, cena, t, ctx):
     img = ctx.elem(img, cena, t)
     tam = cena.get("tamanho", 84) * (1 + 0.07 * pulo)
     f = caber(cena.get("fonte", "medium"), tam, palavras, W * SEGURA / (1 + 0.07 * pulo))
-    frase_em_foco(img, palavras, ts, t, f, lambda i, k: fg, W, H / 2 + cena.get("dy", 0), W * SEGURA, f.size * 1.25)
+    frase_em_foco(img, palavras, ts, t, f, lambda i, k: fg, W, H / 2 + cena.get("dy", 0), W * SEGURA, f.size * 1.25,
+                  modos=[cena["entrada"]] if cena.get("entrada") else None)
     return img
 
 

@@ -797,3 +797,72 @@ def cinzas(s, img, tempo, t, cena, claro):
 
 
 Elementos.cinzas = cinzas
+
+
+# ====================================================================== FOTO (imagens enviadas pelo usuário)
+_FOTOS = {}
+
+
+def _carregar_foto(caminho, alvo_h):
+    k = (caminho, alvo_h)
+    if k not in _FOTOS:
+        import os
+        base = os.path.dirname(os.path.abspath(__file__))
+        im = Image.open(caminho if os.path.exists(caminho) else os.path.join(base, caminho)).convert("RGB")
+        z = alvo_h / im.height
+        im = im.resize((int(im.width * z), alvo_h), Image.LANCZOS).filter(ImageFilter.UnsharpMask(2, 60, 2))
+        _FOTOS[k] = im
+    return _FOTOS[k]
+
+
+def foto(s, img, tempo, t, cena, claro):
+    """Foto com movimento leve (zoom e deslize lentos), entrando em fade.
+    foto_modo: "dir" / "esq" (foto vertical num lado, borda interna se dissolvendo no fundo)
+               "cheio" (cobre a tela; foto_degrade "baixo"/"cima" funde com o fundo pra caber a letra)"""
+    W, H = s.W, s.H
+    dur = max(0.5, cena["fim"] - cena["inicio"])
+    u = t / dur
+    entra = min(1.0, t / 0.5)
+    modo = cena.get("foto_modo", "dir")
+    fundo = img.getpixel((3, 3))
+    if modo == "cheio":
+        base = _carregar_foto(cena["foto"], int(H * 1.12))
+        if base.width < W * 1.12:
+            base = _carregar_foto(cena["foto"], int(H * 1.12 * W * 1.12 / base.width))
+        z = 1.0 + 0.05 * u
+        bw, bh = int(base.width * z / 1.0), int(base.height * z / 1.0)
+        im = base.resize((bw, bh), Image.BICUBIC)
+        ox = int((bw - W) / 2 + cena.get("foto_pan", 0.0) * (u - 0.5) * 60)
+        oy = int((bh - H) * cena.get("foto_y", 0.5))
+        im = im.crop((ox, oy, ox + W, oy + H))
+        m = Image.new("L", (W, H), int(255 * entra))
+        deg = cena.get("foto_degrade")
+        if deg:
+            g = Image.linear_gradient("L").resize((W, H))  # 0 em cima -> 255 embaixo
+            if deg == "baixo":
+                g = g.point(lambda v: 255 - int(255 * max(0.0, (v / 255 - 0.55) / 0.35)) if v / 255 > 0.55 else 255)
+            else:
+                g = g.point(lambda v: 255 - int(255 * max(0.0, (0.45 - v / 255) / 0.35)) if v / 255 < 0.45 else 255)
+            m = ImageChops.multiply(m, g)
+        return Image.composite(im, img, m)
+    # lateral
+    alto = int(H * cena.get("foto_altura", 1.0))
+    base = _carregar_foto(cena["foto"], alto)
+    z = 1.0 + 0.06 * u
+    im = base.resize((int(base.width * z), int(base.height * z)), Image.BICUBIC)
+    cx = W * (0.74 if modo == "dir" else 0.26) + (-1 if modo == "dir" else 1) * 25 * (1 - entra) ** 2
+    cy = H - im.height / 2 + 10 * (u - 0.5) if cena.get("foto_chao", True) else H / 2
+    x0, y0 = int(cx - im.width / 2), int(cy - im.height / 2)
+    m = Image.new("L", im.size, int(255 * entra))
+    # borda interna (lado do texto) se dissolve no fundo
+    fx = Image.linear_gradient("L").rotate(90 if modo == "dir" else -90).resize(im.size)
+    fx = fx.point(lambda v: min(255, int(v * 3.2)))
+    m = ImageChops.multiply(m, fx)
+    # topo também dissolve
+    fy = Image.linear_gradient("L").resize(im.size).point(lambda v: min(255, int(v * 6)))
+    m = ImageChops.multiply(m, fy)
+    img.paste(im, (x0, y0), m)
+    return img
+
+
+Elementos.foto = foto

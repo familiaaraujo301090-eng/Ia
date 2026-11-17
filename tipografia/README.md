@@ -98,6 +98,9 @@ Todo vídeo sai **com a música sincronizada**:
   `janela` (interior com feixes de luz) · `campo_azul` (campo de flores azuis). Nenhum personagem ou arte copiada.
 - Estilo `inclinado`: tela branca com linhas de texto tortas (a última maior) e riscos diagonais.
 - `"animar": true` (projeto ou cena): cada palavra entra com movimento (sobe, pop, cai, zoom) e a frase pulsa nos ataques da música; a tela `inclinado` escreve letra por letra girando devagar.
+- `"entrada": "cortina"`: cada palavra é revelada da esquerda pra direita (sem desfoque, sem pulso). `"pulsar": true` liga o pulso nos ataques.
+- Elemento `foto` (imagens suas em `fotos/`, fora do git): `"foto": "fotos/x.jpg"`, `"foto_modo": "dir"|"esq"|"cheio"`, `foto_altura`, `foto_degrade` ("baixo"/"cima"), `foto_y`; movimento lento de zoom/deslize.
+- `"dx"` e `"largura"` no `revelar`/`pilha`: põe a letra num lado da tela (ao lado da foto).
 - `"sombra": true` no `revelar`: sombra suave atrás do texto pra ler sobre céu claro.
 
 ## Preto e branco com elementos dinâmicos
