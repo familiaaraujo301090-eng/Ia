@@ -97,6 +97,7 @@ Todo vídeo sai **com a música sincronizada**:
   `por_do_sol` · `crepusculo` · `muralha` · `cachecol` (tecido vermelho ao vento; `cachecol_voa` faz ele subir) ·
   `janela` (interior com feixes de luz) · `campo_azul` (campo de flores azuis). Nenhum personagem ou arte copiada.
 - Estilo `inclinado`: tela branca com linhas de texto tortas (a última maior) e riscos diagonais.
+- `"animar": true` (projeto ou cena): cada palavra entra com movimento (sobe, pop, cai, zoom) e a frase pulsa nos ataques da música; a tela `inclinado` escreve letra por letra girando devagar.
 - `"sombra": true` no `revelar`: sombra suave atrás do texto pra ler sobre céu claro.
 
 ## Preto e branco com elementos dinâmicos
@@ -104,7 +105,7 @@ Todo vídeo sai **com a música sincronizada**:
 `"pb": true` no projeto deixa tudo em P&B com curva de filme. `"elementos"` (no projeto ou por cena)
 desenha elementos animados ATRÁS da letra, todos originais:
 
-`casal` (ele respira, sopra, e a fumaça forma o rosto dela) · `porta` (porta abrindo, luz no chão, silhueta no vão) · `vidro` (box embaçado com gotas escorrendo) · `eclipse` (coroa de luz que explode nos ataques) · `petalas` · `rosa` (desabrochando a traço) · `cidade` (prédios com janelas acendendo) · `cortes` (golpes de corte atravessando a tela nos ataques) · `cinzas` (brasas subindo, mais fortes nos ataques) · `fios` · `pulso` (batimento cardíaco no ritmo) · `perfil` (rosto de perfil soprando fumaça) · `fumaca` · `lua` (esfera subindo) · `traco` (lápis desenhando)
+`casal` (ele respira, sopra, e a fumaça forma o rosto dela) · `porta` (porta abrindo, luz no chão, silhueta no vão) · `vidro` (box embaçado com gotas escorrendo) · `eclipse` (coroa de luz que explode nos ataques) · `petalas` · `rosa` (desabrochando a traço) · `cidade` (prédios com janelas acendendo) · `cinzas` (brasas subindo, mais fortes nos ataques) · `fios` · `pulso` (batimento cardíaco no ritmo) · `perfil` (rosto de perfil soprando fumaça) · `fumaca` · `lua` (esfera subindo) · `traco` (lápis desenhando)
 · `particulas` (poeira/bokeh) · `chuva` · `aneis` (nascem nas batidas) · `linhas` (scanner) · `luz` (flash nas batidas)
 
 ```json

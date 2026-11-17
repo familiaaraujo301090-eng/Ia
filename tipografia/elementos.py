@@ -769,43 +769,7 @@ for _f in (eclipse, petalas, rosa, cidade):
     setattr(Elementos, _f.__name__, _f)
 
 
-# ====================================================================== CORTES + CINZAS (música: "vingança")
-def cortes(s, img, tempo, t, cena, claro):
-    """Em cada ataque da música, um corte atravessa a tela num golpe rápido e some (com brilho)."""
-    W, H = s.W, s.H
-    ataques = [a for a in getattr(s, "ataques", []) if cena["inicio"] - 0.05 <= a <= tempo and tempo - a < 0.7]
-    if not ataques:
-        return img
-    lum = sum(img.getpixel((x, y))[0] for x, y in ((10, 10), (W - 10, H - 10), (W // 2, 10))) / 3
-    vermelho_fundo = img.getpixel((W // 2, 10))[0] > 100 and img.getpixel((W // 2, 10))[1] < 60
-    if vermelho_fundo:
-        cor = (14, 4, 4)
-    elif claro:
-        cor = (170, 10, 24)
-    else:
-        cor = (250, 244, 236)
-    nucleo = Image.new("L", (W, H), 0)
-    halo = Image.new("L", (W, H), 0)
-    dn, dh = ImageDraw.Draw(nucleo), ImageDraw.Draw(halo)
-    for a in ataques:
-        rng = random.Random(int(a * 1000))
-        idade = tempo - a
-        ang = rng.uniform(-0.55, 0.55) + (math.pi / 2 if rng.random() < 0.15 else 0)
-        cx, cy = W * rng.uniform(0.3, 0.7), H * rng.uniform(0.3, 0.7)
-        L = math.hypot(W, H)
-        dx, dy = math.cos(ang) * L / 2, math.sin(ang) * L / 2
-        golpe = min(1.0, idade / 0.07)  # o corte "corre" pela tela
-        p0 = (cx - dx, cy - dy)
-        p1 = (cx - dx + 2 * dx * golpe, cy - dy + 2 * dy * golpe)
-        some = max(0.0, 1 - idade / 0.7) ** 1.6
-        larg = 2 + 7 * max(0.0, 1 - idade / 0.25)
-        dn.line([p0, p1], fill=int(255 * some), width=int(larg))
-        dh.line([p0, p1], fill=int(150 * some), width=int(larg * 6))
-    halo = halo.filter(ImageFilter.GaussianBlur(14))
-    m = ImageChops.lighter(nucleo.filter(ImageFilter.GaussianBlur(0.8)), halo)
-    return Image.composite(Image.new("RGB", (W, H), cor), img, m)
-
-
+# ====================================================================== CINZAS (música: "vingança")
 def cinzas(s, img, tempo, t, cena, claro):
     """Brasas/cinzas subindo e piscando; mais fortes logo depois de cada ataque."""
     W, H = s.W, s.H
@@ -832,5 +796,4 @@ def cinzas(s, img, tempo, t, cena, claro):
     return img
 
 
-Elementos.cortes = cortes
 Elementos.cinzas = cinzas

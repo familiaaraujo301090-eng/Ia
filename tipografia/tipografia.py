@@ -228,7 +228,7 @@ def camada_texto(txt, f, c, pad=40):
     return im, b
 
 
-def colar_foco(img, txt, f, c, x, y, k, anchor="lm", blur_max=16, escala=0.10, subir=14):
+def colar_foco(img, txt, f, c, x, y, k, anchor="lm", blur_max=16, escala=0.10, subir=14, modo=None):
     """Desenha txt em (x,y). k: 0 = começando a entrar, 1 = assentado.
     Desfoque -> nítido, levemente maior -> tamanho real, opacidade 0 -> 1.  Sem listras, sem glitch."""
     if k >= 1:
@@ -237,6 +237,16 @@ def colar_foco(img, txt, f, c, x, y, k, anchor="lm", blur_max=16, escala=0.10, s
     e = ease_out(k)
     im, b = camada_texto(txt, f, c)
     z = 1 + escala * (1 - e)
+    if modo == "pop":      # nasce grande e assenta com um quiquinho
+        z = 1 + 0.95 * (1 - ease_back(k))
+        blur_max = 8
+    elif modo == "zoom":   # nasce pequeno e cresce passando do ponto
+        z = 0.25 + 0.75 * ease_back(k)
+        blur_max = 8
+    elif modo == "subir":
+        subir = 120
+    elif modo == "queda":
+        subir = -120
     if z != 1:
         im = im.resize((max(1, int(im.width * z)), max(1, int(im.height * z))), Image.BICUBIC)
     r = blur_max * (1 - e) ** 1.5
@@ -252,7 +262,7 @@ def colar_foco(img, txt, f, c, x, y, k, anchor="lm", blur_max=16, escala=0.10, s
     img.paste(im, (int(cx - im.width / 2), int(cy - im.height / 2)), im)
 
 
-def frase_em_foco(img, palavras, ts, t, f, cor_fn, W, cy, largura_max, lh, recentrar=True):
+def frase_em_foco(img, palavras, ts, t, f, cor_fn, W, cy, largura_max, lh, recentrar=True, modos=None):
     """Layout de frase palavra a palavra; a palavra nova entra com foco."""
     linhas = quebrar(palavras, f, largura_max)
     esp = medir(f, " ")[0] or f.size * .28
@@ -266,7 +276,7 @@ def frase_em_foco(img, palavras, ts, t, f, cor_fn, W, cy, largura_max, lh, recen
         for i, p in vis:
             if t >= ts[i]:
                 k = (t - ts[i]) / FOCO
-                colar_foco(img, p, f, cor_fn(i, k), x, y0 + li * lh, k)
+                colar_foco(img, p, f, cor_fn(i, k), x, y0 + li * lh, k, modo=modos[i % len(modos)] if modos else None)
             x += medir(f, p)[0] + esp
 
 
@@ -280,9 +290,22 @@ def est_revelar(cv, cena, t, ctx):
     c_on, c_off = cor(cena.get("cor", "#ece9e4")), cor(cena.get("cor_apagada", "#5a5a5a"))
     # palavra acende de cinza pra branco um pouco DEPOIS de assentar (igual aos edits)
     cor_fn = lambda i, k: mix(c_off, c_on, ease_out((k - 0.4) / 1.2))
-    if cena.get("sombra"):
+    modos = ["subir", "pop", "queda", "zoom"] if cena.get("animar") else None
+    if cena.get("sombra") or cena.get("animar"):
         cam = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-        frase_em_foco(cam, palavras, ts, t, f, cor_fn, W, H / 2 + cena.get("dy", 0), W * SEGURA, f.size * 1.18)
+        cy = H / 2 + cena.get("dy", 0)
+        frase_em_foco(cam, palavras, ts, t, f, cor_fn, W, cy, W * SEGURA, f.size * 1.18, modos=modos)
+        if cena.get("animar"):  # a frase pulsa em cada ataque da música
+            agora = cena["inicio"] + t
+            pul = min(1.0, sum(math.exp(-(agora - a) * 9) for a in ctx.ataques if 0 <= agora - a < 0.6))
+            z = 1 + 0.045 * pul + 0.015 * t / max(0.5, cena["fim"] - cena["inicio"])
+            if z != 1:
+                w2, h2 = int(W * z), int(H * z)
+                big = cam.resize((w2, h2), Image.BICUBIC)
+                cam = big.crop(((w2 - W) // 2, int(cy * z - cy), (w2 - W) // 2 + W, int(cy * z - cy) + H))
+        if not cena.get("sombra"):
+            img.paste(cam, (0, 0), cam)
+            return img
         sb = cam.getchannel("A").filter(ImageFilter.GaussianBlur(10)).point(lambda v: int(v * 0.75))
         img = Image.composite(Image.new("RGB", (W, H), (20, 10, 10)), img, ImageChops.offset(sb, 3, 5))
         img.paste(cam, (0, 0), cam)
@@ -311,7 +334,8 @@ def est_pilha(cv, cena, t, ctx):
         k = (t - ts[i])
         c = cores[min(i * len(cores) // max(1, len(palavras)), len(cores) - 1)] if cena.get("degrade") else cores[i % len(cores)]
         y = alvo + i * lh + lh / 2
-        colar_foco(img, p, f, c, W / 2, y, k / FOCO, anchor="mm", blur_max=20, subir=24)
+        colar_foco(img, p, f, c, W / 2, y, k / FOCO, anchor="mm", blur_max=20, subir=24,
+                   modo=["pop", "subir", "zoom", "queda"][i % 4] if cena.get("animar") else None)
     return img
 
 
@@ -495,9 +519,23 @@ def est_inclinado(cv, cena, t, ctx):
     alt = sum(f.size * 1.05 for _, f in blocos)
     y = H / 2 - alt / 2
     for i, f in blocos:
-        colar_foco(cam, linhas[i], f, fg, W / 2, y + f.size * 0.5, (t - ts[i]) / FOCO, anchor="mm", blur_max=14, subir=18)
+        txt = linhas[i]
+        if cena.get("digitar", True):  # escreve letra por letra, ancorado na linha inteira
+            nchar = max(1, int(len(txt) * min(1.0, (t - ts[i]) / 0.45)) + 1)
+            w_full = medir(f, txt)[0]
+            parcial = txt[:nchar]
+            colar_foco(cam, parcial, f, fg, W / 2 - w_full / 2, y + f.size * 0.5, (t - ts[i]) / FOCO,
+                       anchor="lm", blur_max=10, subir=10)
+        else:
+            colar_foco(cam, txt, f, fg, W / 2, y + f.size * 0.5, (t - ts[i]) / FOCO, anchor="mm", blur_max=14, subir=18)
         y += f.size * 1.05
-    cam = cam.rotate(cena.get("angulo", 9), resample=Image.BICUBIC, center=(W / 2, H / 2))
+    dur = max(0.5, cena["fim"] - cena["inicio"])
+    giro = cena.get("angulo", 9) + 5 * t / dur
+    zz = 1 + 0.10 * t / dur
+    if zz != 1:
+        w2, h2 = int(W * zz), int(H * zz)
+        cam = cam.resize((w2, h2), Image.BICUBIC).crop(((w2 - W) // 2, (h2 - H) // 2, (w2 - W) // 2 + W, (h2 - H) // 2 + H))
+    cam = cam.rotate(giro, resample=Image.BICUBIC, center=(W / 2, H / 2))
     img.paste(cam, (0, 0), cam)
     d = ImageDraw.Draw(img)
     a = t * 12
@@ -525,7 +563,7 @@ def quadro(proj, ctx, tempo, idx):
     else:
         t = tempo - cena["inicio"]
         cfg = com_paleta(cena)
-        for k in ("bpm", "grade"):
+        for k in ("bpm", "grade", "animar"):
             if k in proj and k not in cfg:
                 cfg[k] = proj[k]
         lista = cfg.get("elementos", proj.get("elementos", []))
