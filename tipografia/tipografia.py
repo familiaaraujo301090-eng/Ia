@@ -247,6 +247,16 @@ def colar_foco(img, txt, f, c, x, y, k, anchor="lm", blur_max=16, escala=0.10, s
         subir = 120
     elif modo == "queda":
         subir = -120
+    # a palavra nunca passa da área segura, nem no pico do pop/zoom
+    w_txt0 = b[2] - b[0]
+    if w_txt0 > 0:
+        z = min(z, img.width * 0.92 / w_txt0)
+        if anchor[0] == "l":  # ancorado à esquerda: cresce a partir do centro da palavra; não deixa encostar
+            cxp = x + w_txt0 / 2
+            z = min(z, 2 * min(cxp, img.width - cxp) * 0.96 / w_txt0)
+        else:
+            z = min(z, 2 * min(x, img.width - x) * 0.96 / w_txt0)
+    z = max(z, 0.05)
     if z != 1:
         im = im.resize((max(1, int(im.width * z)), max(1, int(im.height * z))), Image.BICUBIC)
     r = blur_max * (1 - e) ** 1.5
