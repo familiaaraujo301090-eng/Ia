@@ -862,6 +862,23 @@ def foto(s, img, tempo, t, cena, claro):
     # lateral
     alto = int(H * cena.get("foto_altura", 1.0))
     base = _carregar_foto(cena["foto"], alto)
+    if cena.get("foto_fundo") == "desfocado":
+        # fundo = continuação das bordas da própria foto (o vermelho emenda sem costura e sem "fantasma")
+        k = ("fundo_borda", cena["foto"], W, H, alto)
+        if k not in _FOTOS:
+            esq = base.crop((0, 0, 8, base.height)).resize((1, base.height), Image.BOX)
+            dir_ = base.crop((base.width - 8, 0, base.width, base.height)).resize((1, base.height), Image.BOX)
+            y0f = H - base.height
+            faixa_e = esq.resize((W, base.height), Image.NEAREST)
+            faixa_d = dir_.resize((W, base.height), Image.NEAREST)
+            mix = Image.linear_gradient("L").rotate(90).resize((W, base.height))
+            mix = mix.point(lambda v: 0 if v < 140 else min(255, (v - 140) * 4)) if modo == "dir" else mix
+            fb = Image.composite(faixa_d, faixa_e, mix)
+            bg = Image.new("RGB", (W, H), fb.getpixel((W // 2, 0)))
+            bg.paste(fb, (0, y0f))
+            bg = bg.filter(ImageFilter.GaussianBlur(25))
+            _FOTOS[k] = bg
+        img = Image.blend(img, _FOTOS[k], entra) if entra < 1 else _FOTOS[k].copy()
     z = 1.0 + 0.06 * u
     im = base.resize((int(base.width * z), int(base.height * z)), Image.BICUBIC)
     cx = W * (0.74 if modo == "dir" else 0.26) + (-1 if modo == "dir" else 1) * 25 * (1 - entra) ** 2
@@ -872,6 +889,11 @@ def foto(s, img, tempo, t, cena, claro):
     fx = Image.linear_gradient("L").rotate(90 if modo == "dir" else -90).resize(im.size)
     fx = fx.point(lambda v: min(255, int(v * 3.2)))
     m = ImageChops.multiply(m, fx)
+    if cena.get("foto_fundo") == "desfocado":  # dissolve também a borda externa e a de baixo
+        fo = Image.linear_gradient("L").rotate(-90 if modo == "dir" else 90).resize(im.size)
+        m = ImageChops.multiply(m, fo.point(lambda v: min(255, int(v * 4))))
+        fb = Image.linear_gradient("L").rotate(180).resize(im.size)
+        m = ImageChops.multiply(m, fb.point(lambda v: min(255, int(v * 8))))
     # topo também dissolve
     fy = Image.linear_gradient("L").resize(im.size).point(lambda v: min(255, int(v * 6)))
     m = ImageChops.multiply(m, fy)
@@ -905,8 +927,8 @@ def coracoes(s, img, tempo, t, cena, claro):
     ataques = [a for a in todos if cena["inicio"] - 0.05 <= a <= tempo and tempo - a < 2.2]
     if not ataques:
         return img
-    fundo = img.getpixel((W // 2, 4))
-    vermelho_fundo = fundo[0] > 80 and fundo[1] < 50
+    fundo = img.resize((1, 1), Image.BOX).getpixel((0, 0))
+    vermelho_fundo = fundo[0] > 60 and fundo[0] > fundo[1] * 2.2
     cor = (250, 244, 236) if vermelho_fundo else (196, 18, 44)
     cam = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(cam)
