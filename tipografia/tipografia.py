@@ -22,6 +22,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageChops
 import numpy as np
 from PIL import ImageOps
 from elementos import Elementos
+import cenario  # noqa: F401  (registra os cenários de anime nos Elementos)
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 FONTES = {
@@ -279,6 +280,13 @@ def est_revelar(cv, cena, t, ctx):
     c_on, c_off = cor(cena.get("cor", "#ece9e4")), cor(cena.get("cor_apagada", "#5a5a5a"))
     # palavra acende de cinza pra branco um pouco DEPOIS de assentar (igual aos edits)
     cor_fn = lambda i, k: mix(c_off, c_on, ease_out((k - 0.4) / 1.2))
+    if cena.get("sombra"):
+        cam = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        frase_em_foco(cam, palavras, ts, t, f, cor_fn, W, H / 2 + cena.get("dy", 0), W * SEGURA, f.size * 1.18)
+        sb = cam.getchannel("A").filter(ImageFilter.GaussianBlur(10)).point(lambda v: int(v * 0.75))
+        img = Image.composite(Image.new("RGB", (W, H), (20, 10, 10)), img, ImageChops.offset(sb, 3, 5))
+        img.paste(cam, (0, 0), cam)
+        return img
     frase_em_foco(img, palavras, ts, t, f, cor_fn, W, H / 2 + cena.get("dy", 0), W * SEGURA, f.size * 1.18)
     return img
 
@@ -467,7 +475,38 @@ def est_circulo(cv, cena, t, ctx):
     return img
 
 
-ESTILOS = dict(revelar=est_revelar, pilha=est_pilha, flash=est_flash, gigante=est_gigante,
+def est_inclinado(cv, cena, t, ctx):
+    """Tela branca: linhas de texto inclinadas, a última maior; riscos diagonais finos atravessando."""
+    W, H = ctx.W, ctx.H
+    img = ctx.fx.vinheta_sobre(ctx.fx.solido(cena.get("bg", "#f3f2ef")), 0.35, (170, 170, 170))
+    img = ctx.elem(img, cena, t)
+    linhas = [l.strip() for l in cena["texto"].split("/")]
+    ts = tempos_palavras(cena, len(linhas))
+    n = sum(1 for x in ts if t >= x)
+    cam = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    fg = cor(cena.get("cor", "#4a4a4a"))
+    base = cena.get("tamanho", 80)
+    ini = max(0, n - 2)  # mostra no máximo as 2 últimas linhas
+    blocos = []
+    for i in range(ini, n):
+        grande = i == n - 1 and n > ini + 1 or (n == 1)
+        f = caber(cena.get("fonte", "bebas"), base * (1.5 if grande else 1.0), [linhas[i]], W * 0.62)
+        blocos.append((i, f))
+    alt = sum(f.size * 1.05 for _, f in blocos)
+    y = H / 2 - alt / 2
+    for i, f in blocos:
+        colar_foco(cam, linhas[i], f, fg, W / 2, y + f.size * 0.5, (t - ts[i]) / FOCO, anchor="mm", blur_max=14, subir=18)
+        y += f.size * 1.05
+    cam = cam.rotate(cena.get("angulo", 9), resample=Image.BICUBIC, center=(W / 2, H / 2))
+    img.paste(cam, (0, 0), cam)
+    d = ImageDraw.Draw(img)
+    a = t * 12
+    d.line([(W * 0.62 + a, -20), (W * 0.98 + a, H + 20)], fill=(70, 70, 70), width=3)
+    d.line([(W * 0.40 - a * 0.6, -20), (W * 0.30 - a * 0.6, H + 20)], fill=(150, 150, 150), width=1)
+    return img
+
+
+ESTILOS = dict(inclinado=est_inclinado, revelar=est_revelar, pilha=est_pilha, flash=est_flash, gigante=est_gigante,
                serifa=est_serifa, cursiva=est_cursiva, maquina=est_maquina, circulo=est_circulo)
 
 

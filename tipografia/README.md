@@ -90,6 +90,15 @@ Todo vídeo sai **com a música sincronizada**:
   No projeto, use `"audio": "trilhas/minha.wav"` e `"bpm": 130`: **cada palavra é encaixada na
   colcheia mais próxima** (`"grade": 2`; use 4 pra semicolcheia) e as cenas trocam no compasso.
 
+## Formato e cenários de anime
+
+- Formato livre: `"w": 1440, "h": 990` (16:11) no projeto; o padrão é 1080x1920 (9:16).
+- `cenario.py`: cenários ORIGINAIS com clima de anime (cel-shading, luz quente, nuvens em cúmulo):
+  `por_do_sol` · `crepusculo` · `muralha` · `cachecol` (tecido vermelho ao vento; `cachecol_voa` faz ele subir) ·
+  `janela` (interior com feixes de luz) · `campo_azul` (campo de flores azuis). Nenhum personagem ou arte copiada.
+- Estilo `inclinado`: tela branca com linhas de texto tortas (a última maior) e riscos diagonais.
+- `"sombra": true` no `revelar`: sombra suave atrás do texto pra ler sobre céu claro.
+
 ## Preto e branco com elementos dinâmicos
 
 `"pb": true` no projeto deixa tudo em P&B com curva de filme. `"elementos"` (no projeto ou por cena)
