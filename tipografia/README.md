@@ -99,7 +99,7 @@ Todo vídeo sai **com a música sincronizada**:
 - Estilo `inclinado`: tela branca com linhas de texto tortas (a última maior) e riscos diagonais.
 - `"animar": true` (projeto ou cena): cada palavra entra com movimento (sobe, pop, cai, zoom) e a frase pulsa nos ataques da música; a tela `inclinado` escreve letra por letra girando devagar.
 - `"entrada": "cortina"`: cada palavra é revelada da esquerda pra direita (sem desfoque, sem pulso). `"pulsar": true` liga o pulso nos ataques.
-- Elemento `foto` (imagens suas em `fotos/`, fora do git): `"foto": "fotos/x.jpg"`, `"foto_modo": "dir"|"esq"|"cheio"`, `foto_altura`, `foto_degrade` ("baixo"/"cima"), `foto_y`; movimento lento de zoom/deslize.
+- Elemento `foto` (imagens suas em `fotos/`, fora do git): `"foto": "fotos/x.jpg"`, `"foto_modo": "dir"|"esq"|"cheio"|"topo"` (topo: foto horizontal no alto, letra embaixo), `foto_fade` (0 = sem fade, pra continuar a mesma foto),, `foto_altura`, `foto_degrade` ("baixo"/"cima"), `foto_y`; movimento lento de zoom/deslize.
 - `"dx"` e `"largura"` no `revelar`/`pilha`: põe a letra num lado da tela (ao lado da foto).
 - `"sombra": true` no `revelar`: sombra suave atrás do texto pra ler sobre céu claro.
 
@@ -108,7 +108,7 @@ Todo vídeo sai **com a música sincronizada**:
 `"pb": true` no projeto deixa tudo em P&B com curva de filme. `"elementos"` (no projeto ou por cena)
 desenha elementos animados ATRÁS da letra, todos originais:
 
-`casal` (ele respira, sopra, e a fumaça forma o rosto dela) · `porta` (porta abrindo, luz no chão, silhueta no vão) · `vidro` (box embaçado com gotas escorrendo) · `eclipse` (coroa de luz que explode nos ataques) · `petalas` · `rosa` (desabrochando a traço) · `cidade` (prédios com janelas acendendo) · `cinzas` (brasas subindo, mais fortes nos ataques) · `fios` · `pulso` (batimento cardíaco no ritmo) · `perfil` (rosto de perfil soprando fumaça) · `fumaca` · `lua` (esfera subindo) · `traco` (lápis desenhando)
+`casal` (ele respira, sopra, e a fumaça forma o rosto dela) · `porta` (porta abrindo, luz no chão, silhueta no vão) · `vidro` (box embaçado com gotas escorrendo) · `eclipse` (coroa de luz que explode nos ataques) · `petalas` · `rosa` (desabrochando a traço) · `cidade` (prédios com janelas acendendo) · `cinzas` (brasas subindo, mais fortes nos ataques) · `coracoes` (corações em traço nascendo nos ataques, nas margens) · `fios` · `pulso` (batimento cardíaco no ritmo) · `perfil` (rosto de perfil soprando fumaça) · `fumaca` · `lua` (esfera subindo) · `traco` (lápis desenhando)
 · `particulas` (poeira/bokeh) · `chuva` · `aneis` (nascem nas batidas) · `linhas` (scanner) · `luz` (flash nas batidas)
 
 ```json

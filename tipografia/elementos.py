@@ -822,8 +822,22 @@ def foto(s, img, tempo, t, cena, claro):
     W, H = s.W, s.H
     dur = max(0.5, cena["fim"] - cena["inicio"])
     u = t / dur
-    entra = min(1.0, t / 0.5)
+    fd = cena.get("foto_fade", 0.5)
+    entra = min(1.0, t / fd) if fd > 0 else 1.0
     modo = cena.get("foto_modo", "dir")
+    if modo == "topo":  # foto horizontal no alto, centralizada; base se dissolve no fundo (letra embaixo)
+        alto = int(H * cena.get("foto_altura", 0.62))
+        base = _carregar_foto(cena["foto"], alto)
+        z = 1.0 + 0.04 * u
+        im = base.resize((int(base.width * z), int(base.height * z)), Image.BICUBIC)
+        x0 = int(W / 2 - im.width / 2 + cena.get("foto_pan", 0.0) * (u - 0.5) * 40)
+        y0 = int(H * cena.get("foto_y", 0.04) - (im.height - base.height) / 2)
+        m = Image.new("L", im.size, int(255 * entra))
+        fy = Image.linear_gradient("L").resize(im.size).point(lambda v: 255 if v < 170 else int(255 * (255 - v) / 85))
+        fx = Image.linear_gradient("L").rotate(90).resize(im.size).point(lambda v: min(255, int(min(v, 255 - v) * 6)))
+        m = ImageChops.multiply(ImageChops.multiply(m, fy), fx)
+        img.paste(im, (x0, y0), m)
+        return img
     fundo = img.getpixel((3, 3))
     if modo == "cheio":
         base = _carregar_foto(cena["foto"], int(H * 1.12))
@@ -866,3 +880,56 @@ def foto(s, img, tempo, t, cena, claro):
 
 
 Elementos.foto = foto
+
+
+
+# ====================================================================== CORAÇÕES (música: "I Was Made for Lovin' You")
+def _coracao(cx, cy, r, n=60):
+    pts = []
+    for k in range(n + 1):
+        a = 2 * math.pi * k / n
+        x = 16 * math.sin(a) ** 3
+        y = -(13 * math.cos(a) - 5 * math.cos(2 * a) - 2 * math.cos(3 * a) - math.cos(4 * a))
+        pts.append((cx + x * r / 16, cy + y * r / 16))
+    return pts
+
+
+def coracoes(s, img, tempo, t, cena, claro):
+    """Em cada ataque da música nasce um coração em traço: se desenha, sobe devagar e some."""
+    W, H = s.W, s.H
+    todos, ult = [], -9.0
+    for a in getattr(s, "ataques", []):  # no máximo um coração a cada 0,5s
+        if a - ult >= 0.5:
+            todos.append(a)
+            ult = a
+    ataques = [a for a in todos if cena["inicio"] - 0.05 <= a <= tempo and tempo - a < 2.2]
+    if not ataques:
+        return img
+    fundo = img.getpixel((W // 2, 4))
+    vermelho_fundo = fundo[0] > 80 and fundo[1] < 50
+    cor = (250, 244, 236) if vermelho_fundo else (196, 18, 44)
+    cam = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(cam)
+    lado = cena.get("coracoes_lado")  # "esq"/"dir": só do lado da letra
+    for a in ataques:
+        rng = random.Random(int(a * 1000))
+        idade = tempo - a
+        if lado == "esq":
+            x = W * rng.uniform(0.05, 0.45)
+        elif lado == "dir":
+            x = W * rng.uniform(0.55, 0.95)
+        else:
+            x = W * rng.choice([rng.uniform(0.05, 0.22), rng.uniform(0.78, 0.95)])
+        # só nas faixas de cima/baixo, longe da letra (que fica no meio)
+        y = H * (rng.uniform(0.10, 0.24) if rng.random() < 0.5 else rng.uniform(0.80, 0.93)) - idade * 40
+        r = rng.uniform(16, 34)
+        x += 10 * math.sin(idade * 3 + a)
+        pts = _coracao(x, y, r)
+        n = max(2, int(len(pts) * min(1.0, idade / 0.4)))  # traço se desenhando
+        alfa = int(230 * max(0.0, 1 - max(0.0, idade - 1.2) / 1.0))
+        d.line(pts[:n], fill=cor + (alfa,), width=4, joint="curve")
+    img.paste(cam, (0, 0), cam.filter(ImageFilter.GaussianBlur(0.6)))
+    return img
+
+
+Elementos.coracoes = coracoes
