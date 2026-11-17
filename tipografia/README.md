@@ -108,12 +108,13 @@ Todo vídeo sai **com a música sincronizada**:
 `"pb": true` no projeto deixa tudo em P&B com curva de filme. `"elementos"` (no projeto ou por cena)
 desenha elementos animados ATRÁS da letra, todos originais:
 
-`casal` (ele respira, sopra, e a fumaça forma o rosto dela) · `porta` (porta abrindo, luz no chão, silhueta no vão) · `vidro` (box embaçado com gotas escorrendo) · `eclipse` (coroa de luz que explode nos ataques) · `petalas` · `rosa` (desabrochando a traço) · `cidade` (prédios com janelas acendendo) · `cinzas` (brasas subindo, mais fortes nos ataques) · `coracoes` (corações em traço nascendo nos ataques, nas margens) · `fios` · `pulso` (batimento cardíaco no ritmo) · `perfil` (rosto de perfil soprando fumaça) · `fumaca` · `lua` (esfera subindo) · `traco` (lápis desenhando)
+`casal` (ele respira, sopra, e a fumaça forma o rosto dela) · `porta` (porta abrindo, luz no chão, silhueta no vão) · `vidro` (box embaçado com gotas escorrendo) · `eclipse` (coroa de luz que explode nos ataques) · `petalas` · `rosa` (desabrochando a traço) · `cidade` (prédios com janelas acendendo) · `cinzas` (brasas subindo, mais fortes nos ataques) · `coracoes` (corações em traço nascendo nos ataques, nas margens) · `estrelas` (brilhos ✦ piscando nos ataques) · `fios` · `pulso` (batimento cardíaco no ritmo) · `perfil` (rosto de perfil soprando fumaça) · `fumaca` · `lua` (esfera subindo) · `traco` (lápis desenhando)
 · `particulas` (poeira/bokeh) · `chuva` · `aneis` (nascem nas batidas) · `linhas` (scanner) · `luz` (flash nas batidas)
 
 ```json
 {"pb": true, "cenas": [{"estilo": "revelar", "texto": "...", "elementos": ["perfil", "fumaca"], "dy": 330}]}
 ```
+- `"piscar_inverte": true` em qualquer cena: a tela inteira (foto junto) inverte as cores em cada ataque — frase repetida.
 - `"piscar": true` numa cena `flash` ou `gigante`: frase repetida pisca preto/branco em cada ataque da música (detectado no áudio).
 - `referencia.py projeto.json video_ref.mp4 --offset S`: acerta os tempos pelas trocas de um edit de referência.
 - Regra da casa: **cada música nova ganha um elemento novo**; só a base P&B se repete.

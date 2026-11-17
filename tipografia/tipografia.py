@@ -593,6 +593,10 @@ def quadro(proj, ctx, tempo, idx):
         lista = cfg.get("elementos", proj.get("elementos", []))
         ctx.elem = lambda im, c, tt: ctx.el.aplicar(im, lista, tempo, tt, c, proj.get("batidas", []))
         img = ESTILOS[cena["estilo"]](None, cfg, t, ctx)
+        if cfg.get("piscar_inverte"):  # frase repetida: a tela inteira (foto junto) inverte em cada ataque
+            n_at = sum(1 for x in ctx.ataques if cena["inicio"] + 0.15 <= x <= tempo)
+            if n_at % 2 == 1:
+                img = ImageOps.invert(img)
         img = ctx.fx.acabamento(img, tempo, t, cena["fim"] - cena["inicio"], idx, proj)
         # fade curtinho entre cenas
         fade = cena.get("fade", proj.get("fade", 0.12))

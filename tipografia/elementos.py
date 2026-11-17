@@ -955,3 +955,42 @@ def coracoes(s, img, tempo, t, cena, claro):
 
 
 Elementos.coracoes = coracoes
+
+
+# ====================================================================== ESTRELAS (música: "GUY.exe")
+def estrelas(s, img, tempo, t, cena, claro):
+    """Brilhos ✦ que piscam nos ataques da música (o 'brilho' do cara perfeito), nas margens."""
+    W, H = s.W, s.H
+    todos, ult = [], -9.0
+    for a in getattr(s, "ataques", []):
+        if a - ult >= 0.35:
+            todos.append(a)
+            ult = a
+    ativos = [a for a in todos if cena["inicio"] - 0.05 <= a <= tempo and tempo - a < 0.9]
+    if not ativos:
+        return img
+    lum = sum(img.resize((1, 1), Image.BOX).getpixel((0, 0))) / 3
+    cor = (150, 215, 255) if lum < 128 else (40, 110, 220)
+    cam = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(cam)
+    for a in ativos:
+        rng = random.Random(int(a * 977))
+        for _ in range(2):
+            x = W * (rng.uniform(0.04, 0.2) if rng.random() < 0.5 else rng.uniform(0.8, 0.96))
+            y = H * rng.uniform(0.08, 0.92)
+            idade = tempo - a
+            k = math.sin(min(1.0, idade / 0.9) * math.pi)  # cresce e some
+            r = rng.uniform(14, 30) * k
+            if r < 1:
+                continue
+            fino = r * 0.22
+            pts = [(x, y - r), (x + fino, y - fino), (x + r, y), (x + fino, y + fino),
+                   (x, y + r), (x - fino, y + fino), (x - r, y), (x - fino, y - fino)]
+            d.polygon(pts, fill=cor + (int(240 * k),))
+    glow = cam.filter(ImageFilter.GaussianBlur(6))
+    img.paste(glow, (0, 0), glow)
+    img.paste(cam, (0, 0), cam)
+    return img
+
+
+Elementos.estrelas = estrelas
