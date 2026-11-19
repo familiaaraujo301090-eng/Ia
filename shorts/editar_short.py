@@ -264,8 +264,34 @@ def montar(pasta, arquivo_cfg="video.json"):
     filtros.append(
         f"[escurecido]trim=duration={duracao_total:.3f},eq=contrast=1.06:saturation=0.92,"
         f"vignette=PI/4.5,subtitles=legendas.ass:fontsdir='{fontes}',"
-        f"fade=t=in:st=0:d={cfg.get('fade_in', 0.4)},fade=t=out:st={duracao_total - 0.5:.3f}:d=0.5[video]"
+        f"fade=t=in:st=0:d={cfg.get('fade_in', 0.4)},fade=t=out:st={duracao_total - 0.5:.3f}:d=0.5"
+        + ("[semBarra]" if cfg.get("barra") else "[video]")
     )
+    if cfg.get("barra"):
+        # Barra de progresso fina no rodape: o espectador ve quanto falta e tende a ficar ate o fim.
+        entradas += ["-f", "lavfi", "-i", f"color=c=0xFFD84A:s={LARGURA}x10:d={duracao_total:.3f}:r={FPS}"]
+        filtros.append(f"[semBarra][{n}:v]overlay=x='-w+w*t/{duracao_total:.3f}':y=H-10:shortest=1[video]")
+        n += 1
+
+    sfx = None
+    if cfg.get("whoosh"):
+        # Um "whoosh" curto em cada troca de imagem: da ritmo sem atrapalhar a voz.
+        trocas = [planos[k][1] for k in range(1, len(planos)) if planos[k][0] != planos[k - 1][0]]
+        if trocas:
+            sfx = pasta / "sfx.wav"
+            atrasos = "".join(f"[w{j}]adelay={max(0, int((t - 0.3) * 1000))}:all=1[d{j}];"
+                              for j, t in enumerate(trocas))
+            subprocess.run([
+                "ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i",
+                "anoisesrc=color=pink:d=0.55:a=0.6,highpass=f=400,lowpass=f=2600,"
+                "afade=t=in:d=0.32:curve=exp,afade=t=out:st=0.32:d=0.23",
+                "-filter_complex",
+                f"[0:a]asplit={len(trocas)}" + "".join(f"[w{j}]" for j in range(len(trocas))) + ";"
+                + atrasos + "".join(f"[d{j}]" for j in range(len(trocas)))
+                + f"amix=inputs={len(trocas)}:normalize=0,apad=whole_dur={duracao_total:.3f},"
+                f"volume={cfg.get('volume_whoosh', 1.2)}[s]",
+                "-map", "[s]", "-t", f"{duracao_total:.3f}", "-ar", "44100", str(sfx),
+            ], check=True)
 
     audio = []
     if narracao:
@@ -292,6 +318,11 @@ def montar(pasta, arquivo_cfg="video.json"):
             fundo = "[mus][amb]" if ambiente else "[mus]"
         else:
             fundo = "[amb]" if ambiente else ""
+        if sfx:
+            entradas += ["-i", str(sfx)]
+            idx = n + (2 if musica else 1)
+            filtros.append(f"[{idx}:a]anull[sfx]")
+            fundo += "[sfx]"
         if fundo:
             n_fundo = fundo.count("[")
             filtros.append(f"[{voz}:a]apad=whole_dur={duracao_total:.3f}[voz]")

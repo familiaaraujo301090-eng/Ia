@@ -1,0 +1,47 @@
+{
+ "titulo": "",
+ "gancho": "ELE FUGIU DE DEUS E|[ACABOU DENTRO DE UM PEIXE]",
+ "fade_in": 0,
+ "barra": true,
+ "whoosh": true,
+ "narracao": "narracao.wav",
+ "tempos": "tempos.json",
+ "imagens": [
+  "1.jpg",
+  "2.jpg",
+  "3.jpg",
+  "4.jpg",
+  "5.jpg",
+  "6.jpg",
+  "7.jpg"
+ ],
+ "cenas": [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7
+ ],
+ "focos": [
+  0.35,
+  0.35,
+  0.4,
+  0.35,
+  0.4,
+  0.35,
+  0.3
+ ],
+ "musica": "musica.wav",
+ "volume_musica": 0.14,
+ "idades": {
+  "1": "O CHAMADO",
+  "2": "A FUGA",
+  "3": "A TEMPESTADE",
+  "4": "AO MAR",
+  "5": "O PEIXE",
+  "6": "3 DIAS",
+  "7": "NÍNIVE"
+ }
+}
