@@ -568,51 +568,148 @@ def est_inclinado(cv, cena, t, ctx):
     return img
 
 
+def _palavra_espacada(txt, f, c, track):
+    """Desenha a palavra letra a letra com espaçamento extra (tracking)."""
+    larg = sum(f.getlength(ch) for ch in txt) + track * max(0, len(txt) - 1)
+    asc, desc = f.getmetrics()
+    pad = 30
+    im = Image.new("RGBA", (int(larg) + pad * 2, asc + desc + pad * 2), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    x = pad
+    for ch in txt:
+        d.text((x, pad), ch, font=f, fill=c + (255,))
+        x += f.getlength(ch) + track
+    return im, larg, pad
+
+
+def _achatar(cam, e, cx, cy):
+    """Saída em 'chicote': achata na vertical, estica e borra na horizontal, apaga."""
+    if e <= 0:
+        return cam
+    W, H = cam.size
+    sy = max(0.06, 1 - 0.9 * e)
+    sx = 1.0  # sem esticar: a letra não passa da borda
+    w2, h2 = int(W * sx), max(1, int(H * sy))
+    im = cam.resize((w2, h2), Image.BICUBIC)
+    borrado = im.resize((max(1, int(w2 / (1 + 14 * e))), h2), Image.BILINEAR).resize((w2, h2), Image.BILINEAR)
+    out = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    out.paste(borrado, (int(cx - w2 * cx / W), int(cy - h2 * cy / H)))
+    out.putalpha(out.getchannel("A").point(lambda v: int(v * (1 - e) ** 1.2)))
+    return out
+
+
 def est_linhas(cv, cena, t, ctx):
-    """Só letras: várias linhas empilhadas, cada uma com fonte própria; dentro de uma linha os
-    'grupos' trocam no lugar (ex.: "MAIS DO QUE" -> "TUA VOZ"). Palavras entram em cortina e o
-    bloco aproxima devagar. cena["linhas"] = [{"fonte","tamanho","cor","grupos":[{"texto","tempos",...}]}]"""
+    """Só letras, com as animações da referência: palavras surgem desfocadas e cinza e clareiam,
+    o espaçamento entre letras abre devagar, troca de frase em 'chicote' (achata+borra), leve
+    inclinação, aproximação lenta, soco de zoom nas palavras de impacto e brilho suave."""
     W, H = ctx.W, ctx.H
     bg = cor(cena.get("bg", "#060606"))
     img = fundo(ctx, cena, "#060606", 0.55)
     img = ctx.elem(img, cena, t)
     claro = sum(bg) > 380
-    fg_pad = (18, 18, 18) if claro else (240, 238, 232)
-    linhas = cena["linhas"]
-    blocos = []
-    for ln in linhas:
-        g_ativo = None
-        for g in ln["grupos"]:
-            if t >= g["tempos"][0] - cena["inicio"]:
-                g_ativo = g
-        g_ref = g_ativo or ln["grupos"][0]
-        nome = g_ref.get("fonte", ln.get("fonte", "serif"))
-        tam = g_ref.get("tamanho", ln.get("tamanho", 90))
-        f = caber(nome, tam, g_ref["texto"].split(), W * cena.get("largura", SEGURA))
-        n_lin = len(quebrar(g_ref["texto"].split(), f, W * cena.get("largura", SEGURA)))
-        blocos.append((ln, g_ativo, f, f.size * 1.18 * n_lin))
-    alt = sum(b[3] for b in blocos)
-    cam = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    y = H / 2 + cena.get("dy", 0) - alt / 2
-    for ln, g, f, h in blocos:
-        if g is not None:
-            c = cor(g.get("cor", ln.get("cor", fg_pad)))
-            palavras = g["texto"].split()
-            ts = [x - cena["inicio"] for x in g["tempos"]]
-            while len(ts) < len(palavras):
-                ts.append(ts[-1] + 0.15)
-            frase_em_foco(cam, palavras, ts[:len(palavras)], t, f, lambda i, k, c=c: c, W, y + h / 2,
-                          W * cena.get("largura", SEGURA), f.size * 1.18, modos=["cortina"])
-        y += h
+    fg_pad = (18, 18, 18) if claro else (242, 240, 235)
+    cinza = (150, 150, 150) if claro else (120, 118, 114)
     dur = max(0.5, cena["fim"] - cena["inicio"])
-    z = 1 + cena.get("zoom_texto", 0.05) * t / dur
+    LARG = W * cena.get("largura", 0.84)
+    linhas = cena["linhas"]
+    # layout reservado (não pula quando a linha de baixo chega)
+    medidas = []
+    for ln in linhas:
+        g0 = max(ln["grupos"], key=lambda g: len(g["texto"]))
+        nome = g0.get("fonte", ln.get("fonte", "serif"))
+        tam = ln.get("tamanho", 90)
+        f = caber(nome, tam, [g0["texto"]], LARG * 0.86)
+        medidas.append(f.size * 1.25)
+    alt = sum(medidas)
+    bloco = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    y = H / 2 + cena.get("dy", 0) - alt / 2
+    for ln, h in zip(linhas, medidas):
+        grupos = ln["grupos"]
+        ativo = None
+        for gi, g in enumerate(grupos):
+            if t >= g["tempos"][0] - cena["inicio"]:
+                ativo = gi
+        cy = y + h / 2
+        y += h
+        if ativo is None:
+            continue
+        g = grupos[ativo]
+        g_ini = g["tempos"][0] - cena["inicio"]
+        g_fim = (grupos[ativo + 1]["tempos"][0] - cena["inicio"]) if ativo + 1 < len(grupos) else dur
+        nome = g.get("fonte", ln.get("fonte", "serif"))
+        tam = g.get("tamanho", ln.get("tamanho", 90))
+        f = caber(nome, tam, [g["texto"]], LARG * 0.86)
+        c = cor(g.get("cor", ln.get("cor", fg_pad)))
+        # espaçamento abrindo com o tempo (mais na serifa, menos no negrito)
+        abre = {"serif": 7.0, "italico": 5.0}.get(nome, 2.5) * ln.get("abrir", 1.0)
+        track = f.size * 0.02 + abre * (t - g_ini)
+        palavras = g["texto"].split()
+        ts = [x - cena["inicio"] for x in g["tempos"]]
+        while len(ts) < len(palavras):
+            ts.append(ts[-1] + 0.15)
+        imgs = [_palavra_espacada(p, f, c, track) for p in palavras]
+        esp = f.getlength(" ") + track * 1.5
+        total = sum(w for _, w, _ in imgs) + esp * (len(imgs) - 1)
+        if total > LARG:  # nunca passa da área segura
+            track = max(0.0, track - (total - LARG) / max(1, sum(len(p) for p in palavras)))
+            imgs = [_palavra_espacada(p, f, c, track) for p in palavras]
+            esp = f.getlength(" ") + track * 1.5
+            total = sum(w for _, w, _ in imgs) + esp * (len(imgs) - 1)
+        cam = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        x = W / 2 - total / 2
+        asc, desc = f.getmetrics()
+        for (im, w, pad), t0 in zip(imgs, ts):
+            k = (t - t0) / 0.45
+            if k <= 0:
+                x += w + esp
+                continue
+            e = ease_out(k)
+            col = mix(cinza, c, ease_out((k - 0.15) / 0.9))
+            if col != c:  # recolore (cinza -> branco)
+                im = Image.merge("RGBA", (*[Image.new("L", im.size, v) for v in col], im.getchannel("A")))
+            r = 7 * (1 - e) ** 1.4
+            if r > 0.4:
+                im = im.filter(ImageFilter.GaussianBlur(r))
+            im.putalpha(im.getchannel("A").point(lambda v, e=e: int(v * min(1, e * 1.4))))
+            cam.paste(im, (int(x - pad), int(cy - (asc + desc) / 2 - pad + 8 * (1 - e))), im)
+            x += w + esp
+        # soco de zoom (palavra de impacto) — limitado à área segura
+        if g.get("soco"):
+            kz = ease_out((t - g_ini) / 0.6)
+            z = 1 + g["soco"] * kz
+            z = min(z, (W * 0.92) / max(1, total))
+            if z > 1.001:
+                w2, h2 = int(W * z), int(H * z)
+                cam = cam.resize((w2, h2), Image.BICUBIC).crop((int((w2 - W) / 2), int(cy * z - cy), int((w2 - W) / 2) + W, int(cy * z - cy) + H))
+        # troca de frase: a antiga sai em chicote nos últimos 0,16s antes da nova
+        if ativo + 1 < len(grupos) and t > g_fim - 0.16:
+            cam = _achatar(cam, (t - (g_fim - 0.16)) / 0.16, W / 2, cy)
+        bloco.alpha_composite(cam)
+    # aproximação lenta + leve inclinação (como na referência), saída da cena em chicote
+    z = 1 + cena.get("zoom_texto", 0.05) * ease_out(t / dur)
     if z != 1:
         w2, h2 = int(W * z), int(H * z)
-        cam = cam.resize((w2, h2), Image.BICUBIC).crop(((w2 - W) // 2, (h2 - H) // 2, (w2 - W) // 2 + W, (h2 - H) // 2 + H))
-    sb = cam.getchannel("A").filter(ImageFilter.GaussianBlur(12)).point(lambda v: int(v * 0.35))
-    if not claro:  # brilho suave em volta da letra clara
-        img = Image.composite(Image.new("RGB", (W, H), (90, 88, 84)), img, sb)
-    img.paste(cam, (0, 0), cam)
+        bloco = bloco.resize((w2, h2), Image.BICUBIC).crop(((w2 - W) // 2, (h2 - H) // 2, (w2 - W) // 2 + W, (h2 - H) // 2 + H))
+    # trava final: o bloco montado nunca passa de 92% da tela (soco + zoom + espaçamento somados)
+    caixa = bloco.getchannel("A").getbbox()
+    if caixa:
+        bw, bh = caixa[2] - caixa[0], caixa[3] - caixa[1]
+        lim = min(W * 0.92 / max(1, bw), H * 0.92 / max(1, bh), 1.0)
+        bx = (caixa[0] + caixa[2]) / 2
+        if lim < 1.0 or caixa[0] < W * 0.04 or caixa[2] > W * 0.96:
+            w2, h2 = max(1, int(W * lim)), max(1, int(H * lim))
+            menor = bloco.resize((w2, h2), Image.BICUBIC)
+            bloco = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+            bloco.paste(menor, (int(W / 2 - bx * lim), int(H / 2 - H / 2 * lim)))
+    rnd = random.Random(int(cena["inicio"] * 100))
+    ang = cena.get("inclinacao", rnd.uniform(-1.6, 1.6)) + 0.5 * (t / dur)
+    bloco = bloco.rotate(ang, resample=Image.BICUBIC, center=(W / 2, H / 2))
+    if t > dur - 0.2:
+        bloco = _achatar(bloco, (t - (dur - 0.2)) / 0.2, W / 2, H / 2 + cena.get("dy", 0))
+    a = bloco.getchannel("A")
+    brilho = a.filter(ImageFilter.GaussianBlur(14)).point(lambda v: int(v * (0.55 if not claro else 0.25)))
+    img = Image.composite(Image.new("RGB", (W, H), (200, 196, 188) if not claro else (120, 120, 120)), img, brilho)
+    img.paste(bloco, (0, 0), bloco)
     return img
 
 
