@@ -690,13 +690,14 @@ def est_linhas(cv, cena, t, ctx):
     if z != 1:
         w2, h2 = int(W * z), int(H * z)
         bloco = bloco.resize((w2, h2), Image.BICUBIC).crop(((w2 - W) // 2, (h2 - H) // 2, (w2 - W) // 2 + W, (h2 - H) // 2 + H))
-    # trava final: o bloco montado nunca passa de 92% da tela (soco + zoom + espaçamento somados)
+    # trava final: o bloco montado nunca passa de 86% da tela (soco + zoom + espaçamento somados)
     caixa = bloco.getchannel("A").getbbox()
     if caixa:
         bw, bh = caixa[2] - caixa[0], caixa[3] - caixa[1]
-        lim = min(W * 0.92 / max(1, bw), H * 0.92 / max(1, bh), 1.0)
+        # 86%: sobra margem pra inclinação e pro zoom/deriva da câmera que vêm depois
+        lim = min(W * 0.86 / max(1, bw), H * 0.86 / max(1, bh), 1.0)
         bx = (caixa[0] + caixa[2]) / 2
-        if lim < 1.0 or caixa[0] < W * 0.04 or caixa[2] > W * 0.96:
+        if lim < 1.0 or caixa[0] < W * 0.07 or caixa[2] > W * 0.93:
             w2, h2 = max(1, int(W * lim)), max(1, int(H * lim))
             menor = bloco.resize((w2, h2), Image.BICUBIC)
             bloco = Image.new("RGBA", (W, H), (0, 0, 0, 0))
