@@ -568,7 +568,55 @@ def est_inclinado(cv, cena, t, ctx):
     return img
 
 
-ESTILOS = dict(inclinado=est_inclinado, revelar=est_revelar, pilha=est_pilha, flash=est_flash, gigante=est_gigante,
+def est_linhas(cv, cena, t, ctx):
+    """Só letras: várias linhas empilhadas, cada uma com fonte própria; dentro de uma linha os
+    'grupos' trocam no lugar (ex.: "MAIS DO QUE" -> "TUA VOZ"). Palavras entram em cortina e o
+    bloco aproxima devagar. cena["linhas"] = [{"fonte","tamanho","cor","grupos":[{"texto","tempos",...}]}]"""
+    W, H = ctx.W, ctx.H
+    bg = cor(cena.get("bg", "#060606"))
+    img = fundo(ctx, cena, "#060606", 0.55)
+    img = ctx.elem(img, cena, t)
+    claro = sum(bg) > 380
+    fg_pad = (18, 18, 18) if claro else (240, 238, 232)
+    linhas = cena["linhas"]
+    blocos = []
+    for ln in linhas:
+        g_ativo = None
+        for g in ln["grupos"]:
+            if t >= g["tempos"][0] - cena["inicio"]:
+                g_ativo = g
+        g_ref = g_ativo or ln["grupos"][0]
+        nome = g_ref.get("fonte", ln.get("fonte", "serif"))
+        tam = g_ref.get("tamanho", ln.get("tamanho", 90))
+        f = caber(nome, tam, g_ref["texto"].split(), W * cena.get("largura", SEGURA))
+        n_lin = len(quebrar(g_ref["texto"].split(), f, W * cena.get("largura", SEGURA)))
+        blocos.append((ln, g_ativo, f, f.size * 1.18 * n_lin))
+    alt = sum(b[3] for b in blocos)
+    cam = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    y = H / 2 + cena.get("dy", 0) - alt / 2
+    for ln, g, f, h in blocos:
+        if g is not None:
+            c = cor(g.get("cor", ln.get("cor", fg_pad)))
+            palavras = g["texto"].split()
+            ts = [x - cena["inicio"] for x in g["tempos"]]
+            while len(ts) < len(palavras):
+                ts.append(ts[-1] + 0.15)
+            frase_em_foco(cam, palavras, ts[:len(palavras)], t, f, lambda i, k, c=c: c, W, y + h / 2,
+                          W * cena.get("largura", SEGURA), f.size * 1.18, modos=["cortina"])
+        y += h
+    dur = max(0.5, cena["fim"] - cena["inicio"])
+    z = 1 + cena.get("zoom_texto", 0.05) * t / dur
+    if z != 1:
+        w2, h2 = int(W * z), int(H * z)
+        cam = cam.resize((w2, h2), Image.BICUBIC).crop(((w2 - W) // 2, (h2 - H) // 2, (w2 - W) // 2 + W, (h2 - H) // 2 + H))
+    sb = cam.getchannel("A").filter(ImageFilter.GaussianBlur(12)).point(lambda v: int(v * 0.35))
+    if not claro:  # brilho suave em volta da letra clara
+        img = Image.composite(Image.new("RGB", (W, H), (90, 88, 84)), img, sb)
+    img.paste(cam, (0, 0), cam)
+    return img
+
+
+ESTILOS = dict(linhas=est_linhas, inclinado=est_inclinado, revelar=est_revelar, pilha=est_pilha, flash=est_flash, gigante=est_gigante,
                serifa=est_serifa, cursiva=est_cursiva, maquina=est_maquina, circulo=est_circulo)
 
 

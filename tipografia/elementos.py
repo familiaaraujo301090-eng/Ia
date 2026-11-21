@@ -994,3 +994,31 @@ def estrelas(s, img, tempo, t, cena, claro):
 
 
 Elementos.estrelas = estrelas
+
+
+# ====================================================================== FILME (música: "Em outra vida")
+def filme(s, img, tempo, t, cena, claro):
+    """Película antiga: riscos verticais finos, poeira e um leve tremor de luz (nada exagerado)."""
+    W, H = s.W, s.H
+    q = int(tempo * 24)  # muda como projetor (24 qps)
+    rng = random.Random(q * 7919)
+    cam = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(cam)
+    cor = (235, 232, 225) if not claro else (40, 38, 35)
+    for _ in range(rng.randint(0, 2)):  # riscos
+        x = rng.uniform(0.05, 0.95) * W
+        y0, y1 = rng.uniform(-0.1, 0.5) * H, rng.uniform(0.5, 1.1) * H
+        d.line([(x, y0), (x + rng.uniform(-6, 6), y1)], fill=cor + (rng.randint(40, 110),), width=1)
+    for _ in range(rng.randint(3, 9)):  # poeira
+        x, y, r = rng.random() * W, rng.random() * H, rng.uniform(0.8, 2.6)
+        d.ellipse([x - r, y - r, x + r * rng.uniform(1, 2.2), y + r], fill=cor + (rng.randint(60, 150),))
+    if rng.random() < 0.06:  # fio de cabelo na película, raro
+        x, y = rng.random() * W, rng.random() * H
+        pts = [(x + k * 6, y + 8 * math.sin(k * 0.6 + q)) for k in range(18)]
+        d.line(pts, fill=cor + (90,), width=1)
+    img.paste(cam, (0, 0), cam.filter(ImageFilter.GaussianBlur(0.4)))
+    fl = 1 + 0.025 * (rng.random() - 0.5)
+    return img.point(lambda v: min(255, int(v * fl)))
+
+
+Elementos.filme = filme
