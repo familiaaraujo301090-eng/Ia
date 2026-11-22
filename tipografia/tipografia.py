@@ -607,6 +607,17 @@ def est_linhas(cv, cena, t, ctx):
     img = fundo(ctx, cena, "#060606", 0.55)
     img = ctx.elem(img, cena, t)
     claro = sum(bg) > 380
+    if cena.get("faixa"):  # faixa de cor oposta atravessando a tela, com a letra dentro (abre rápido)
+        kf = ease_out(t / 0.25)
+        hf = H * cena.get("faixa_altura", 0.24) * kf
+        cyf = H / 2 + cena.get("dy", 0)
+        cf = (244, 243, 240) if not claro else (10, 10, 10)
+        df = ImageDraw.Draw(img)
+        rnd_f = random.Random(int(cena["inicio"] * 10))
+        topo = [(x, cyf - hf / 2 + rnd_f.uniform(-3, 3)) for x in range(0, W + 40, 40)]
+        base = [(x, cyf + hf / 2 + rnd_f.uniform(-3, 3)) for x in range(W + 40, -40, -40)]
+        df.polygon(topo + base, fill=cf)
+        claro = not claro
     fg_pad = (18, 18, 18) if claro else (242, 240, 235)
     cinza = (150, 150, 150) if claro else (120, 118, 114)
     dur = max(0.5, cena["fim"] - cena["inicio"])

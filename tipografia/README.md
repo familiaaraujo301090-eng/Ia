@@ -96,6 +96,7 @@ Todo vídeo sai **com a música sincronizada**:
 - `cenario.py`: cenários ORIGINAIS com clima de anime (cel-shading, luz quente, nuvens em cúmulo):
   `por_do_sol` · `crepusculo` · `muralha` · `cachecol` (tecido vermelho ao vento; `cachecol_voa` faz ele subir) ·
   `janela` (interior com feixes de luz) · `campo_azul` (campo de flores azuis). Nenhum personagem ou arte copiada.
+- `"faixa": true` no `linhas`: faixa de cor oposta atravessando a tela com a letra dentro.
 - Estilo `linhas` (só letras): várias linhas com fonte própria; dentro da linha os grupos trocam no lugar ("MAIS DO QUE" -> "TUA VOZ"), palavras em cortina e bloco aproximando devagar.
 - Estilo `inclinado`: tela branca com linhas de texto tortas (a última maior) e riscos diagonais.
 - `"animar": true` (projeto ou cena): cada palavra entra com movimento (sobe, pop, cai, zoom) e a frase pulsa nos ataques da música; a tela `inclinado` escreve letra por letra girando devagar.
@@ -109,7 +110,7 @@ Todo vídeo sai **com a música sincronizada**:
 `"pb": true` no projeto deixa tudo em P&B com curva de filme. `"elementos"` (no projeto ou por cena)
 desenha elementos animados ATRÁS da letra, todos originais:
 
-`casal` (ele respira, sopra, e a fumaça forma o rosto dela) · `porta` (porta abrindo, luz no chão, silhueta no vão) · `vidro` (box embaçado com gotas escorrendo) · `eclipse` (coroa de luz que explode nos ataques) · `petalas` · `rosa` (desabrochando a traço) · `cidade` (prédios com janelas acendendo) · `cinzas` (brasas subindo, mais fortes nos ataques) · `coracoes` (corações em traço nascendo nos ataques, nas margens) · `estrelas` (brilhos ✦ piscando nos ataques) · `filme` (riscos e poeira de película antiga) · `fios` · `pulso` (batimento cardíaco no ritmo) · `perfil` (rosto de perfil soprando fumaça) · `fumaca` · `lua` (esfera subindo) · `traco` (lápis desenhando)
+`casal` (ele respira, sopra, e a fumaça forma o rosto dela) · `porta` (porta abrindo, luz no chão, silhueta no vão) · `vidro` (box embaçado com gotas escorrendo) · `eclipse` (coroa de luz que explode nos ataques) · `petalas` · `rosa` (desabrochando a traço) · `cidade` (prédios com janelas acendendo) · `cinzas` (brasas subindo, mais fortes nos ataques) · `coracoes` (corações em traço nascendo nos ataques, nas margens) · `estrelas` (brilhos ✦ piscando nos ataques) · `filme` (riscos e poeira de película antiga) · `horas` (relógio fininho, ponteiro pulando nos ataques) · `estouro` (estrela de pontas pulsando atrás do texto) · `fios` · `pulso` (batimento cardíaco no ritmo) · `perfil` (rosto de perfil soprando fumaça) · `fumaca` · `lua` (esfera subindo) · `traco` (lápis desenhando)
 · `particulas` (poeira/bokeh) · `chuva` · `aneis` (nascem nas batidas) · `linhas` (scanner) · `luz` (flash nas batidas)
 
 ```json

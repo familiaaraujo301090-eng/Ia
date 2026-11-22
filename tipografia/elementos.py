@@ -1022,3 +1022,60 @@ def filme(s, img, tempo, t, cena, claro):
 
 
 Elementos.filme = filme
+
+
+# ====================================================================== HORAS (música: "você é o que me torna real")
+def horas(s, img, tempo, t, cena, claro):
+    """Relógio fininho ao fundo: ponteiro andando devagar e um tique em cada ataque da música."""
+    W, H = s.W, s.H
+    cx, cy, R = W / 2, H / 2, H * 0.44
+    ataques = getattr(s, "ataques", [])
+    tique = min(1.0, sum(math.exp(-(tempo - a) * 10) for a in ataques if 0 <= tempo - a < 0.5))
+    cor = (235, 233, 228) if not claro else (30, 30, 30)
+    cam = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(cam)
+    d.ellipse([cx - R, cy - R, cx + R, cy + R], outline=cor + (34,), width=2)
+    for k in range(60):
+        a = k * math.pi / 30
+        L = 22 if k % 5 == 0 else 9
+        d.line([(cx + (R - L) * math.cos(a), cy + (R - L) * math.sin(a)), (cx + R * math.cos(a), cy + R * math.sin(a))],
+               fill=cor + (60 if k % 5 == 0 else 30,), width=2)
+    seg = sum(1 for a in ataques if a <= tempo)  # o ponteiro pula a cada ataque (tique-taque no ritmo)
+    ang = -math.pi / 2 + seg * (math.pi / 30) + tempo * 0.02
+    d.line([(cx, cy), (cx + (R * 0.86) * math.cos(ang), cy + (R * 0.86) * math.sin(ang))], fill=cor + (int(70 + 120 * tique),), width=2)
+    ang2 = -math.pi / 2 + tempo * 0.12
+    d.line([(cx, cy), (cx + (R * 0.55) * math.cos(ang2), cy + (R * 0.55) * math.sin(ang2))], fill=cor + (55,), width=3)
+    d.ellipse([cx - 5, cy - 5, cx + 5, cy + 5], fill=cor + (90,))
+    img.paste(cam, (0, 0), cam)
+    return img
+
+
+# ====================================================================== ESTOURO (música: "deusa")
+def estouro(s, img, tempo, t, cena, claro):
+    """Estrela de pontas (balão de impacto) atrás do texto, pulsando e girando nos ataques."""
+    W, H = s.W, s.H
+    ataques = getattr(s, "ataques", [])
+    pul = min(1.0, sum(math.exp(-(tempo - a) * 7) for a in ataques if 0 <= tempo - a < 0.7))
+    cx, cy = W / 2, H / 2 + cena.get("dy", 0)
+    R = H * cena.get("estouro_raio", 0.30) * (1 + 0.10 * pul) * min(1.0, ease(t / 0.3))
+    n = 12
+    giro = tempo * 0.15 + 0.12 * pul
+    pts = []
+    for k in range(2 * n):
+        a = giro + k * math.pi / n
+        r = R if k % 2 == 0 else R * 0.58
+        r *= 1 + 0.06 * math.sin(k * 2.3)
+        pts.append((cx + r * math.cos(a), cy + r * math.sin(a)))
+    cor = (60, 60, 60) if not claro else (150, 150, 150)
+    d = ImageDraw.Draw(img)
+    d.polygon(pts, fill=cor)
+    return img
+
+
+def ease(x):
+    x = max(0.0, min(1.0, x))
+    return 1 - (1 - x) ** 3
+
+
+Elementos.horas = horas
+Elementos.estouro = estouro
