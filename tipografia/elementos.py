@@ -1079,3 +1079,99 @@ def ease(x):
 
 Elementos.horas = horas
 Elementos.estouro = estouro
+
+
+# ====================================================================== FOLHAS (rap)
+def folhas(s, img, tempo, t, cena, claro):
+    """Folhas caindo e girando, com rajada de vento em cada ataque."""
+    W, H = s.W, s.H
+    if not hasattr(s, "_folhas"):
+        rng = random.Random(81)
+        s._folhas = [(rng.random(), rng.random(), rng.uniform(0.4, 1), rng.random() * 6.28, rng.uniform(0.6, 1.5)) for _ in range(26)]
+    ataques = getattr(s, "ataques", [])
+    vento = sum(math.exp(-(tempo - a) * 4) for a in ataques if 0 <= tempo - a < 1.0)
+    cor = (205, 200, 192) if not claro else (60, 58, 55)
+    cam = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    for x, y, z, fase, giro in s._folhas:
+        yy = ((y + tempo * 0.07 * z) % 1.15 - 0.08) * H
+        xx = ((x + tempo * 0.03 * z + 0.02 * vento * z) % 1.1 - 0.05) * W + 40 * z * math.sin(tempo * 1.1 * giro + fase)
+        L = 20 + 26 * z
+        f = Image.new("RGBA", (int(L * 2.6), int(L * 2.6)), (0, 0, 0, 0))
+        d = ImageDraw.Draw(f)
+        c = f.width / 2
+        flip = max(0.2, abs(math.cos(tempo * 2 * giro + fase)))
+        pts = []
+        for u in range(21):  # folha em forma de amêndoa com ponta
+            a = u / 20 * math.pi
+            pts.append((c + L * math.cos(a) * 1.0, c - L * 0.42 * flip * math.sin(a)))
+        pts += [(2 * c - px, 2 * c - py) for px, py in pts]
+        d.polygon(pts, fill=cor + (int(120 + 110 * z),))
+        d.line([(c - L, c), (c + L, c)], fill=(90, 90, 90, 120), width=2)
+        f = f.rotate(math.degrees(tempo * 1.4 * giro + fase), resample=Image.BICUBIC)
+        if z < 0.65:
+            f = f.filter(ImageFilter.GaussianBlur(2.5))
+        cam.paste(f, (int(xx - c), int(yy - c)), f)
+    img.paste(cam, (0, 0), cam)
+    return img
+
+
+# ====================================================================== NEVE (again)
+def neve(s, img, tempo, t, cena, claro):
+    """Neve caindo em camadas (perto nítida, longe desfocada); rajada lateral nos ataques."""
+    W, H = s.W, s.H
+    if not hasattr(s, "_neve"):
+        rng = random.Random(5150)
+        s._neve = [(rng.random(), rng.random(), rng.uniform(0.25, 1), rng.random() * 6.28) for _ in range(220)]
+    ataques = getattr(s, "ataques", [])
+    rajada = sum(math.exp(-(tempo - a) * 3) for a in ataques if 0 <= tempo - a < 1.2)
+    perto = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    longe = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    cor = (245, 245, 248) if not claro else (120, 124, 130)
+    for x, y, z, fase in s._neve:
+        cam = perto if z > 0.6 else longe
+        d = ImageDraw.Draw(cam)
+        yy = ((y + tempo * 0.09 * z) % 1.08 - 0.04) * H
+        xx = ((x + 0.015 * math.sin(tempo * 0.9 + fase) + 0.04 * rajada * z) % 1.0) * W
+        r = 1.2 + 4.2 * z * z
+        d.ellipse([xx - r, yy - r, xx + r, yy + r], fill=cor + (int(130 + 120 * z),))
+    img.paste(longe.filter(ImageFilter.GaussianBlur(2.2)), (0, 0), longe.filter(ImageFilter.GaussianBlur(2.2)))
+    img.paste(perto, (0, 0), perto.filter(ImageFilter.GaussianBlur(0.7)))
+    return img
+
+
+# ====================================================================== FOGO (away)
+def fogo(s, img, tempo, t, cena, claro):
+    """Chamas subindo da base da tela e anéis de fogo que explodem em cada ataque da música."""
+    W, H = s.W, s.H
+    ataques = getattr(s, "ataques", [])
+    forca = min(1.0, sum(math.exp(-(tempo - a) * 5) for a in ataques if 0 <= tempo - a < 0.8))
+    w4, h4 = W // 4, H // 4
+    oy = int(tempo * 90) % 150
+    # ruído esticado na vertical = línguas de fogo (não um morro)
+    faixa = s.nevoa[oy:oy + h4 // 4 + 2, 30:30 + w4 * 2]
+    n = np.asarray(Image.fromarray((faixa * 255).astype(np.uint8)).resize((w4, h4), Image.BICUBIC), np.float32) / 255
+    yy = np.linspace(0, 1, h4)[:, None]
+    altura = 0.30 + 0.16 * forca
+    chama = np.clip(((n - 0.35) * 2.2 - (1 - yy) / altura) * 3.0, 0, 1) * (yy > 0.35)
+    m = Image.fromarray((chama * 255).astype(np.uint8)).resize((W, H), Image.BICUBIC).filter(ImageFilter.GaussianBlur(5))
+    # três camadas: borda vermelho-escura, corpo laranja, miolo amarelo (só onde a chama é densa)
+    img = Image.composite(Image.new("RGB", (W, H), (150, 14, 6)), img, m.point(lambda v: min(255, int(v * 1.6))))
+    img = Image.composite(Image.new("RGB", (W, H), (240, 90, 12)), img, m.point(lambda v: max(0, min(255, (v - 70) * 2))))
+    img = Image.composite(Image.new("RGB", (W, H), (255, 205, 90)), img, m.point(lambda v: max(0, min(255, (v - 215) * 4))))
+    cam = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(cam)
+    for a in ataques:
+        idade = tempo - a
+        if 0 <= idade < 0.7:
+            e = 1 - (1 - idade / 0.7) ** 3
+            r = 40 + e * W * 0.55
+            alfa = int(230 * (1 - idade / 0.7))
+            d.ellipse([W / 2 - r, H / 2 - r * 0.8, W / 2 + r, H / 2 + r * 0.8], outline=(255, 140, 40, alfa), width=int(10 * (1 - e)) + 2)
+    brilho = cam.filter(ImageFilter.GaussianBlur(10))
+    img.paste(brilho, (0, 0), brilho)
+    img.paste(cam, (0, 0), cam)
+    return img
+
+
+for _f in (folhas, neve, fogo):
+    setattr(Elementos, _f.__name__, _f)
