@@ -1,0 +1,47 @@
+{
+ "balada": {
+  "num": 143,
+  "nome": "enquanto-eles-estao-na-balada",
+  "clima": "pulso",
+  "prot": null,
+  "prompts": [
+   "3D animated film still, adult Pixar style, young people dancing at a neon nightclub party at night, while in the corner window across the street a wise old man with a short white beard and kind eyes, simple brown tunic turns off his lamp to sleep. Cinematic lighting, vertical composition, no text.",
+   "3D animated film still, adult Pixar style, close-up of a wise old man with a short white beard and kind eyes, simple brown tunic waking up in a dark simple bedroom at dawn, alarm clock showing 4:59, determined eyes. Cinematic lighting, vertical composition, no text.",
+   "3D animated film still, adult Pixar style, a wise old man with a short white beard and kind eyes, simple brown tunic kneeling in prayer beside his bed, first blue light of dawn through the window, peaceful. Cinematic lighting, vertical composition, no text.",
+   "3D animated film still, adult Pixar style, a wise old man with a short white beard and kind eyes, simple brown tunic reading an old book with a pen at a wooden desk, candle and cup of tea, phone face down. Cinematic lighting, vertical composition, no text.",
+   "3D animated film still, adult Pixar style, a wise old man with a short white beard and kind eyes, simple brown tunic jogging alone on an empty city street at sunrise, mist, streetlights turning off. Cinematic lighting, vertical composition, no text.",
+   "3D animated film still, adult Pixar style, tired young people with sunglasses leaving a nightclub at morning while a wise old man with a short white beard and kind eyes, simple brown tunic walks past energized carrying bread, golden morning light. Cinematic lighting, vertical composition, no text.",
+   "3D animated film still, adult Pixar style, a wise old man with a short white beard and kind eyes, simple brown tunic standing on a mountain top at sunrise looking over the city, arms crossed, calm victory. Cinematic lighting, vertical composition, no text."
+  ]
+ },
+ "carregando": {
+  "num": 144,
+  "nome": "carregando-disciplina",
+  "clima": "epica",
+  "prot": null,
+  "prompts": [
+   "3D animated film still, adult Pixar style, a messy dark bedroom at noon, a young man with messy hair lying in bed scrolling his phone, pizza boxes, curtains closed. Cinematic lighting, vertical composition, no text.",
+   "3D animated film still, adult Pixar style, the same young man with messy hair making his bed carefully, a small ray of sunlight entering the room. Cinematic lighting, vertical composition, no text.",
+   "3D animated film still, adult Pixar style, the young man with messy hair reading a book on a chair, his phone in a drawer, warm lamp light. Cinematic lighting, vertical composition, no text.",
+   "3D animated film still, adult Pixar style, the young man with messy hair falling on a running track in the rain and getting back up, determined. Cinematic lighting, vertical composition, no text.",
+   "3D animated film still, adult Pixar style, friends laughing at the young man with messy hair at a bar while he drinks water, focused calm face. Cinematic lighting, vertical composition, no text.",
+   "3D animated film still, adult Pixar style, the young man exhausted at night at a desk with papers, almost giving up, then clenching his fist. Cinematic lighting, vertical composition, no text.",
+   "3D animated film still, adult Pixar style, the young man now confident, neat hair, fit, standing in a bright clean room at sunrise, proud smile. Cinematic lighting, vertical composition, no text."
+  ]
+ },
+ "amor70": {
+  "num": 145,
+  "nome": "o-amor-que-durou-70-anos",
+  "clima": "piano",
+  "prot": null,
+  "prompts": [
+   "3D animated film still, adult Pixar style, an old couple in their nineties holding hands on a porch swing at sunset, gentle smiles, wedding photo on the wall. Cinematic lighting, vertical composition, no text.",
+   "3D animated film still, adult Pixar style, a 1950s dance hall, a shy young man stepping on the foot of a young woman in a polka dot dress, both laughing. Cinematic lighting, vertical composition, no text.",
+   "3D animated film still, adult Pixar style, the young couple in a tiny old room with a leaking roof and a bucket, hugging and laughing, rain outside. Cinematic lighting, vertical composition, no text.",
+   "3D animated film still, adult Pixar style, the young couple sitting on the floor crying and holding each other, soft window light, grief and love. Cinematic lighting, vertical composition, no text.",
+   "3D animated film still, adult Pixar style, the wife secretly giving her jewelry to a pawnshop owner, her husband looking at job ads at home. Cinematic lighting, vertical composition, no text.",
+   "3D animated film still, adult Pixar style, an elderly man opening a car door for his elderly wife, she smiles at him like a young girl, autumn street. Cinematic lighting, vertical composition, no text.",
+   "3D animated film still, adult Pixar style, the old couple in their nineties dancing slowly in their kitchen, a radio playing, warm golden light. Cinematic lighting, vertical composition, no text."
+  ]
+ }
+}
