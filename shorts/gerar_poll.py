@@ -12,8 +12,8 @@ for k in sys.argv[2:]:
         if alvo.exists():
             continue
         url = ("https://image.pollinations.ai/prompt/" + urllib.parse.quote(prompt + " Highly detailed Pixar 3D render.")
-               + f"?width=1080&height=1920&nologo=true&seed={n * 7 + len(k)}")
-        for t in range(4):
+               + f"?width=1080&height=1920&seed={n * 7 + len(k)}")
+        for t in range(8):
             try:
                 dados = urllib.request.urlopen(url, timeout=180).read()
                 im = Image.open(io.BytesIO(dados)).convert("RGB")
@@ -29,5 +29,5 @@ for k in sys.argv[2:]:
                 print("ok", k, n, flush=True)
                 break
             except Exception as e:
-                print("erro", k, n, e, flush=True); time.sleep(10)
-        time.sleep(3)
+                print("erro", k, n, e, flush=True); time.sleep(25)
+        time.sleep(6)
