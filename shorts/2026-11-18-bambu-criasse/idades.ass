@@ -1,0 +1,21 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+WrapStyle: 0
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Idade,Inter ExtraBold,120,&H0060C8F0,&H0060C8F0,&H00101010,&H96000000,0,0,0,0,100,100,4,0,1,6,4,8,60,60,335,1
+Style: Gancho,Inter ExtraBold,82,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,3,18,0,8,70,70,260,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 1,0:00:00.00,0:00:03.20,Gancho,,0,0,0,,{\fad(0,200)}POR 5 ANOS ESSA PLANTA\N{\c&H004AD8FF}NÃO CRESCEU NADA{\c&H00FFFFFF&}
+Dialogue: 0,0:00:03.20,0:00:04.15,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}ANO 1
+Dialogue: 0,0:00:04.15,0:00:07.55,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}ANO 2
+Dialogue: 0,0:00:07.55,0:00:10.60,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}ANO 3
+Dialogue: 0,0:00:10.60,0:00:13.77,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}ANO 4
+Dialogue: 0,0:00:13.77,0:00:19.07,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}ANO 5
+Dialogue: 0,0:00:19.07,0:00:24.29,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}6 SEMANAS
+Dialogue: 0,0:00:24.29,0:00:32.97,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}VOCÊ

@@ -1,0 +1,21 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+WrapStyle: 0
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Idade,Inter ExtraBold,120,&H0060C8F0,&H0060C8F0,&H00101010,&H96000000,0,0,0,0,100,100,4,0,1,6,4,8,60,60,335,1
+Style: Gancho,Inter ExtraBold,82,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,3,18,0,8,70,70,260,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 1,0:00:00.00,0:00:03.20,Gancho,,0,0,0,,{\fad(0,200)}POR QUE UM ELEFANTE\NNÃO FOGE DE {\c&H004AD8FF}UMA CORDA{\c&H00FFFFFF&}?
+Dialogue: 0,0:00:03.20,0:00:04.35,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}A CORDA
+Dialogue: 0,0:00:04.35,0:00:08.25,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}O FILHOTE
+Dialogue: 0,0:00:08.25,0:00:13.83,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}TENTATIVAS
+Dialogue: 0,0:00:13.83,0:00:18.26,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}DESISTIU
+Dialogue: 0,0:00:18.26,0:00:23.05,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}ADULTO
+Dialogue: 0,0:00:23.05,0:00:27.03,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}A MENTIRA
+Dialogue: 0,0:00:27.03,0:00:32.18,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}VOCÊ

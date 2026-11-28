@@ -1,0 +1,21 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+WrapStyle: 0
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Idade,Inter ExtraBold,120,&H0060C8F0,&H0060C8F0,&H00101010,&H96000000,0,0,0,0,100,100,4,0,1,6,4,8,60,60,335,1
+Style: Gancho,Inter ExtraBold,82,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,3,18,0,8,70,70,260,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 1,0:00:00.00,0:00:03.20,Gancho,,0,0,0,,{\fad(0,200)}POR QUE AS PESSOAS\N{\c&H004AD8FF}TE PUXAM PRA BAIXO{\c&H00FFFFFF&}?
+Dialogue: 0,0:00:03.20,0:00:03.71,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}O BALDE
+Dialogue: 0,0:00:03.71,0:00:07.54,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}SEM TAMPA
+Dialogue: 0,0:00:07.54,0:00:12.33,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}O PRIMEIRO
+Dialogue: 0,0:00:12.33,0:00:14.75,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}A BORDA
+Dialogue: 0,0:00:14.75,0:00:17.68,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}PUXADO
+Dialogue: 0,0:00:17.68,0:00:22.86,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}PESSOAS
+Dialogue: 0,0:00:22.86,0:00:30.10,Idade,,0,0,0,,{\fscx140\fscy140\t(0,160,\fscx100\fscy100)}VOCÊ
