@@ -692,6 +692,14 @@ def est_linhas(cv, cena, t, ctx):
             if z > 1.001:
                 w2, h2 = int(W * z), int(H * z)
                 cam = cam.resize((w2, h2), Image.BICUBIC).crop((int((w2 - W) / 2), int(cy * z - cy), int((w2 - W) / 2) + W, int(cy * z - cy) + H))
+        # marca registrada: traço vermelho nasce do centro sob a frase de destaque
+        if g.get("destaque"):
+            kd = ease_out((t - g_ini - 0.15) / 0.35)
+            if kd > 0:
+                dd = ImageDraw.Draw(cam)
+                meia = total * 0.32 * kd
+                yb = cy + (asc + desc) / 2 + f.size * 0.05
+                dd.rectangle([W / 2 - meia, yb, W / 2 + meia, yb + max(4, f.size * 0.045)], fill=(196, 22, 28, 255))
         # troca de frase: a antiga sai em chicote nos últimos 0,16s antes da nova
         if ativo + 1 < len(grupos) and t > g_fim - 0.16:
             cam = _achatar(cam, (t - (g_fim - 0.16)) / 0.16, W / 2, cy)
@@ -763,10 +771,39 @@ def quadro(proj, ctx, tempo, idx):
     if proj.get("pb"):  # preto e branco com curva de filme (pretos fundos, brancos cremosos)
         g = ImageOps.grayscale(img).point(lambda v: int(255 * (0.5 - 0.5 * math.cos(math.pi * v / 255)) ** 0.92))
         img = Image.merge("RGB", [g, g, g.point(lambda v: max(0, v - 4))])
+    if proj.get("assinatura"):  # assinatura discreta no canto (marca do canal)
+        d = ImageDraw.Draw(img)
+        fs = fonte("serif", max(18, int(ctx.H * 0.026)))
+        lum = sum(img.getpixel((ctx.W - 30, ctx.H - 30))) / 3
+        corsig = (255, 255, 255) if lum < 128 else (0, 0, 0)
+        cam = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        ImageDraw.Draw(cam).text((ctx.W - ctx.W * 0.035, ctx.H - ctx.H * 0.045), proj["assinatura"], font=fs,
+                                 fill=corsig + (95,), anchor="rs")
+        img.paste(cam, (0, 0), cam)
     return ctx.fx.grao(img, idx, proj.get("grao", 0.05))
 
 
+IDENTIDADES = {
+    # "VERSO." — identidade própria: preto/osso/vermelho, 3 vozes tipográficas, só letras, sincronia exata
+    "verso": dict(w=1440, h=990, grao=0.04, zoom=0.02, deriva=2.0, fade=0, assinatura="verso."),
+}
+
+
+def aplicar_identidade(proj):
+    ide = IDENTIDADES.get(proj.get("identidade"))
+    if not ide:
+        return proj
+    for k, v in ide.items():
+        proj.setdefault(k, v)
+    for i, c in enumerate(proj["cenas"]):
+        c.setdefault("estilo", "linhas")
+        c.setdefault("bg", "#060606" if i % 3 != 2 else "#f2f1ee")  # respiro branco a cada 3 cenas
+        c.setdefault("elementos", ["filme"])
+    return proj
+
+
 def render(proj, saida, audio=None, inicio=0.0, preview=False):
+    proj = aplicar_identidade(proj)
     W, H, fps = proj.get("w", 1080), proj.get("h", 1920), proj.get("fps", 30)
     ctx = Ctx()
     ctx.W, ctx.H = W, H

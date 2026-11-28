@@ -150,3 +150,9 @@ Doja Cat – *Streets*; Chris Brown – *Under the Influence*; Sabrina Carpenter
 Pabllo Vittar – *K.O.*; Ludmilla – *Verdinha*; Matuê – *Quer Voar*; Kevin o Chris – *Ela é do Tipo*.
 
 Fontes em `fonts/`: Google Fonts, licença SIL OFL (livres pra uso comercial).
+
+
+## Identidade "verso." (em validação)
+`"identidade": "verso"` no projeto aplica 16:11, estilo `linhas`, preto com respiro branco a cada
+3 cenas, elemento `filme`, assinatura discreta no canto e o traço vermelho de destaque
+(`"destaque": true` no grupo). Detalhes em `CLAUDE.md`.
