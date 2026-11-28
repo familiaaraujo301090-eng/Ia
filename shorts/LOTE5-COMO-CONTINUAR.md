@@ -10,3 +10,8 @@ Falta: as 7 imagens de cada video (140 no total).
 - Depois: `python3 grade.py ids-lote5.json` -> grade Canva DAHYxf_hmrY (pagina 1) -> exportar jpg 4320x7680
   -> `python3 cortar_grade.py <url> 0 ordem-atual.json` -> `./montar.sh <chave> <num> <nome>` (num/nome em prompts-lote5.json).
 - Montar um video por vez (dois ao mesmo tempo na mesma pasta corrompem o arquivo).
+
+# Lote 6 (videos 143-145, formatos de trends)
+Pastas `2026-11-28-{balada,carregando,amor70}-criasse` com roteiro, voz e trilha prontos; prompts em `prompts-lote6.json`, ids em `ids-lote6.json`.
+Num container novo, antes de gerar voz: `pip install soundfile kokoro-onnx edge-tts numpy pillow`.
+Instabilidade: a sessao antiga reiniciava apos cada chamada ao Canva; gerar 1 imagem por vez e anotar o media id logo.
